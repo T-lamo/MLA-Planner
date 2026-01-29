@@ -1,7 +1,7 @@
 # 🚀 MLA / ICC — Service Planning Application
 
 > Application moderne de planification de services conçue pour le projet **MLA / ICC**  
-> Développée avec une stack rapide, sécurisée et scalable..
+> Développée avec une stack rapide, sécurisée et scalable.
 
 ---
 
