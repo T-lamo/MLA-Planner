@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
@@ -12,6 +13,7 @@ ENV = os.getenv("ENV", "dev")
 dotenv_path = f".env.{ENV}"
 if os.path.exists(dotenv_path):
     load_dotenv(dotenv_path)
+
 
 # --------------------------
 # Settings Pydantic
@@ -37,6 +39,7 @@ class Settings(BaseSettings):
         "extra": "allow",
         "case_sensitive": True,
     }
+
 
 # Instance globale
 settings = Settings()
