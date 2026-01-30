@@ -1,0 +1,52 @@
+name: FastAPI CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  quality:
+    name: Code Quality & Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black isort mypy pylint pytest pytest-cov pip-audit
+
+      - name: Black (format check)
+        run: black --check src
+
+      - name: Isort (import order check)
+        run: isort --check-only src --profile black
+
+      - name: Mypy (type checking)
+        run: mypy src
+
+      - name: Pylint (linting)
+        run: pylint src
+
+      - name: Security audit (pip-audit)
+        run: pip-audit
+
+      - name: Run tests + coverage
+        run: pytest --cov=src --cov-report=xml --cov-fail-under=80
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          fail_ci_if_error: true
