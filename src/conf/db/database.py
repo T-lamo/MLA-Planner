@@ -1,5 +1,7 @@
-from sqlmodel import SQLModel, create_engine, Session
-from src.settings import settings
+from sqlmodel import Session, SQLModel, create_engine
+
+from core.settings import settings
+
 
 class Database:
     _engine = None
@@ -10,7 +12,7 @@ class Database:
             cls._engine = create_engine(
                 f"postgresql+psycopg2://{settings.DB_USER}:{settings.DB_PASSWORD}"
                 f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}",
-                echo=True
+                echo=True,
             )
         return cls._engine
 
@@ -22,8 +24,8 @@ class Database:
 
     @classmethod
     def init_db(cls):
-       #import model import ici
-        from src.models import __all__ as models  
+        # pylint: disable=import-outside-toplevel
+        from models import __all__ as models  # pylint: disable=unused-import
 
         engine = cls.get_engine()
         SQLModel.metadata.create_all(engine)
@@ -36,7 +38,6 @@ class Database:
         engine = cls.get_engine()
         SQLModel.metadata.drop_all(engine)
         SQLModel.metadata.create_all(engine)
-
 
     @classmethod
     def disconnect(cls):

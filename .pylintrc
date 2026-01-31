@@ -1,0 +1,19 @@
+[MASTER]
+init-hook='import sys; sys.path.append("src")'
+
+[MESSAGES CONTROL]
+# On désactive les alertes de docstrings et les limites de méthodes
+# C0114, C0115, C0116 : Docstrings manquantes
+# R0903 : Trop peu de méthodes publiques (typique des modèles SQLModel/Pydantic)
+disable=
+    C0114,
+    C0115,
+    C0116,
+    R0903,
+    logging-fstring-interpolation
+
+[BASIC]
+# On autorise les noms de constantes en minuscules pour les chemins (ex: dotenv_path)
+const-rgx=[a-z_][a-z0-9_]{2,30}$|(?P<uppercase>[A-Z_][A-Z0-9_]{2,30}$)
+# On autorise les noms de classes avec des underscores (ex: Equipe_Membre)
+class-rgx=[a-zA-Z_][a-zA-Z0-9_]+$

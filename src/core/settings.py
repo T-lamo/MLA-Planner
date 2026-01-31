@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 
@@ -12,6 +13,7 @@ ENV = os.getenv("ENV", "dev")
 dotenv_path = f".env.{ENV}"
 if os.path.exists(dotenv_path):
     load_dotenv(dotenv_path)
+
 
 # --------------------------
 # Settings Pydantic
@@ -28,7 +30,7 @@ class Settings(BaseSettings):
     DB_NAME: str = "mla_planning_db"
 
     # JWT
-    JWT_SECRET_KEY: str
+    JWT_SECRET_KEY: str = ""
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
@@ -38,5 +40,6 @@ class Settings(BaseSettings):
         "case_sensitive": True,
     }
 
+
 # Instance globale
-settings = Settings()
+settings: Settings = Settings()
