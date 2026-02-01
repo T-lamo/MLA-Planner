@@ -1,0 +1,17 @@
+
+__pycache__/
+.env
+.vscode/
+.idea/
+.DS_Store
+*.pyc
+*.pyo
+apivenv/
+.venv/
+env
+.env.docker
+/logs/
+.env.dev
+.env.prod
+.env.test
+test.db
