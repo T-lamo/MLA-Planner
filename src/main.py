@@ -1,6 +1,45 @@
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="MLA App")
+import uvicorn
+from fastapi import FastAPI
+from sqlmodel import Session
+
+from conf.db.database import Database
+from conf.db.seed.seed_service import SeedService
+
+# from routes import router
+# from core import register_exception_handlers
+from core.settings import settings
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # Initialisation de la base de données au démarrage de l'application
+    Database.init_db()
+    # Database._recreate_db()
+
+    with Session(Database.get_engine()) as session:
+        SeedService(session).run()
+    # Recréer la base de données (supprimer et recréer les tables si besoin)
+    yield
+    Database.disconnect()
+
+
+# Deactivate docs in production
+app = FastAPI(
+    title="DigiChees API",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url=None if settings.ENV == "prod" else "/docs",
+    redoc_url=None if settings.ENV == "prod" else "/redoc",
+)
+
+# app.include_router(router)
+# register_exception_handlers(app)
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
 
 
 @app.get("/healthcheck")

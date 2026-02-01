@@ -10,8 +10,13 @@ from mla_enum import VoixEnum
 from .activite_model import ActiviteBase
 from .affectation_context_model import AffectationContexteBase
 from .affectation_role_model import AffectationRoleBase
+from .campus_model import CampusBase
+from .chantre_model import ChantreBase
+from .indisponibilite_model import IndisponibiliteBase
 from .membre_model import MembreBase
 from .ministere_model import MinistereBase
+from .organisationicc_model import OrganisationICCBase
+from .pays_model import PaysBase
 from .permission_model import PermissionBase
 from .pole_model import PoleBase
 from .role_model import RoleBase
@@ -58,51 +63,55 @@ class TypeResponsabilite(SQLModel, table=True):  # type: ignore
 
 
 # -------------------------
-# Organisation
+# TABLE MODEL
 # -------------------------
-class OrganisationICC(SQLModel, table=True):  # type: ignore
+class OrganisationICC(OrganisationICCBase, table=True):  # type: ignore
     __tablename__ = "t_organisationicc"
+
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
     )
-    nom: str
-    dateCreation: str
 
+    # Relations
+    # On utilise back_populates pour l'intégrité avec la classe Pays
     pays: List["Pays"] = Relationship(back_populates="organisation")
 
 
-class Pays(SQLModel, table=True):  # type: ignore
+# -------------------------
+# TABLE MODEL
+# -------------------------
+class Pays(PaysBase, table=True):  # type: ignore
     __tablename__ = "t_pays"
 
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
     )
-    nom: str
-    code: str
+
     organisation_id: str = Field(
-        sa_column=Column(
-            ForeignKey("t_organisationicc.id", ondelete="CASCADE"), nullable=False
-        )
+        foreign_key="t_organisationicc.id", nullable=False, ondelete="CASCADE"
     )
-    organisation: Optional[OrganisationICC] = Relationship(back_populates="pays")
+
+    # Relations
+    organisation: Optional["OrganisationICC"] = Relationship(back_populates="pays")
     campus: List["Campus"] = Relationship(back_populates="pays")
 
 
-class Campus(SQLModel, table=True):  # type: ignore
+# -------------------------
+# TABLE MODEL
+# -------------------------
+class Campus(CampusBase, table=True):  # type: ignore
     __tablename__ = "t_campus"
 
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
     )
-    nom: str
-    ville: str
-    timezone: str
 
     pays_id: str = Field(
         sa_column=Column(ForeignKey("t_pays.id", ondelete="CASCADE"), nullable=False)
     )
 
-    pays: Optional[Pays] = Relationship(back_populates="campus")
+    # Relations
+    pays: Optional["Pays"] = Relationship(back_populates="campus")
     ministeres: List["Ministere"] = Relationship(back_populates="campus")
     activites: List["Activite"] = Relationship(back_populates="campus")
 
@@ -177,14 +186,11 @@ class Membre(MembreBase, table=True):  # type: ignore
 # -------------------------
 # Chantres / Choristes / Musiciens
 # -------------------------
-class Chantre(SQLModel, table=True):  # type: ignore
+class Chantre(ChantreBase, table=True):  # type: ignore
     __tablename__ = "t_chantre"
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
     )
-    dateIntegration: Optional[str] = None
-    niveau: Optional[str] = None
-
     membre_id: str = Field(
         sa_column=Column(ForeignKey("t_membre.id", ondelete="CASCADE"), nullable=False)
     )
@@ -366,19 +372,24 @@ class Affectation(SQLModel, table=True):  # type: ignore
     instrument: Optional[Instrument] = Relationship(back_populates="affectations")
 
 
-class Indisponibilite(SQLModel, table=True):  # type: ignore
+# -------------------------
+# TABLE
+# -------------------------
+class Indisponibilite(IndisponibiliteBase, table=True):  # type: ignore
     __tablename__ = "t_indisponibilite"
 
     id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
+        default_factory=lambda: str(uuid.uuid4()),
+        primary_key=True,
+        max_length=36,
     )
-    dateDebut: Optional[str] = None
-    dateFin: Optional[str] = None
-    motif: Optional[str] = None
-    validee: bool = False
 
     chantre_id: str = Field(
-        sa_column=Column(ForeignKey("t_chantre.id", ondelete="CASCADE"), nullable=False)
+        sa_column=Column(
+            ForeignKey("t_chantre.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        )
     )
 
     chantre: Optional[Chantre] = Relationship(back_populates="indisponibilites")
@@ -532,7 +543,7 @@ class AffectationContexte(AffectationContexteBase, table=True):  # type: ignore
         default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
     )
 
-    affectation_id: str = Field(
+    affectation_role_id: str = Field(
         sa_column=Column(
             ForeignKey("t_affectation_role.id", ondelete="CASCADE"),
             nullable=False,

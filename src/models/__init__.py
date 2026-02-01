@@ -7,6 +7,8 @@ from .affectation_context_model import *
 from .affectation_context_model import __all__ as affectation_context
 from .affectation_role_model import *
 from .affectation_role_model import __all__ as affectation_role
+from .chantre_model import *
+from .chantre_model import __all__ as chantre
 from .membre_model import *
 from .membre_model import __all__ as membres
 from .ministere_model import *
@@ -36,4 +38,5 @@ __all__: List[str] = (
     + permission_model
     + pole_model
     + voix_model
+    + chantre
 )

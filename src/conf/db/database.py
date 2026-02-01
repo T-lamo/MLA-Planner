@@ -1,3 +1,4 @@
+from sqlalchemy import text  # Import nécessaire
 from sqlmodel import Session, SQLModel, create_engine
 
 from core.settings import settings
@@ -33,10 +34,20 @@ class Database:
     @classmethod
     def _recreate_db(cls):
         """
-        ⚠️ DANGEREUX – réservé aux scripts d’administration
+        ⚠️ DANGEREUX – Supprime et recrée tout le schéma public proprement
         """
         engine = cls.get_engine()
-        SQLModel.metadata.drop_all(engine)
+
+        with engine.connect() as connection:
+            with connection.begin():
+                # On force la suppression du schéma public et on le recrée
+                # C'est la méthode la plus fiable pour nettoyer un Postgres
+                connection.execute(text("DROP SCHEMA public CASCADE;"))
+                connection.execute(text("CREATE SCHEMA public;"))
+                # On s'assure que les permissions sont correctes
+                connection.execute(text("GRANT ALL ON SCHEMA public TO public;"))
+
+        # On recrée tout via SQLModel
         SQLModel.metadata.create_all(engine)
 
     @classmethod
