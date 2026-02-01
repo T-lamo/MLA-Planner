@@ -1,5 +1,5 @@
 from sqlalchemy import text  # Import nécessaire
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, SQLModel, StaticPool, create_engine
 
 from core.settings import settings
 
@@ -10,10 +10,19 @@ class Database:
     @classmethod
     def get_engine(cls):
         if cls._engine is None:
+            url = settings.sync_database_url
+
+            # Configuration spécifique au moteur (Engine-specific)
+            # On ne vérifie pas "si on teste", mais "si le moteur est SQLite"
+            connect_args = {}
+            poolclass = None
+
+            if url.startswith("sqlite"):
+                connect_args = {"check_same_thread": False}
+                poolclass = StaticPool
+
             cls._engine = create_engine(
-                f"postgresql+psycopg2://{settings.DB_USER}:{settings.DB_PASSWORD}"
-                f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}",
-                echo=True,
+                url, connect_args=connect_args, poolclass=poolclass, echo=True
             )
         return cls._engine
 
