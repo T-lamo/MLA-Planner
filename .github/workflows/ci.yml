@@ -7,9 +7,26 @@ on:
     branches: [main, develop]
 
 jobs:
-  quality:
-    name: Code Quality & Tests
+  quality_and_tests:
+    name: Quality & Integration Tests
     runs-on: ubuntu-latest
+
+    # --- LE SERVICE POSTGRES (C'est ici que la magie opère) ---
+    services:
+      db:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user_test
+          POSTGRES_PASSWORD: pass_test
+          POSTGRES_DB: mla_db_test
+        ports:
+          - 5432:5432
+        # On attend que Postgres soit prêt avant de lancer les jobs
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout code
@@ -19,34 +36,39 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip' # Accélère les builds suivants
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install black isort mypy pylint pytest pytest-cov pip-audit
+          pip install black isort mypy pylint pytest pytest-cov pip-audit psycopg2-binary
 
-      - name: Black (format check)
-        run: black --check src
+      # --- ANALYSE STATIQUE (Échoue vite si le code est moche) ---
+      - name: Black & Isort
+        run: |
+          black --check src
+          isort --check-only src --profile black
 
-      - name: Isort (import order check)
-        run: isort --check-only src --profile black
+      - name: Mypy & Pylint
+        run: |
+          mypy src
+          pylint src
 
-      - name: Mypy (type checking)
-        run: mypy src
-
-      - name: Pylint (linting)
-        run: pylint src
-
-      - name: Security audit (pip-audit)
+      - name: Security audit
         run: pip-audit --ignore-vuln CVE-2024-23342
 
+      # --- TESTS D'INTÉGRATION (Sur vraie DB) ---
       - name: Run tests + coverage
-        run: pytest --cov=src --cov-report=xml #--cov-fail-under=80
+        env:
+          # On pointe vers le service Postgres défini plus haut
+          DATABASE_URL: "postgresql+psycopg2://user_test:pass_test@localhost:5432/mla_db_test"
+          ENV: "testing"
+          JWT_SECRET_KEY: "test_secret_key_for_ci_only"
+        run: pytest --cov=src --cov-report=xml --cov-fail-under=80
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.xml
-          fail_ci_if_error: true

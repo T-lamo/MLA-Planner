@@ -16,7 +16,7 @@ class AuthRepository:
         statement = select(Utilisateur).where(Utilisateur.username == username)
         return self.db.exec(statement).first()
 
-    def get_user_by_id(self, utilisateur_id: int) -> Optional[Utilisateur]:
+    def get_user_by_id(self, utilisateur_id: str) -> Optional[Utilisateur]:
         """Récupère un utilisateur par son ID."""
         return self.db.get(Utilisateur, utilisateur_id)
 
