@@ -27,9 +27,18 @@ class ConflictException(HTTPException):
         super().__init__(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 
+class UnprocessableContent(HTTPException):
+    def __init__(self, detail: str = "Conflit"):
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=detail
+        )
+
+
 __all__ = [
     "NotFoundException",
     "BadRequestException",
     "UnauthorizedException",
     "ConflictException",
+    "UnprocessableContent",
+    "ForbiddenException",
 ]

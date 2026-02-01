@@ -1,11 +1,17 @@
-# core/auth/auth_service.py
 from typing import Any, Dict, List, Optional
 
-from fastapi import HTTPException, status
 from sqlmodel import Session
 
 from core.auth.auth_repository import AuthRepository
 from core.auth.security import create_access_token, get_password_hash, verify_password
+
+# Import de tes exceptions centralisées
+from core.exceptions import (
+    BadRequestException,
+    ForbiddenException,
+    NotFoundException,
+    UnauthorizedException,
+)
 from models import Utilisateur
 
 
@@ -30,7 +36,6 @@ class AuthService:
                 "scopes": [],
             }
 
-            # Périmètres liés à cette affectation
             for ctx in aff.contextes:
                 scope: Dict[str, Optional[str]] = {
                     "ministere_id": ctx.ministere_id,
@@ -49,18 +54,13 @@ class AuthService:
     ) -> Dict[str, Any]:
         user = self.repo.get_user_by_username(username)
 
+        # Utilisation de UnauthorizedException
         if not user or not verify_password(password, user.password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Identifiants invalides",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            raise UnauthorizedException(detail="Identifiants invalides")
 
+        # Utilisation de ForbiddenException
         if not user.actif:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Compte désactivé",
-            )
+            raise ForbiddenException(detail="Compte désactivé")
 
         token_data: Dict[str, Any] = {
             "sub": user.username,
@@ -82,27 +82,15 @@ class AuthService:
         """
         Change le mot de passe d'un utilisateur après vérification.
         """
-        # Si get_user_by_id attend un int, convertir si nécessaire
-        try:
-            user_id_int: int = int(utilisateur_id)
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="ID utilisateur invalide",
-            ) from exc
+        # On tente de récupérer l'utilisateur
+        user = self.repo.get_user_by_id(utilisateur_id)
 
-        user = self.repo.get_user_by_id(user_id_int)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Utilisateur introuvable",
-            )
+            raise NotFoundException(detail="Utilisateur introuvable")
 
+        # Utilisation de BadRequestException pour le mot de passe incorrect
         if not verify_password(current_password, user.password):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Le mot de passe actuel est incorrect",
-            )
+            raise BadRequestException(detail="Le mot de passe actuel est incorrect")
 
         hashed_new_password: str = get_password_hash(new_password)
         self.repo.update_password(user, hashed_new_password)
