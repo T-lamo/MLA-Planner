@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
 from pydantic import BaseModel, constr
 
@@ -6,6 +6,8 @@ from pydantic import BaseModel, constr
 class Token(BaseModel):
     access_token: str
     token_type: str
+    expires_at: str  # Ajouté pour le frontend
+    refresh_token: Optional[str] = None
 
 
 class TokenData(BaseModel):
