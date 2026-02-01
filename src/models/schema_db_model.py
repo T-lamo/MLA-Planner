@@ -1,5 +1,6 @@
 # models.py
 import uuid
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy import Column, ForeignKey
@@ -576,6 +577,15 @@ class AffectationContexte(AffectationContexteBase, table=True):  # type: ignore
     voix: Optional["Voix"] = Relationship()
 
 
+class TokenBlacklist(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_revoked_tokens"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    jti: str = Field(index=True, unique=True, nullable=False)
+    expires_at: datetime = Field(nullable=False)
+    revoked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 # -------------------------
 # Export
 # -------------------------
@@ -606,4 +616,5 @@ __all__ = [
     "Affectation",
     "Indisponibilite",
     "Responsabilite",
+    "TokenBlacklist",
 ]

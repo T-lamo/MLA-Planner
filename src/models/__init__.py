@@ -1,4 +1,3 @@
-import importlib
 from typing import List
 
 from .activite_model import *
@@ -26,17 +25,21 @@ from .utilisateur_model import __all__ as utilisateurs
 from .voix_model import *
 from .voix_model import __all__ as voix_model
 
+# N'oublie pas d'importer ton nouveau modèle ici si tu l'as déjà créé
+# from .token_blacklist_model import *
+# from .token_blacklist_model import __all__ as blacklist
+
 __all__: List[str] = (
-    roles
-    + utilisateurs
-    + membres
-    + schema_dbs
-    + activite
-    + affectation_context
-    + affectation_role
-    + ministre_model
-    + permission_model
-    + pole_model
-    + voix_model
-    + chantre
+    list(roles)
+    + list(utilisateurs)
+    + list(membres)
+    + list(schema_dbs)
+    + list(activite)
+    + list(affectation_context)
+    + list(affectation_role)
+    + list(ministre_model)
+    + list(permission_model)
+    + list(pole_model)
+    + list(voix_model)
+    + list(chantre)
 )
