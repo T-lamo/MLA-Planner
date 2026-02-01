@@ -191,3 +191,25 @@ def test_jwt_payload_contains_context(client: TestClient, test_admin: Utilisateu
     assert payload["sub"] == test_admin.username
     assert "context" in payload
     assert any(ctx["role"] == RoleName.ADMIN for ctx in payload["context"])
+
+
+def test_logout_and_token_invalidation(client: TestClient, test_user: Utilisateur):
+    # 1. Login pour obtenir un token
+    login_res = client.post(
+        "/auth/token", data={"username": "active_user", "password": "password123"}
+    )
+    token = login_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 2. Vérifier que le token fonctionne
+    me_res = client.get("/auth/users/me", headers=headers)
+    assert me_res.status_code == 200
+
+    # 3. Logout
+    logout_res = client.post("/auth/logout", headers=headers)
+    assert logout_res.status_code == 200
+
+    # 4. Vérifier que le token est maintenant rejeté
+    revoked_res = client.get("/auth/users/me", headers=headers)
+    assert revoked_res.status_code == 401
+    assert revoked_res.json()["detail"] == "Cette session a été fermée (déconnexion)"

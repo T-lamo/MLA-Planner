@@ -1,8 +1,9 @@
+from datetime import datetime
 from typing import Optional
 
 from sqlmodel import Session, select
 
-from models import Utilisateur
+from models import TokenBlacklist, Utilisateur
 
 
 class AuthRepository:
@@ -27,3 +28,14 @@ class AuthRepository:
         self.db.commit()
         self.db.refresh(user)
         return user
+
+    def add_to_blacklist(self, jti: str, expires_at: datetime) -> None:
+        """Enregistre un identifiant de token dans la liste noire."""
+        revoked_token = TokenBlacklist(jti=jti, expires_at=expires_at)
+        self.db.add(revoked_token)
+        self.db.commit()
+
+    def is_token_revoked(self, jti: str) -> bool:
+        """Vérifie si un JTI est présent dans la table des révocations."""
+        statement = select(TokenBlacklist).where(TokenBlacklist.jti == jti)
+        return self.db.exec(statement).first() is not None
