@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import field_validator, model_validator
+from pydantic import ConfigDict, field_validator, model_validator
 from sqlmodel import Field, SQLModel
 
 
@@ -24,7 +24,7 @@ class ActiviteBase(SQLModel):
         default=None, max_length=1000, description="Description détaillée de l'activité"
     )
 
-    campus_id: str = Field(min_length=36, max_length=36, description="UUID du campus")
+    # campus_id: str = Field(min_length=36, max_length=36, description="UUID du campus")
 
     # ======================
     # VALIDATION CHAMPS
@@ -59,7 +59,7 @@ class ActiviteUpdate(SQLModel):
     dateFin: Optional[datetime] = None
     lieu: Optional[str] = Field(None, min_length=2, max_length=255)
     description: Optional[str] = Field(None, max_length=1000)
-    campus_id: Optional[str] = Field(None, min_length=36, max_length=36)
+    # campus_id: Optional[str] = Field(None, min_length=36, max_length=36)
 
     @model_validator(mode="after")
     def validate_dates(self):
@@ -71,9 +71,7 @@ class ActiviteUpdate(SQLModel):
 
 class ActiviteRead(ActiviteBase):
     id: str
-
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)  # type: ignore
 
 
 __all__ = ["ActiviteBase", "ActiviteRead", "ActiviteUpdate", "ActiviteCreate"]
