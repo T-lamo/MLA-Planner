@@ -47,7 +47,7 @@ def test_login_flow(
 def test_login_missing_fields(client: TestClient):
     """Vérifie que l'envoi de champs incomplets retourne une erreur 422."""
     response = client.post("/auth/token", data={"username": "only_user"})
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 # --- TESTS DE RÉCUPÉRATION DE PROFIL (ME) ---

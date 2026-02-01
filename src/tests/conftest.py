@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, select
@@ -12,6 +14,21 @@ from models import AffectationRole, Role, Utilisateur
 
 # On récupère l'engine configuré par notre factory (Postgres en local ou CI)
 engine = Database.get_engine()
+
+# --- PROTECTION CRITIQUE ---
+engine = Database.get_engine()
+db_url = str(engine.url)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def force_test_db():
+    """Vérifie qu'on n'écrase pas la base de prod ou de dev par erreur."""
+    if "test" not in db_url.lower() and os.getenv("ENV") != "testing":
+        pytest.exit(
+            f"\n❌ ERREUR DE SÉCURITÉ : Les tests pointent sur une base non-test : {db_url}\n"
+            "Action : Crée une DB dédiée (ex: mla_test_db) ou utilise DATABASE_URL en"
+            "ligne de commande."
+        )
 
 
 @pytest.fixture(scope="session", autouse=True)
