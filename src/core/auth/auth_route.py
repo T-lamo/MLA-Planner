@@ -95,3 +95,18 @@ async def read_users_me(
 async def test_admin_route() -> dict[str, str]:
     """Route de test accessible uniquement aux administrateurs."""
     return {"message": "Bienvenue, Administrateur."}
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout(
+    current_user: Utilisateur = Depends(get_current_active_user),
+    service: AuthService = Depends(get_auth_service),
+):
+    """Révoque le token actuel de l'utilisateur."""
+    # On récupère le payload stocké par la dépendance
+    payload = getattr(current_user, "_current_token_payload", None)
+    if not payload:
+        raise HTTPException(status_code=400, detail="Impossible de révoquer le token")
+
+    service.logout(payload)
+    return {"message": "Déconnexion réussie"}
