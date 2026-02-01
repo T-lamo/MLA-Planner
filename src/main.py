@@ -7,9 +7,9 @@ from sqlmodel import Session
 from conf.db.database import Database
 from conf.db.seed.seed_service import SeedService
 
-# from routes import router
 # from core import register_exception_handlers
 from core.settings import settings
+from routes import router
 
 
 @asynccontextmanager
@@ -34,7 +34,7 @@ app = FastAPI(
     redoc_url=None if settings.ENV == "prod" else "/redoc",
 )
 
-# app.include_router(router)
+app.include_router(router)
 # register_exception_handlers(app)
 
 

@@ -1,24 +1,12 @@
-from datetime import timedelta
-from typing import Annotated
+# core/auth/auth_service.py
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jwt.exceptions import InvalidTokenError
-from pydantic import constr
 from sqlmodel import Session
 
 from core.auth.auth_repository import AuthRepository
-from core.auth.security import (
-    create_access_token,
-    decode_token,
-    get_password_hash,
-    verify_password,
-)
-from core.exceptions import BadRequestException
-from core.settings import settings as stng
+from core.auth.security import create_access_token, get_password_hash, verify_password
 from models import Utilisateur
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
 class AuthService:
@@ -26,91 +14,95 @@ class AuthService:
         self.db = db
         self.repo = AuthRepository(db)
 
-    # --- LOGIN / JWT ---
-    def authenticate_user(self, username: str, password: str) -> Utilisateur | None:
-        user = self.repo.get_user_by_username(username)
-        if not user or not verify_password(password, user.password):
-            return None
-        return user
+    def _build_user_context(self, user: Utilisateur) -> List[Dict[str, Any]]:
+        """Extrait les rôles et leurs contextes (Ministère, Pôle, Activite)"""
+        contexts: List[Dict[str, Any]] = []
 
-    def login_for_access_token(self, username: str, password: str) -> dict:
-        user = self.authenticate_user(username, password)
-        if not user:
+        for aff in user.affectations:
+            role_code: Optional[str] = aff.role.libelle if aff.role else None
+            permissions: List[str] = (
+                [p.code for p in aff.role.permissions] if aff.role else []
+            )
+
+            role_info: Dict[str, Any] = {
+                "role": role_code,
+                "permissions": permissions,
+                "scopes": [],
+            }
+
+            # Périmètres liés à cette affectation
+            for ctx in aff.contextes:
+                scope: Dict[str, Optional[str]] = {
+                    "ministere_id": ctx.ministere_id,
+                    "pole_id": ctx.pole_id,
+                    "activite_id": ctx.activite_id,
+                    "voix_id": getattr(ctx, "voix_id", None),
+                }
+                role_info["scopes"].append(scope)
+
+            contexts.append(role_info)
+
+        return contexts
+
+    def authenticate_and_create_token(
+        self, username: str, password: str
+    ) -> Dict[str, Any]:
+        user = self.repo.get_user_by_username(username)
+
+        if not user or not verify_password(password, user.password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
+                detail="Identifiants invalides",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        access_token = create_access_token(
-            data={"sub": user.username},
-            expires_delta=timedelta(minutes=stng.ACCESS_TOKEN_EXPIRE_MINUTES),
-        )
-        return {"access_token": access_token, "token_type": "bearer"}
 
-    # --- CURRENT USER ---
-    def get_current_user(self, token: str) -> Utilisateur:
-        credentials_exception = HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-        try:
-            payload = decode_token(token)
-            username = payload.get("sub")
-            if not username:
-                raise credentials_exception
-        except InvalidTokenError as exc:
-            raise credentials_exception from exc
-
-        user = self.repo.get_user_by_username(username)
-        if not user:
-            raise credentials_exception
-        return user
-
-    def get_current_active_user(self, token: str) -> Utilisateur:
-        user = self.get_current_user(token)
-        print(user)
         if not user.actif:
-            raise HTTPException(status_code=400, detail="Inactive user")
-        return user
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Compte désactivé",
+            )
 
-    # --- CHANGE PASSWORD ---
+        token_data: Dict[str, Any] = {
+            "sub": user.username,
+            "user_id": user.id,
+            "context": self._build_user_context(user),
+        }
+
+        token, expire = create_access_token(data=token_data)
+
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "expires_at": expire.isoformat(),
+        }
+
     def change_password(
-        self,
-        utilisateur_id: int,
-        current_password: str,
-        new_password: Annotated[str, constr(min_length=6)],
+        self, utilisateur_id: str, current_password: str, new_password: str
     ) -> None:
         """
-        Change le mot de passe d'un utilisateur.
-        Vérifie le mot de passe actuel avant d'appliquer le nouveau.
+        Change le mot de passe d'un utilisateur après vérification.
         """
-        user = self.repo.get_user_by_id(utilisateur_id)
-        if not user:
-            raise BadRequestException("Utilisateur introuvable")
-
-        # Vérifier mot de passe actuel
-        if not verify_password(current_password, user.password):
-            raise BadRequestException("Mot de passe actuel incorrect")
-
-        # Hash et update via le repo
-        hashed = get_password_hash(new_password)
-        self.repo.update_password(user, hashed)
-
-    def authenticate_and_create_token(self, username, password):
-        user = self.repo.get_user_by_username(username)
-
-        # Le bloc que Pylint a repéré
-        if not user or not verify_password(password, user.hashed_password):
+        # Si get_user_by_id attend un int, convertir si nécessaire
+        try:
+            user_id_int: int = int(utilisateur_id)
+        except ValueError as exc:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="ID utilisateur invalide",
+            ) from exc
+
+        user = self.repo.get_user_by_id(user_id_int)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Utilisateur introuvable",
             )
 
-        access_token = create_access_token(
-            data={"sub": user.username},
-            expires_delta=timedelta(minutes=stng.ACCESS_TOKEN_EXPIRE_MINUTES),
-        )
+        if not verify_password(current_password, user.password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Le mot de passe actuel est incorrect",
+            )
 
-        return {"access_token": access_token, "token_type": "bearer"}
+        hashed_new_password: str = get_password_hash(new_password)
+        self.repo.update_password(user, hashed_new_password)
