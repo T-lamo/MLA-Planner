@@ -18,28 +18,44 @@ def get_current_active_user(
     token: str = Depends(OAuth2PasswordBearer(tokenUrl="/auth/token")),
 ) -> Utilisateur:
     try:
+        # 1. Décodage du payload
         payload = jwt.decode(
             token, stng.JWT_SECRET_KEY, algorithms=[stng.JWT_ALGORITHM]
         )
 
         username = payload.get("sub")
+        jti = payload.get("jti")  # <-- Nouvel identifiant du token
 
-        if not isinstance(username, str):
+        # 2. Tes validations strictes sur le format du token
+        if not isinstance(username, str) or username is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token invalide: sub manquant",
+                detail="Token invalide: sub manquant ou incorrect",
             )
 
-        if username is None:
+        if not jti:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token invalide"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token invalide: jti manquant",
             )
+
     except JWTError as exc:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Session expirée"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expirée ou corrompue",
         ) from exc
 
     repo = AuthRepository(db)
+
+    # 3. VERIFICATION DE LA BLACKLIST (Logout)
+    # On vérifie avant de charger l'utilisateur pour économiser une requête si révoqué
+    if repo.is_token_revoked(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Cette session a été fermée (déconnexion)",
+        )
+
+    # 4. Récupération de l'utilisateur
     user = repo.get_user_by_username(username)
 
     if not user:
@@ -47,11 +63,15 @@ def get_current_active_user(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Utilisateur introuvable"
         )
 
-    # Validation stricte du statut actif en DB (pas seulement dans le token)
+    # 5. Ta validation stricte du statut actif
     if not user.actif:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Utilisateur inactif"
         )
+
+    # Astuce : On stocke le payload dans l'objet user pour que l'endpoint /logout
+    # puisse y accéder sans avoir à redécoder le token.
+    setattr(user, "_current_token_payload", payload)
 
     return user
 

@@ -1,4 +1,5 @@
 # core/auth/security.py
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
@@ -28,11 +29,7 @@ def create_access_token(
 
     # Standard Claims (RFC 7519)
     to_encode.update(
-        {
-            "exp": expire,
-            "iat": datetime.now(timezone.utc),
-            "jti": str(datetime.now().timestamp()),  # Identifiant unique du token
-        }
+        {"exp": expire, "iat": datetime.now(timezone.utc), "jti": str(uuid.uuid4())}
     )
 
     encoded_jwt = jwt.encode(

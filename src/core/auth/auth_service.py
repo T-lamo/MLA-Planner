@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from sqlmodel import Session
@@ -94,3 +95,19 @@ class AuthService:
 
         hashed_new_password: str = get_password_hash(new_password)
         self.repo.update_password(user, hashed_new_password)
+
+    def logout(self, token_payload: dict) -> None:
+        """
+        Invalide un token en extrayant son JTI et sa date d'expiration.
+        """
+        jti = token_payload.get("jti")
+        exp_timestamp = token_payload.get("exp")
+
+        if not jti or not exp_timestamp:
+            raise BadRequestException(detail="Token invalide pour la déconnexion")
+
+        # Conversion du timestamp JWT en objet datetime
+        expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
+
+        # Appel au repository pour la persistance
+        self.repo.add_to_blacklist(jti=jti, expires_at=expires_at)
