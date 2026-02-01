@@ -1,6 +1,7 @@
 from typing import Annotated, Optional
 
 from pydantic import BaseModel, constr
+from sqlmodel import Field
 
 
 class Token(BaseModel):
@@ -16,4 +17,4 @@ class TokenData(BaseModel):
 
 class PasswordChangeRequest(BaseModel):
     current_password: Annotated[str, constr(min_length=6)]
-    new_password: Annotated[str, constr(min_length=6)]
+    new_password: str = Field(min_length=6, max_length=128)
