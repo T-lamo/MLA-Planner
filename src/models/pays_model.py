@@ -1,7 +1,9 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
+
+from models.campus_model import CampusRead
 
 
 # -------------------------
@@ -60,12 +62,7 @@ class PaysRead(PaysBase):
     id: str
     organisation_id: str
     # On peut ajouter le compte des campus pour les statistiques
-    campus_count: Optional[int] = 0
+    campus: List[CampusRead]
 
 
-__all__ = [
-    "PaysBase",
-    "PaysUpdate",
-    "PaysRead",
-    "PaysCreate",
-]
+__all__ = ["PaysBase", "PaysUpdate", "PaysRead", "PaysCreate"]

@@ -1,28 +1,33 @@
 from typing import List
 
-from .activite_model import *
+from .activite_model import *  # noqa: F401,F403
 from .activite_model import __all__ as activite
-from .affectation_context_model import *
+from .affectation_context_model import *  # noqa: F401,F403
 from .affectation_context_model import __all__ as affectation_context
-from .affectation_role_model import *
+from .affectation_role_model import *  # noqa: F401,F403
 from .affectation_role_model import __all__ as affectation_role
-from .chantre_model import *
+from .base_pagination import *  # noqa: F401,F403
+from .chantre_model import *  # noqa: F401,F403
 from .chantre_model import __all__ as chantre
-from .membre_model import *
+from .membre_model import *  # noqa: F401,F403
 from .membre_model import __all__ as membres
-from .ministere_model import *
+from .ministere_model import *  # noqa: F401,F403
 from .ministere_model import __all__ as ministre_model
-from .permission_model import *
+from .organisationicc_model import *  # noqa: F401,F403
+from .organisationicc_model import __all__ as organisation
+from .pays_model import *  # noqa: F401,F403
+from .pays_model import __all__ as pays
+from .permission_model import *  # noqa: F401,F403
 from .permission_model import __all__ as permission_model
-from .pole_model import *
+from .pole_model import *  # noqa: F401,F403
 from .pole_model import __all__ as pole_model
-from .role_model import *
+from .role_model import *  # noqa: F401,F403
 from .role_model import __all__ as roles
-from .schema_db_model import *
+from .schema_db_model import *  # noqa: F401,F403
 from .schema_db_model import __all__ as schema_dbs
-from .utilisateur_model import *
+from .utilisateur_model import *  # noqa: F401,F403
 from .utilisateur_model import __all__ as utilisateurs
-from .voix_model import *
+from .voix_model import *  # noqa: F401,F403
 from .voix_model import __all__ as voix_model
 
 # N'oublie pas d'importer ton nouveau modèle ici si tu l'as déjà créé
@@ -42,4 +47,6 @@ __all__: List[str] = (
     + list(pole_model)
     + list(voix_model)
     + list(chantre)
+    + list(organisation)
+    + list(pays)
 )

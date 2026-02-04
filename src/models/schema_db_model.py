@@ -88,8 +88,11 @@ class Pays(PaysBase, table=True):  # type: ignore
         default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
     )
 
-    organisation_id: str = Field(
-        foreign_key="t_organisationicc.id", nullable=False, ondelete="CASCADE"
+    organisation_id: Optional[str] = Field(
+        default=None,
+        sa_column=Column(
+            ForeignKey("t_organisationicc.id", ondelete="SET NULL"), nullable=True
+        ),
     )
 
     # Relations
@@ -163,14 +166,21 @@ class Membre(MembreBase, table=True):  # type: ignore
         default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
     )
     dateInscription: Optional[str] = None
-    ministere_id: str = Field(
+    # Modification ici : Optional[str] et nullable=True
+    ministere_id: Optional[str] = Field(
+        default=None,
         sa_column=Column(
-            ForeignKey("t_ministere.id", ondelete="CASCADE"), nullable=False
-        )
+            ForeignKey(
+                "t_ministere.id", ondelete="SET NULL"
+            ),  # SET NULL est plus logique ici
+            nullable=True,
+        ),
     )
 
-    pole_id: str = Field(
-        sa_column=Column(ForeignKey("t_pole.id", ondelete="CASCADE"), nullable=False)
+    # Modification ici : Optional[str] et nullable=True
+    pole_id: Optional[str] = Field(
+        default=None,
+        sa_column=Column(ForeignKey("t_pole.id", ondelete="SET NULL"), nullable=True),
     )
 
     ministere: Optional[Ministere] = Relationship(back_populates="membres")
@@ -314,7 +324,7 @@ class PlanningService(SQLModel, table=True):  # type: ignore
     id: str = Field(
         default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
     )
-    dateCreation: Optional[str] = None
+    date_creation: Optional[str] = None
 
     statut_code: str = Field(
         sa_column=Column(

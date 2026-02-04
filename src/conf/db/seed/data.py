@@ -22,7 +22,7 @@ PERMISSIONS = {
 }
 
 # --- GEOGRAPHIE ---
-SEED_ORGANISATIONS = [{"nom": "ICC Europe", "dateCreation": "2010-01-01"}]
+SEED_ORGANISATIONS = [{"nom": "ICC Europe", "date_creation": "2010-01-01"}]
 SEED_PAYS = [{"nom": "France", "code": "FR", "org_nom": "ICC Europe"}]
 SEED_CAMPUS = [
     {
