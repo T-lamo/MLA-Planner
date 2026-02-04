@@ -236,7 +236,7 @@ class SeedService:
             d["nom"]: self._get_or_create(
                 OrganisationICC,
                 nom=d["nom"],
-                defaults={"dateCreation": d["dateCreation"]},
+                defaults={"date_creation": d["date_creation"]},
             )[0]
             for d in SEED_ORGANISATIONS
         }
@@ -328,8 +328,8 @@ class SeedService:
                 defaults={"role": "Chantre", "principal": True},
             )
 
-    def _seed_roles(self, l):
-        return {r: self._get_or_create(Role, libelle=r)[0] for r in l}
+    def _seed_roles(self, lib):
+        return {r: self._get_or_create(Role, libelle=r)[0] for r in lib}
 
     def _seed_permissions(self, d):
         return {

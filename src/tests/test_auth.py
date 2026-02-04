@@ -11,7 +11,8 @@ from core.settings import settings as stng
 from mla_enum import RoleName
 from models import Utilisateur
 
-# pylint: disable=redefined-outer-name, unused-argument, too-many-arguments, too-many-positional-arguments
+# pylint: disable=redefined-outer-name, unused-argument, too-many-arguments
+# pylint: disable = too-many-positional-arguments
 
 
 # --- TESTS DE CONNEXION (LOGIN) ---
@@ -26,12 +27,19 @@ from models import Utilisateur
         ("banned_user", "password123", status.HTTP_403_FORBIDDEN),
     ],
 )
+# pylint: disable=too-many-arguments
 def test_login_flow(
-    client: TestClient, test_user, inactive_user, username, password, expected_status  # type: ignore # pylint: disable=too-many-arguments
+    client: TestClient,
+    test_user,
+    inactive_user,
+    username,
+    password,
+    expected_status,  # type: ignore
 ):
     """
     Teste les différents scénarios de login.
-    Note: On injecte test_user et inactive_user pour qu'ils soient présents en DB.
+    Note: On injecte test_user et inactive_user
+    pour qu'ils soient présents en DB.
     """
     response = client.post(
         "/auth/token", data={"username": username, "password": password}
@@ -151,7 +159,8 @@ def test_password_rotation_invalidates_old_login(
 def test_active_status_middleware_enforcement(
     client: TestClient, test_user: Utilisateur, session: Session
 ):
-    """Vérifie que le middleware bloque un utilisateur désactivé même avec un token valide."""
+    """Vérifie que le middleware bloque un utilisateur
+    désactivé même avec un token valide."""
     token, _ = create_access_token(data={"sub": test_user.username})
     headers = {"Authorization": f"Bearer {token}"}
 
