@@ -7,6 +7,8 @@ from .affectation_context_model import __all__ as affectation_context
 from .affectation_role_model import *  # noqa: F401,F403
 from .affectation_role_model import __all__ as affectation_role
 from .base_pagination import *  # noqa: F401,F403
+from .campus_model import *  # noqa: F401,F403
+from .campus_model import __all__ as campus
 from .chantre_model import *  # noqa: F401,F403
 from .chantre_model import __all__ as chantre
 from .membre_model import *  # noqa: F401,F403
@@ -49,4 +51,5 @@ __all__: List[str] = (
     + list(chantre)
     + list(organisation)
     + list(pays)
+    + list(campus)
 )
