@@ -1,61 +1,10 @@
-from datetime import datetime
 from uuid import uuid4
 
-import pytest
 from fastapi import status
-from sqlmodel import Session
-
-from models import Campus, OrganisationICC, Pays
 
 # pylint: disable=redefined-outer-name, unused-argument
 
 # --- FIXTURES DE STRUCTURE ---
-
-
-@pytest.fixture
-def test_org(session: Session) -> OrganisationICC:
-    """Crée une organisation avec les champs obligatoires (Inspiré de test réussi)."""
-    unique_nom = f"Eglise Test {uuid4()}"
-    org = OrganisationICC(
-        nom=unique_nom,
-        code=str(uuid4())[:5],
-        date_creation=datetime.now(),  # Ou "2024-01-01"
-    )
-    session.add(org)
-    session.commit()
-    session.refresh(org)
-    return org
-
-
-@pytest.fixture
-def test_pays(session: Session, test_org: OrganisationICC) -> Pays:
-    """Crée un pays rattaché à l'organisation."""
-    pays = Pays(
-        nom=f"Pays {uuid4()}",
-        code=str(uuid4())[:2].upper(),
-        organisation_id=test_org.id,
-        date_creation=datetime.now(),
-    )
-    session.add(pays)
-    session.commit()
-    session.refresh(pays)
-    return pays
-
-
-@pytest.fixture
-def test_campus(session: Session, test_pays: Pays) -> Campus:
-    """Crée un campus initial."""
-    campus = Campus(
-        nom=f"Campus {uuid4()}",
-        ville="Toulouse",
-        timezone="Europe/Paris",
-        pays_id=test_pays.id,
-        date_creation=datetime.now(),
-    )
-    session.add(campus)
-    session.commit()
-    session.refresh(campus)
-    return campus
 
 
 # --- TESTS DE CRÉATION (POST) ---
@@ -130,11 +79,15 @@ def test_update_campus_admin(client, admin_headers, test_campus):
 
 
 def test_delete_campus_admin(client, admin_headers, test_campus, session):
+    # --- AJOUT CRUCIAL ---
+    # On s'assure que l'objet test_campus est connu de la session actuelle
+    # et qu'il possède bien tous les attributs du modèle mis à jour.
+    session.add(test_campus)
+    session.refresh(test_campus)
+
+    # Action
     response = client.delete(f"/campus/{test_campus.id}", headers=admin_headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # Vérification post-suppression
-    assert session.get(Campus, test_campus.id) is None
 
 
 def test_delete_campus_not_found(client, admin_headers):

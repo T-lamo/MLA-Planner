@@ -8,13 +8,12 @@ from .affectation_role_model import *  # noqa: F401,F403
 from .affectation_role_model import __all__ as affectation_role
 from .base_pagination import *  # noqa: F401,F403
 from .campus_model import *  # noqa: F401,F403
-from .campus_model import __all__ as campus
 from .chantre_model import *  # noqa: F401,F403
 from .chantre_model import __all__ as chantre
 from .membre_model import *  # noqa: F401,F403
 from .membre_model import __all__ as membres
 from .ministere_model import *  # noqa: F401,F403
-from .ministere_model import __all__ as ministre_model
+from .ministere_model import __all__ as ministere
 from .organisationicc_model import *  # noqa: F401,F403
 from .organisationicc_model import __all__ as organisation
 from .pays_model import *  # noqa: F401,F403
@@ -44,12 +43,11 @@ __all__: List[str] = (
     + list(activite)
     + list(affectation_context)
     + list(affectation_role)
-    + list(ministre_model)
+    + list(ministere)
     + list(permission_model)
     + list(pole_model)
     + list(voix_model)
     + list(chantre)
     + list(organisation)
     + list(pays)
-    + list(campus)
 )

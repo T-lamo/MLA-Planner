@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import field_validator
+from pydantic import computed_field, field_validator
 from sqlmodel import Field, SQLModel
 
 
@@ -8,13 +8,13 @@ from sqlmodel import Field, SQLModel
 # BASE
 # -------------------------
 class MinistereBase(SQLModel):
-    nom: str = Field(max_length=100)
+    nom: str = Field(max_length=100, unique=True, index=True)
     date_creation: str
     actif: bool = True
 
     @field_validator("nom")
     @classmethod
-    def nom_not_blank(cls, v: str):
+    def nom_not_blank(cls, v: str) -> str:
         if not v.strip():
             raise ValueError("Le nom du ministère ne peut pas être vide")
         return v
@@ -24,7 +24,7 @@ class MinistereBase(SQLModel):
 # CREATE
 # -------------------------
 class MinistereCreate(MinistereBase):
-    campus_id: str  # obligatoire pour créer un ministère
+    campus_id: str
 
 
 # -------------------------
@@ -32,10 +32,28 @@ class MinistereCreate(MinistereBase):
 # -------------------------
 class MinistereRead(MinistereBase):
     id: str
-    # campus: Optional[CampusRead] = None
-    poles_count: Optional[int] = 0
-    membres_count: Optional[int] = 0
-    equipes_count: Optional[int] = 0
+    campus_id: str
+
+    # SOLUTION POUR MYPY : Utiliser @computed_field seul (sans @property)
+    # ou s'assurer qu'il est supporté. En Pydantic V2, @computed_field
+    # est conçu pour décorer une property. L'erreur vient souvent de la
+    # version de l'extension Mypy ou de l'ordre.
+    # Alternative compatible Mypy :
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def poles_count(self) -> int:
+        return len(getattr(self, "poles", []))
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def membres_count(self) -> int:
+        return len(getattr(self, "membres", []))
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def equipes_count(self) -> int:
+        return len(getattr(self, "equipes", []))
 
 
 # -------------------------
@@ -45,16 +63,16 @@ class MinistereUpdate(SQLModel):
     nom: Optional[str] = None
     date_creation: Optional[str] = None
     actif: Optional[bool] = None
-    # campus_id: Optional[str] = None
 
     @field_validator("nom")
     @classmethod
-    def nom_not_blank(cls, v):
+    def nom_not_blank(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and not v.strip():
             raise ValueError("Le nom du ministère ne peut pas être vide")
         return v
 
 
+# CRUCIAL : Ajouter "Ministere" ici pour que le Repository puisse l'importer !
 __all__ = [
     "MinistereBase",
     "MinistereCreate",

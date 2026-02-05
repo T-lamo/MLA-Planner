@@ -15,6 +15,9 @@ class BaseRepository(Generic[T]):
     def _get_base_query(self, load_relations: Optional[List[Any]] = None):
         """Construit la requête de base avec ou sans relations."""
         statement = select(self.model)
+        # Filtre global pour exclure les soft-deleted des résultats API
+        if hasattr(self.model, "deleted_at"):
+            statement = statement.where(cast(Any, self.model).deleted_at.is_(None))
         if load_relations:
             for rel in load_relations:
                 statement = statement.options(selectinload(rel))
@@ -33,7 +36,9 @@ class BaseRepository(Generic[T]):
         # SQLModel utilise des métaclasses, ce qui rend l'accès
         # direct difficile pour le linting statique
         model_id = cast(Any, self.model).id
-        statement = self._get_base_query(load_relations).where(model_id == identifiant)
+        statement = self._get_base_query(load_relations).where(
+            model_id == str(identifiant)
+        )
         return self.db.exec(statement).unique().first()
 
     def get_paginated(

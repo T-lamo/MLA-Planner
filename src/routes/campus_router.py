@@ -1,21 +1,8 @@
-from fastapi import Depends
-
-from core.auth.auth_dependencies import RoleChecker
 from models.campus_model import CampusCreate, CampusRead, CampusUpdate
+from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.campus_service import CampusService
 
 from .base_route_factory import CRUDRouterFactory
-
-# Définition des dépendances de rôles
-admin_only = Depends(RoleChecker(["ADMIN"]))
-
-# Configuration des accès : Create/Update/Delete réservés aux Admins
-campus_deps = {
-    "create": [admin_only],
-    "update": [admin_only],
-    "delete": [admin_only],
-    "read": [],  # Lecture publique (ou ajoutez une dépendance si besoin)
-}
 
 # Génération automatique du router via la Factory
 campus_factory = CRUDRouterFactory(
@@ -25,7 +12,7 @@ campus_factory = CRUDRouterFactory(
     update_schema=CampusUpdate,
     path="/campus",
     tag="Campus",
-    dependencies=campus_deps,
+    dependencies=STANDARD_ADMIN_ONLY_DEPS,
 )
 
 # Export du router pour inclusion dans main.py
