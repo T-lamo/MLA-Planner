@@ -1,7 +1,11 @@
-from typing import Optional
+from datetime import date
+from typing import List, Optional
+from uuid import UUID
 
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
+
+from models.pays_model import PaysRead
 
 
 # -------------------------
@@ -15,7 +19,7 @@ class OrganisationICCBase(SQLModel):
         max_length=150,
         description="Nom officiel de l'organisation",
     )
-    dateCreation: str = Field(
+    date_creation: date = Field(
         description="Date de création (format ISO ou texte, ex: 2020-01-01)"
     )
 
@@ -48,9 +52,10 @@ class OrganisationICCUpdate(SQLModel):
 # READ
 # -------------------------
 class OrganisationICCRead(OrganisationICCBase):
-    id: str
+    id: UUID  # Plus robuste que str
+    date_creation: date  # Permet
     # Optionnel: on peut inclure le nombre de pays rattachés
-    pays_count: Optional[int] = 0
+    pays: List["PaysRead"]
 
 
 __all__ = [

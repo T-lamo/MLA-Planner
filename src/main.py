@@ -2,10 +2,8 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
-from sqlmodel import Session
 
 from conf.db.database import Database
-from conf.db.seed.seed_service import SeedService
 
 # from core import register_exception_handlers
 from core.settings import settings
@@ -16,8 +14,7 @@ from routes import router
 async def lifespan(_app: FastAPI):
     # Initialisation de la base de données au démarrage de l'application
     Database.init_db()
-    with Session(Database.get_engine()) as session:
-        SeedService(session).run()
+
     yield
     Database.disconnect()
 

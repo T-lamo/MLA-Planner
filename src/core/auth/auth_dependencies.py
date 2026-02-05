@@ -94,9 +94,6 @@ class RoleChecker:
             if aff.role
         ]
 
-        print("allow role", self.allowed_roles)
-        print("user role", user_roles)
-
         if not any(role in self.allowed_roles for role in user_roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

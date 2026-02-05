@@ -5,11 +5,13 @@ init-hook='import sys; sys.path.append("src")'
 # On désactive les alertes de docstrings et les limites de méthodes
 # C0114, C0115, C0116 : Docstrings manquantes
 # R0903 : Trop peu de méthodes publiques (typique des modèles SQLModel/Pydantic)
+# R0913 : Trop d'arguments positionnels (utile pour pytest fixtures)
 disable=
     C0114,
     C0115,
     C0116,
     R0903,
+    R0913,
     logging-fstring-interpolation
 
 [BASIC]
