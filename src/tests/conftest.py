@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, select
 
 from conf.db.database import Database
-from core.auth.security import get_password_hash
+from core.auth.security import create_access_token, get_password_hash
 from main import app
 from mla_enum import RoleName
 from models import AffectationRole, Role, Utilisateur
@@ -25,9 +25,10 @@ def force_test_db():
     """Vérifie qu'on n'écrase pas la base de prod ou de dev par erreur."""
     if "test" not in db_url.lower() and os.getenv("ENV") != "testing":
         pytest.exit(
-            f"\n❌ ERREUR DE SÉCURITÉ : Les tests pointent sur une base non-test : {db_url}\n"
-            "Action : Crée une DB dédiée (ex: mla_test_db) ou utilise DATABASE_URL en"
-            "ligne de commande."
+            f"\n❌ ERREUR DE SÉCURITÉ : Les tests pointent sur"
+            f"une base non-test : {db_url}\n"
+            "Action : Crée une DB dédiée (ex: mla_test_db) ou utilise "
+            "DATABASE_URL en ligne de commande."
         )
 
 
@@ -39,7 +40,8 @@ def setup_database():
     # Création des tables sur le vrai Postgres
     SQLModel.metadata.create_all(engine)
     yield
-    # Optionnel : on peut drop à la fin, mais en CI le container est détruit de toute façon
+    # Optionnel : on peut drop à la fin, mais en CI le
+    # container est détruit de toute façon
     SQLModel.metadata.drop_all(engine)
 
 
@@ -148,3 +150,21 @@ def inactive_user(session: Session) -> Utilisateur:
         session.commit()
         session.refresh(user)
     return user
+
+
+@pytest.fixture
+def admin_headers(test_admin):
+    # Remplace par ta vraie fonction de création de token
+    token, _ = create_access_token(data={"sub": test_admin.username})
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def user_headers(test_user):
+    token, _ = create_access_token(
+        data={
+            "sub": test_user.username,
+            "user_id": str(test_user.id),
+        }
+    )
+    return {"Authorization": f"Bearer {token}"}

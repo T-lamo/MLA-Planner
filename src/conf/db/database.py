@@ -35,7 +35,8 @@ class Database:
     @classmethod
     def init_db(cls):
         # pylint: disable=import-outside-toplevel
-        from models import __all__ as models  # pylint: disable=unused-import
+        # pylint: disable=unused-import
+        from models import __all__ as models  # noqa: F401
 
         engine = cls.get_engine()
         SQLModel.metadata.create_all(engine)
