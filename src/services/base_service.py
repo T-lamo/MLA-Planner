@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any, Generic, TypeVar
 
 from sqlalchemy.exc import IntegrityError
@@ -35,11 +36,27 @@ class BaseService(Generic[C, R, U, T]):
         return PaginatedResponse[R](total=total, limit=limit, offset=offset, data=items)
 
     def delete(self, identifiant: str) -> None:
+        """Logique de Soft Delete générique."""
         obj = self.get_one(identifiant)
+
+        update_data: dict[str, Any] = {}
+        if hasattr(obj, "deleted_at"):
+            update_data["deleted_at"] = datetime.now()
+
+        for field in ["actif", "active"]:
+            if hasattr(obj, field):
+                update_data[field] = False
         try:
-            self.repo.delete(obj)
+            self.repo.update(obj, update_data)
+            # On délègue la suite (les cascades) à une méthode spécialisée
+            self._after_delete_hook(obj)
         except IntegrityError as exc:
             raise BadRequestException(
-                f"Suppression impossible : le record '{self.resource_name}' "
-                "est lié à d'autres données."
+                f"Action impossible sur {self.resource_name}"
             ) from exc
+
+    def _after_delete_hook(self, obj: T) -> None:
+        """
+        Hook destiné à être surchargé dans les services enfants
+        pour gérer les cascades spécifiques.
+        """
