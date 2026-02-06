@@ -9,7 +9,16 @@ from conf.db.database import Database
 from core.auth.security import create_access_token, get_password_hash
 from main import app
 from mla_enum import RoleName
-from models import AffectationRole, Campus, OrganisationICC, Pays, Role, Utilisateur
+from models import (
+    AffectationRole,
+    Campus,
+    Ministere,
+    OrganisationICC,
+    Pays,
+    Pole,
+    Role,
+    Utilisateur,
+)
 
 # pylint: disable=redefined-outer-name
 
@@ -212,3 +221,35 @@ def test_campus(session: Session, test_pays: Pays) -> Campus:
     session.commit()
     session.refresh(campus)
     return campus
+
+
+@pytest.fixture
+def test_ministere(session: Session, test_campus: Campus) -> Ministere:
+    """Fixture pour créer un ministère lié à un campus."""
+
+    ministere = Ministere(
+        nom=f"Ministere {uuid4()}",
+        date_creation="2024-01-01",
+        campus_id=test_campus.id,
+        actif=True,
+    )
+    session.add(ministere)
+    session.commit()
+    session.refresh(ministere)
+    return ministere
+
+
+@pytest.fixture
+def test_pole(session: Session, test_ministere: Ministere) -> Pole:
+    """Fixture pour créer un pôle lié à un ministère."""
+
+    pole = Pole(
+        nom=f"Pole Test {uuid4()}",
+        description="Description test",
+        ministere_id=test_ministere.id,
+        active=True,
+    )
+    session.add(pole)
+    session.commit()
+    session.refresh(pole)
+    return pole
