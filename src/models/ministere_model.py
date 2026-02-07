@@ -1,7 +1,10 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import computed_field, field_validator
 from sqlmodel import Field, SQLModel
+
+from .membre_model import MembreRead
+from .pole_model import PoleRead
 
 
 # -------------------------
@@ -33,6 +36,8 @@ class MinistereCreate(MinistereBase):
 class MinistereRead(MinistereBase):
     id: str
     campus_id: str
+    poles: List["PoleRead"]
+    membres: List["MembreRead"]
 
     # SOLUTION POUR MYPY : Utiliser @computed_field seul (sans @property)
     # ou s'assurer qu'il est supporté. En Pydantic V2, @computed_field
@@ -50,10 +55,10 @@ class MinistereRead(MinistereBase):
     def membres_count(self) -> int:
         return len(getattr(self, "membres", []))
 
-    @computed_field  # type: ignore[misc]
-    @property
-    def equipes_count(self) -> int:
-        return len(getattr(self, "equipes", []))
+    # @computed_field  # type: ignore[misc]
+    # @property
+    # def equipes_count(self) -> int:
+    #     return len(getattr(self, "equipes", []))
 
 
 # -------------------------

@@ -7,7 +7,6 @@ from uuid import UUID
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
-from models.ministere_model import MinistereRead
 from utils.validator import NotBlankFieldsMixin
 
 
@@ -47,7 +46,6 @@ class PoleRead(PoleBase):
     id: UUID
     # ministere_id reste présent pour le front-end
     ministere_id: UUID
-    ministere: Optional["MinistereRead"] = None
     membres_count: int = 0
 
 
@@ -80,3 +78,5 @@ __all__ = [
     "PoleRead",
     "PoleUpdate",
 ]
+
+PoleRead.model_rebuild()
