@@ -55,8 +55,7 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
 
         # Suppression physique des profils dépendants si nécessaire
         # ou Soft Delete sur eux aussi si tu veux des stats par instrument
-        if obj.chantres:
-            for chantre in obj.chantres:
-                self.db.delete(chantre)
+        if obj.chantre:
+            self.db.delete(obj.chantre)
 
         self.db.commit()

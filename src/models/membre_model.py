@@ -60,3 +60,5 @@ class MembreUpdate(SQLModel):
 
 
 __all__ = ["MembreBase", "MembreCreate", "MembreRead", "MembreUpdate"]
+
+MembreRead.model_rebuild()

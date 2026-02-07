@@ -21,16 +21,22 @@ from .permission_model import PermissionBase
 from .pole_model import PoleBase
 from .role_model import RoleBase
 from .utilisateur_model import UtilisateurBase
-from .voix_model import VoixBase
 
 
 # -------------------------
 # Tables de référence (Pas de soft delete ici)
 # -------------------------
-class Voix(VoixBase, table=True):  # type: ignore
+class Voix(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_voix"
+
+    # Le code (ex: SOPRANO) est la clé primaire
     code: VoixEnum = Field(primary_key=True)
-    choristes: List["Choriste"] = Relationship(back_populates="voix")
+    nom: str = Field(max_length=50)  # Facultatif, ex: "Soprano"
+
+    # RELATION : On pointe vers la table de liaison, pas vers Choriste directement
+    choristes_assoc: List["ChoristeVoix"] = Relationship(back_populates="voix")
+
+    # Garde tes autres relations (ex: Affectations pour le planning)
     affectations: List["Affectation"] = Relationship(back_populates="voix")
 
 
@@ -152,7 +158,9 @@ class Membre(MembreBase, table=True):  # type: ignore
     )
     ministere: Optional["Ministere"] = Relationship(back_populates="membres")
     pole: Optional["Pole"] = Relationship(back_populates="membres")
-    chantres: List["Chantre"] = Relationship(back_populates="membre")
+    chantre: Optional["Chantre"] = Relationship(
+        back_populates="membre", sa_relationship_kwargs={"uselist": False}
+    )
     responsabilites: List["Responsabilite"] = Relationship(back_populates="membre")
     equipes_assoc: List["Equipe_Membre"] = Relationship(back_populates="membre")
     utilisateur: Optional["Utilisateur"] = Relationship(
@@ -162,14 +170,23 @@ class Membre(MembreBase, table=True):  # type: ignore
 
 class Chantre(ChantreBase, table=True):  # type: ignore
     __tablename__ = "t_chantre"
-    id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
-    )
+
+    # Correction : ID en uuid.UUID pour matcher ChantreRead
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
     deleted_at: Optional[datetime] = Field(default=None, index=True)
-    membre_id: str = Field(
-        sa_column=Column(ForeignKey("t_membre.id", ondelete="CASCADE"), nullable=False)
+
+    # Correction : Sa_column pour forcer la FK proprement
+    membre_id: uuid.UUID = Field(
+        sa_column=Column(
+            ForeignKey("t_membre.id", ondelete="CASCADE"),
+            nullable=False,
+            unique=True,  # Un membre est soit chantre, soit pas, mais pas deux fois
+        )
     )
-    membre: Optional[Membre] = Relationship(back_populates="chantres")
+
+    # Relations avec typage string pour éviter les plantages d'import
+    membre: Optional["Membre"] = Relationship(back_populates="chantre")
     choristes: List["Choriste"] = Relationship(back_populates="chantre")
     musiciens: List["Musicien"] = Relationship(back_populates="chantre")
     affectations: List["Affectation"] = Relationship(back_populates="chantre")
@@ -179,21 +196,28 @@ class Chantre(ChantreBase, table=True):  # type: ignore
 # -------------------------
 # Choristes / Musiciens / Équipes
 # -------------------------
+
+
+class ChoristeVoix(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_choriste_voix"
+    choriste_id: uuid.UUID = Field(foreign_key="t_choriste.id", primary_key=True)
+    voix_code: VoixEnum = Field(foreign_key="t_voix.code", primary_key=True)
+    voix: "Voix" = Relationship(back_populates="choristes_assoc")
+    choriste: "Choriste" = Relationship(back_populates="voix_assoc")
+    is_principal: bool = Field(default=False)  # Le "Secret" est ici
+
+
 class Choriste(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_choriste"
-    id: str = Field(
+    id: uuid.UUID = Field(
         default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
     )
     deleted_at: Optional[datetime] = Field(default=None, index=True)
-    voix_code: str = Field(
-        sa_column=Column(ForeignKey("t_voix.code", ondelete="CASCADE"), nullable=False)
-    )
-    secondaireVoix: Optional[str] = None
+    voix_assoc: List["ChoristeVoix"] = Relationship(back_populates="choriste")
     chantre_id: str = Field(
         sa_column=Column(ForeignKey("t_chantre.id", ondelete="CASCADE"), nullable=False)
     )
     chantre: Optional[Chantre] = Relationship(back_populates="choristes")
-    voix: Optional[Voix] = Relationship(back_populates="choristes")
 
 
 class Musicien(SQLModel, table=True):  # type: ignore
@@ -511,6 +535,7 @@ __all__ = [
     "AffectationRole",
     "Role",
     "Voix",
+    "ChoristeVoix",
     "Instrument",
     "StatutPlanning",
     "TypeResponsabilite",

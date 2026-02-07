@@ -1,52 +1,76 @@
+import uuid
 from datetime import date
 from typing import Optional
 
-from pydantic import ConfigDict
 from sqlmodel import Field, SQLModel
 
+from mla_enum.custom_enum import NiveauChantre
 
+
+# -------------------------
+# BASE
+# -------------------------
 class ChantreBase(SQLModel):
-    dateIntegration: Optional[date] = Field(
+    # Changement en snake_case
+    date_integration: Optional[date] = Field(
         default=None, description="Date d'intégration du chantre"
     )
 
-    niveau: Optional[str] = Field(
-        default=None,
-        min_length=2,
-        max_length=50,
-        description="Niveau du chantre (ex: Débutant, Intermédiaire, Avancé)",
+    niveau: Optional[NiveauChantre] = Field(
+        default=NiveauChantre.DEBUTANT,
+        description="Niveau technique (Débutant, Intermédiaire, Avancé)",
     )
 
-    membre_id: str = Field(
-        min_length=36,
-        max_length=36,
+    # UUID natif pour une meilleure performance SQL
+    membre_id: uuid.UUID = Field(
+        foreign_key="t_membre.id",
         description="UUID du membre associé",
     )
 
 
-# ======================
+# -------------------------
 # CREATE
-# ======================
+# -------------------------
 class ChantreCreate(ChantreBase):
-    """
-    Tous les champs requis à la création
-    """
+    """Tous les champs requis à la création."""
 
 
-# ======================
+# -------------------------
 # UPDATE
-# ======================
+# -------------------------
 class ChantreUpdate(SQLModel):
-    dateIntegration: Optional[date] = None
-    niveau: Optional[str] = Field(None, min_length=2, max_length=50)
+    """Permet de modifier chaque champ optionnellement."""
+
+    date_integration: Optional[date] = None
+    niveau: Optional[NiveauChantre] = None
 
 
-# ======================
+# -------------------------
 # READ
-# ======================
+# -------------------------
 class ChantreRead(ChantreBase):
-    id: str
-    model_config = ConfigDict(from_attributes=True)  # type: ignore
+    id: uuid.UUID
+
+    # Relations (Optionnelles dans le JSON pour éviter les réponses trop lourdes)
+    # choristes: List[Choriste] = []
+    # musiciens: List[Musicien] = []
+    # affectations: List[Aff] = []
+    # indisponibilites: List[dict] = []
+
+    # @computed_field  # type: ignore[misc]
+    # @property
+    # def choristes_count(self) -> int:
+    #     return len(self.choristes)
+
+    # @computed_field  # type: ignore[misc]
+    # @property
+    # def musiciens_count(self) -> int:
+    #     return len(self.musiciens)
+
+    # @computed_field  # type: ignore[misc]
+    # @property
+    # def affectations_count(self) -> int:
+    #     return len(self.affectations)
 
 
 __all__ = [

@@ -58,6 +58,7 @@ class CRUDRouterFactory:
 
         @self.router.get("/all", response_model=List[schema_r])  # type: ignore
         def list_all(service=Depends(get_service)):
+            print("list all")
             return service.repo.list_all()
 
         @self.router.get("/{item_id}", response_model=schema_r)  # type: ignore

@@ -35,6 +35,7 @@ from models import (
     Utilisateur,
     Voix,
 )
+from models.schema_db_model import ChoristeVoix
 
 from .data import (
     ACTIVITES_DATA,
@@ -179,6 +180,10 @@ class SeedService:
 
     def _seed_rh_complet(self, users, min_map, pole_map):
         chantres = []
+        self.logger.info(
+            "👥 Remplissage RH (Membres, Chantres, Choristes, Musiciens)..."
+        )
+
         for i, user in enumerate(users):
             info = MEMBRES_INFOS[i % len(MEMBRES_INFOS)]
             m_nom = "Louange et Adoration" if i % 2 == 0 else "Enseignement"
@@ -186,6 +191,7 @@ class SeedService:
                 "Chorale" if m_nom == "Louange et Adoration" else "École du Dimanche"
             )
 
+            # 1. Création du Membre
             membre, _ = self._get_or_create(
                 Membre,
                 email=info["email"],
@@ -203,18 +209,33 @@ class SeedService:
             self.db.add(user)
             self.db.flush()
 
+            # 2. Spécialisation Chantre (Louange uniquement)
             if m_nom == "Louange et Adoration":
                 ch, _ = self._get_or_create(
                     Chantre, membre_id=membre.id, defaults={"niveau": "Intermédiaire"}
                 )
                 chantres.append(ch)
+
+                # 3. Spécialisation Choriste ou Musicien
                 if i % 2 == 0:
-                    self._get_or_create(
+                    # CRÉATION CHORISTE (Nouveau flux)
+                    choriste, created = self._get_or_create(
                         Choriste,
                         chantre_id=ch.id,
-                        defaults={"voix_code": VoixEnum.TENOR},
+                        # On ne met plus voix_code ici !
                     )
+
+                    if created:
+                        # CRÉATION DE LA LIAISON VOIX (Indispensable)
+                        # On assigne une voix par défaut (TENOR pour l'exemple)
+                        self._get_or_create(
+                            ChoristeVoix,
+                            choriste_id=choriste.id,
+                            voix_code=VoixEnum.TENOR,
+                            defaults={"is_principal": True},
+                        )
                 else:
+                    # CRÉATION MUSICIEN
                     self._get_or_create(
                         Musicien,
                         chantre_id=ch.id,
