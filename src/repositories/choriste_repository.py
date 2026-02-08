@@ -1,5 +1,5 @@
 # src/repositories/choriste_repository.py
-from typing import Any, List, Optional, cast
+from typing import Any, List, cast
 
 from sqlmodel import Session, select
 
@@ -15,25 +15,6 @@ class ChoristeRepository(BaseRepository[Choriste]):
             cast(Any, Choriste.voix_assoc),
             # Tu pourrais ajouter cast(Any, Choriste.chantre) si besoin
         ]
-
-    def get_by_id(
-        self, identifiant: Any, load_relations: Optional[List[Any]] = None
-    ) -> Optional[Choriste]:
-        """Récupère un choriste avec ses voix."""
-        rels = load_relations if load_relations is not None else self.relations
-        return super().get_by_id(identifiant, load_relations=rels)
-
-    def get_paginated(
-        self, limit: int, offset: int, load_relations: Optional[List[Any]] = None
-    ) -> List[Choriste]:
-        """Liste paginée avec chargement des voix pour éviter le Lazy Loading."""
-        rels = load_relations if load_relations is not None else self.relations
-        return super().get_paginated(limit, offset, load_relations=rels)
-
-    def list_all(self, load_relations: Optional[List[Any]] = None) -> List[Choriste]:
-        """Liste complète avec relations."""
-        rels = load_relations if load_relations is not None else self.relations
-        return super().list_all(load_relations=rels)
 
     def create_with_voix(self, db_obj: Choriste, voix_in: List[Any]) -> Choriste:
         """Crée un choriste et ses associations de voix de manière atomique."""

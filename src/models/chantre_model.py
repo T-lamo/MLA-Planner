@@ -51,27 +51,6 @@ class ChantreUpdate(SQLModel):
 class ChantreRead(ChantreBase):
     id: uuid.UUID
 
-    # Relations (Optionnelles dans le JSON pour éviter les réponses trop lourdes)
-    # choristes: List[Choriste] = []
-    # musiciens: List[Musicien] = []
-    # affectations: List[Aff] = []
-    # indisponibilites: List[dict] = []
-
-    # @computed_field  # type: ignore[misc]
-    # @property
-    # def choristes_count(self) -> int:
-    #     return len(self.choristes)
-
-    # @computed_field  # type: ignore[misc]
-    # @property
-    # def musiciens_count(self) -> int:
-    #     return len(self.musiciens)
-
-    # @computed_field  # type: ignore[misc]
-    # @property
-    # def affectations_count(self) -> int:
-    #     return len(self.affectations)
-
 
 __all__ = [
     "ChantreBase",

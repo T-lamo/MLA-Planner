@@ -24,10 +24,3 @@ class MembreRepository(BaseRepository[Membre]):
         """Surcharge pour inclure les relations par défaut si aucune n'est spécifiée."""
         rels = load_relations if load_relations is not None else self.default_relations
         return super().get_by_id(identifiant, load_relations=rels)
-
-    def get_paginated(
-        self, limit: int, offset: int, load_relations: Optional[List[Any]] = None
-    ) -> List[Membre]:
-        """Surcharge pour que la liste paginée contienne aussi les relations."""
-        rels = load_relations if load_relations is not None else self.default_relations
-        return super().get_paginated(limit, offset, load_relations=rels)

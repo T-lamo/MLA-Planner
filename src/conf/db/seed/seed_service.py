@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import datetime, timedelta
 from typing import Any, Optional, Type, TypeVar
 
@@ -35,7 +36,7 @@ from models import (
     Utilisateur,
     Voix,
 )
-from models.schema_db_model import ChoristeVoix
+from models.schema_db_model import ChoristeVoix, MusicienInstrument
 
 from .data import (
     ACTIVITES_DATA,
@@ -82,13 +83,15 @@ class SeedService:
 
                 # 3. RÉFÉRENTIELS ET STRUCTURES
                 self._seed_voix()
-                self._seed_referentiels()
+                instr_map = self._seed_referentiels()
                 min_map = self._seed_ministeres(campus_id)
                 pole_map = self._seed_poles(min_map)
                 act_map = self._seed_activites(campus_id)
 
                 # 4. RH & SPÉCIALISATIONS
-                chantre_objs = self._seed_rh_complet(user_list, min_map, pole_map)
+                chantre_objs = self._seed_rh_complet(
+                    user_list, min_map, pole_map, instr_map
+                )
 
                 # 5. OPÉRATIONNEL (Remplissage des tables manquantes)
                 eq_map = self._seed_equipes(min_map)
@@ -178,7 +181,7 @@ class SeedService:
 
         return obj, True
 
-    def _seed_rh_complet(self, users, min_map, pole_map):
+    def _seed_rh_complet(self, users, min_map, pole_map, instr_map):
         chantres = []
         self.logger.info(
             "👥 Remplissage RH (Membres, Chantres, Choristes, Musiciens)..."
@@ -186,10 +189,11 @@ class SeedService:
 
         for i, user in enumerate(users):
             info = MEMBRES_INFOS[i % len(MEMBRES_INFOS)]
-            m_nom = "Louange et Adoration" if i % 2 == 0 else "Enseignement"
-            p_nom = (
-                "Chorale" if m_nom == "Louange et Adoration" else "École du Dimanche"
-            )
+
+            # On force tout le monde dans la Louange pour le seed
+            # afin de s'assurer d'avoir des Musiciens/Choristes
+            m_nom = "Louange et Adoration"
+            p_nom = "Chorale" if i % 2 == 0 else "Musiciens"
 
             # 1. Création du Membre
             membre, _ = self._get_or_create(
@@ -201,47 +205,66 @@ class SeedService:
                     "telephone": f"012345678{i}",
                     "ministere_id": min_map[m_nom].id,
                     "pole_id": pole_map[p_nom].id,
-                    "date_inscription": "2024-01-01",
+                    "date_inscription": datetime.now().date(),
                     "actif": True,
                 },
             )
+
+            # Mise à jour de l'utilisateur avec l'ID du membre
             user.membre_id = membre.id
             self.db.add(user)
             self.db.flush()
 
-            # 2. Spécialisation Chantre (Louange uniquement)
-            if m_nom == "Louange et Adoration":
-                ch, _ = self._get_or_create(
-                    Chantre, membre_id=membre.id, defaults={"niveau": "Intermédiaire"}
-                )
-                chantres.append(ch)
+            # 2. Création systématique du Chantre pour la Louange
+            chantre, _ = self._get_or_create(
+                Chantre,
+                membre_id=membre.id,
+                defaults={
+                    "niveau": "Intermédiaire",
+                    "date_integration": datetime.now().date(),
+                },
+            )
+            chantres.append(chantre)
 
-                # 3. Spécialisation Choriste ou Musicien
-                if i % 2 == 0:
-                    # CRÉATION CHORISTE (Nouveau flux)
-                    choriste, created = self._get_or_create(
-                        Choriste,
-                        chantre_id=ch.id,
-                        # On ne met plus voix_code ici !
-                    )
+            # 3. Répartition : Pair = Choriste, Impair = Musicien
+            if i % 2 == 0:
+                self.logger.info(f"🎤 Création Choriste pour {info['nom']}")
+                self._create_choriste_specialization(chantre.id)
+            else:
+                self.logger.info(f"🎸 Création Musicien pour {info['nom']}")
+                self._create_musicien_specialization(chantre.id, instr_map)
 
-                    if created:
-                        # CRÉATION DE LA LIAISON VOIX (Indispensable)
-                        # On assigne une voix par défaut (TENOR pour l'exemple)
-                        self._get_or_create(
-                            ChoristeVoix,
-                            choriste_id=choriste.id,
-                            voix_code=VoixEnum.TENOR,
-                            defaults={"is_principal": True},
-                        )
-                else:
-                    # CRÉATION MUSICIEN
-                    self._get_or_create(
-                        Musicien,
-                        chantre_id=ch.id,
-                        defaults={"instrument_code": "Piano"},
-                    )
         return chantres
+
+    def _create_choriste_specialization(self, chantre_id: uuid.UUID):
+        """Sous-méthode pour gérer la création de la partie choriste."""
+        choriste, created = self._get_or_create(Choriste, chantre_id=chantre_id)
+        if created:
+            self._get_or_create(
+                ChoristeVoix,
+                choriste_id=choriste.id,
+                voix_code=VoixEnum.TENOR,
+                defaults={"is_principal": True},
+            )
+
+    def _create_musicien_specialization(self, chantre_id: uuid.UUID, instr_map: dict):
+        """Sous-méthode corrigée pour garantir l'insertion en table de liaison."""
+        musicien, _ = self._get_or_create(Musicien, chantre_id=chantre_id)
+
+        # On essaie de récupérer le Piano ou le premier instrument disponible
+        piano_obj = instr_map.get("PIANO") or list(instr_map.values())[0]
+
+        if piano_obj:
+            # On utilise get_or_create pour éviter les doublons sur la table de liaison
+            self._get_or_create(
+                MusicienInstrument,
+                musicien_id=musicien.id,
+                instrument_id=piano_obj.id,
+                defaults={"is_principal": True},
+            )
+            self.logger.info(
+                f"✅ Liaison Musicien-Instrument créée (ID: {piano_obj.id})"
+            )
 
     def _seed_equipes(self, mm):
         eq_map = {}
@@ -290,12 +313,22 @@ class SeedService:
         }
 
     def _seed_referentiels(self):
-        for inst in INSTRUMENTS_DATA:
-            self._get_or_create(Instrument, code=inst)
+        self.logger.info("🎹 Remplissage des référentiels instruments...")
+        instr_map = {}
+        for inst_nom in INSTRUMENTS_DATA:
+            # On normalise le code comme le fait le validateur
+            code = inst_nom.strip().upper().replace(" ", "_")
+            obj, _ = self._get_or_create(
+                Instrument, code=code, defaults={"nom": inst_nom}
+            )
+            instr_map[code] = obj
+
         for stat in STATUTS_PLANNING:
             self._get_or_create(StatutPlanning, code=stat)
         for resp in TYPES_RESPONSABILITE:
             self._get_or_create(TypeResponsabilite, code=resp)
+
+        return instr_map  # On retourne la map pour usage ultérieur
 
     def _seed_ministeres(self, campus_id):
         return {

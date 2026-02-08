@@ -19,6 +19,10 @@ from .membre_model import *  # noqa: F401,F403
 from .membre_model import __all__ as membres
 from .ministere_model import *  # noqa: F401,F403
 from .ministere_model import __all__ as ministere
+from .musicien_instrument_model import *  # noqa: F401,F403
+from .musicien_instrument_model import __all__ as musicient_instrument
+from .musicien_model import *  # noqa: F401,F403
+from .musicien_model import __all__ as musicien
 from .organisationicc_model import *  # noqa: F401,F403
 from .organisationicc_model import __all__ as organisation
 from .pays_model import *  # noqa: F401,F403
@@ -58,4 +62,6 @@ __all__: List[str] = (
     + list(campus)
     + list(choriste)
     + list(choriste_voix)
+    + list(musicient_instrument)
+    + list(musicien)
 )
