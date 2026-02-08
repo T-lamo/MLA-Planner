@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import EmailStr, field_validator
@@ -47,6 +47,15 @@ class MembreRead(MembreBase):
     ministere_id: Optional[str] = None
     pole_id: Optional[str] = None
     utilisateur: Optional[UtilisateurRead] = None
+    model_config = {"from_attributes": True}
+
+
+class MembrePaginatedResponse(SQLModel):
+    total: int
+    limit: int
+    offset: int
+    data: List[MembreRead]
+    model_config = {"from_attributes": True}
 
 
 class MembreUpdate(SQLModel):
@@ -59,6 +68,12 @@ class MembreUpdate(SQLModel):
     pole_id: Optional[str] = None
 
 
-__all__ = ["MembreBase", "MembreCreate", "MembreRead", "MembreUpdate"]
+__all__ = [
+    "MembreBase",
+    "MembreCreate",
+    "MembreRead",
+    "MembreUpdate",
+    "MembrePaginatedResponse",
+]
 
 MembreRead.model_rebuild()

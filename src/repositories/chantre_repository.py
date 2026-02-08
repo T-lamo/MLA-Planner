@@ -14,8 +14,8 @@ class ChantreRepository(BaseRepository[Chantre]):
     def _get_chantre_relations(self):
         """Liste des relations nécessaires pour les schémas Read."""
         return [
-            # Chantre.choristes,
-            # Chantre.musiciens,
+            Chantre.choristes,
+            Chantre.musiciens,
             # Chantre.affectations,
             # Chantre.indisponibilites,
         ]

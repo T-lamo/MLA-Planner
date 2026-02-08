@@ -6,6 +6,8 @@ from sqlalchemy import Column, ForeignKey
 from sqlmodel import Field, Relationship, SQLModel
 
 from mla_enum import VoixEnum
+from models.musicien_instrument_model import MusicienInstrumentBase
+from models.musicien_model import MusicienBase
 
 from .activite_model import ActiviteBase
 from .affectation_context_model import AffectationContexteBase
@@ -13,6 +15,7 @@ from .affectation_role_model import AffectationRoleBase
 from .campus_model import CampusBase
 from .chantre_model import ChantreBase
 from .indisponibilite_model import IndisponibiliteBase
+from .instrument_model import InstrumentBase
 from .membre_model import MembreBase
 from .ministere_model import MinistereBase
 from .organisationicc_model import OrganisationICCBase
@@ -38,13 +41,6 @@ class Voix(SQLModel, table=True):  # type: ignore
 
     # Garde tes autres relations (ex: Affectations pour le planning)
     affectations: List["Affectation"] = Relationship(back_populates="voix")
-
-
-class Instrument(SQLModel, table=True):  # type: ignore
-    __tablename__ = "t_instrument"
-    code: str = Field(primary_key=True, max_length=20)
-    musiciens: List["Musicien"] = Relationship(back_populates="instrument")
-    affectations: List["Affectation"] = Relationship(back_populates="instrument")
 
 
 class StatutPlanning(SQLModel, table=True):  # type: ignore
@@ -220,23 +216,42 @@ class Choriste(SQLModel, table=True):  # type: ignore
     chantre: Optional[Chantre] = Relationship(back_populates="choristes")
 
 
-class Musicien(SQLModel, table=True):  # type: ignore
+class MusicienInstrument(MusicienInstrumentBase, table=True):  # type: ignore
+    __tablename__ = "t_musicien_instrument"
+
+    musicien_id: uuid.UUID = Field(
+        foreign_key="t_musicien.id", primary_key=True, ondelete="CASCADE"
+    )
+
+    musicien: "Musicien" = Relationship(back_populates="instruments_assoc")
+    instrument: "Instrument" = Relationship(back_populates="musiciens_assoc")
+
+
+class Instrument(InstrumentBase, table=True):  # type: ignore
+    __tablename__ = "t_instrument"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+
+    musiciens_assoc: List["MusicienInstrument"] = Relationship(
+        back_populates="instrument"
+    )
+    affectations: List["Affectation"] = Relationship(back_populates="instrument")
+
+
+class Musicien(MusicienBase, table=True):  # type: ignore
     __tablename__ = "t_musicien"
-    id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
-    )
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
-    instrument_code: str = Field(
-        sa_column=Column(
-            ForeignKey("t_instrument.code", ondelete="CASCADE"), nullable=False
-        )
+
+    chantre_id: uuid.UUID = Field(
+        foreign_key="t_chantre.id", ondelete="CASCADE", nullable=False
     )
-    instrumentPrincipal: Optional[str] = None
-    chantre_id: str = Field(
-        sa_column=Column(ForeignKey("t_chantre.id", ondelete="CASCADE"), nullable=False)
+
+    # Relations
+    chantre: "Chantre" = Relationship(back_populates="musiciens")
+    instruments_assoc: List[MusicienInstrument] = Relationship(
+        back_populates="musicien"
     )
-    chantre: Optional[Chantre] = Relationship(back_populates="musiciens")
-    instrument: Optional[Instrument] = Relationship(back_populates="musiciens")
 
 
 class Equipe(SQLModel, table=True):  # type: ignore
@@ -530,6 +545,7 @@ class TokenBlacklist(SQLModel, table=True):  # type: ignore
 __all__ = [
     "Utilisateur",
     "RolePermission",
+    "MusicienInstrument",
     "Permission",
     "AffectationContexte",
     "AffectationRole",
