@@ -9,12 +9,9 @@ from conf.db.database import Database
 from core.auth.security import create_access_token, get_password_hash
 from main import app
 from mla_enum import RoleName
-from mla_enum.custom_enum import NiveauChantre, VoixEnum
 from models import (
     AffectationRole,
     Campus,
-    Choriste,
-    ChoristeVoix,
     Membre,
     Ministere,
     OrganisationICC,
@@ -22,9 +19,7 @@ from models import (
     Pole,
     Role,
     Utilisateur,
-    Voix,
 )
-from models.schema_db_model import Chantre
 
 # pylint: disable=redefined-outer-name
 
@@ -262,58 +257,16 @@ def test_pole(session: Session, test_ministere: Ministere) -> Pole:
 
 
 @pytest.fixture
-def test_membre(session: Session) -> Membre:
+def test_membre(session: Session, test_campus: Campus) -> Membre:
     """Fixture pour créer un membre valide."""
     membre = Membre(
-        nom="Soro", prenom="Jean", email=f"jean.{uuid4()}@test.com", actif=True
+        nom="Soro",
+        prenom="Jean",
+        email=f"jean.{uuid4()}@test.com",
+        actif=True,
+        campus_id=test_campus.id,
     )
     session.add(membre)
     session.commit()
     session.refresh(membre)
     return membre
-
-
-@pytest.fixture
-def test_chantre(session: Session, test_membre: Membre) -> Chantre:
-    """Fixture pour créer un chantre en base."""
-    chantre = Chantre(
-        membre_id=test_membre.id,
-        niveau=NiveauChantre.INTERMEDIAIRE,
-        date_integration="2024-01-01",
-    )
-    session.add(chantre)
-    session.commit()
-    session.refresh(chantre)
-    return chantre
-
-
-# ----------------------------------------------------------------
-# FIXTURES LOCALES
-# ----------------------------------------------------------------
-
-
-@pytest.fixture(autouse=True)
-def setup_referentiel_voix(session):
-    """Initialise les voix nécessaires dans t_voix avant chaque test."""
-    codes = [VoixEnum.SOPRANO, VoixEnum.ALTO, VoixEnum.TENOR, VoixEnum.BASSE]
-    for code in codes:
-        existing = session.get(Voix, code)
-        if not existing:
-            session.add(Voix(code=code, nom=code.value.capitalize()))
-    session.commit()
-
-
-@pytest.fixture
-def test_choriste(session, test_chantre):
-    """Fixture : Crée un choriste avec une voix principale (SOPRANO)."""
-    choriste = Choriste(chantre_id=test_chantre.id)
-    session.add(choriste)
-    session.flush()
-
-    liaison = ChoristeVoix(
-        choriste_id=choriste.id, voix_code=VoixEnum.SOPRANO, is_principal=True
-    )
-    session.add(liaison)
-    session.commit()
-    session.refresh(choriste)
-    return choriste

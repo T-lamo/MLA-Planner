@@ -9,20 +9,10 @@ from .affectation_role_model import __all__ as affectation_role
 from .base_pagination import *  # noqa: F401,F403
 from .campus_model import *  # noqa: F401,F403
 from .campus_model import __all__ as campus
-from .chantre_model import *  # noqa: F401,F403
-from .chantre_model import __all__ as chantre
-from .choriste_model import *  # noqa: F401,F403
-from .choriste_model import __all__ as choriste
-from .choriste_voix_model import *  # noqa: F401,F403
-from .choriste_voix_model import __all__ as choriste_voix
 from .membre_model import *  # noqa: F401,F403
 from .membre_model import __all__ as membres
 from .ministere_model import *  # noqa: F401,F403
 from .ministere_model import __all__ as ministere
-from .musicien_instrument_model import *  # noqa: F401,F403
-from .musicien_instrument_model import __all__ as musicient_instrument
-from .musicien_model import *  # noqa: F401,F403
-from .musicien_model import __all__ as musicien
 from .organisationicc_model import *  # noqa: F401,F403
 from .organisationicc_model import __all__ as organisation
 from .pays_model import *  # noqa: F401,F403
@@ -56,12 +46,7 @@ __all__: List[str] = (
     + list(permission_model)
     + list(pole_model)
     + list(voix_model)
-    + list(chantre)
     + list(organisation)
     + list(pays)
     + list(campus)
-    + list(choriste)
-    + list(choriste_voix)
-    + list(musicient_instrument)
-    + list(musicien)
 )

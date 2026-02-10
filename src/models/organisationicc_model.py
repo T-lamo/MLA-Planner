@@ -1,6 +1,5 @@
 from datetime import date
 from typing import List, Optional
-from uuid import UUID
 
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
@@ -52,7 +51,7 @@ class OrganisationICCUpdate(SQLModel):
 # READ
 # -------------------------
 class OrganisationICCRead(OrganisationICCBase):
-    id: UUID  # Plus robuste que str
+    id: str
     date_creation: date  # Permet
     # Optionnel: on peut inclure le nombre de pays rattachés
     pays: List["PaysRead"]

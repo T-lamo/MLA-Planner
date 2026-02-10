@@ -1,11 +1,9 @@
 from uuid import uuid4
 
 from fastapi import status
+from fastapi.encoders import jsonable_encoder  # Import crucial
 
 # pylint: disable=redefined-outer-name, unused-argument
-
-# --- FIXTURES DE STRUCTURE ---
-
 
 # --- TESTS DE CRÉATION (POST) ---
 
@@ -16,10 +14,12 @@ def test_create_campus_as_admin(client, admin_headers, test_pays):
         "nom": f"Campus Admin {uuid4()}",
         "ville": "Abidjan",
         "timezone": "Africa/Abidjan",
-        "pays_id": test_pays.id,
+        "pays_id": test_pays.id,  # C'est un UUID
     }
-    # Vérifie bien que le préfixe dans CRUDRouterFactory est "/campus"
-    response = client.post("/campus/", json=payload, headers=admin_headers)
+    # On utilise jsonable_encoder pour transformer l'UUID en string JSON
+    response = client.post(
+        "/campus/", json=jsonable_encoder(payload), headers=admin_headers
+    )
 
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
@@ -30,7 +30,10 @@ def test_create_campus_as_admin(client, admin_headers, test_pays):
 def test_create_campus_as_user_forbidden(client, user_headers, test_pays):
     """Vérifie la sécurité (403)."""
     payload = {"nom": "Hacker Campus", "ville": "X", "pays_id": test_pays.id}
-    response = client.post("/campus/", json=payload, headers=user_headers)
+    # Toujours utiliser jsonable_encoder quand le payload contient un UUID
+    response = client.post(
+        "/campus/", json=jsonable_encoder(payload), headers=user_headers
+    )
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
@@ -39,9 +42,11 @@ def test_create_campus_invalid_pays(client, admin_headers):
     payload = {
         "nom": "Campus Perdu",
         "ville": "Nulle part",
-        "pays_id": str(uuid4()),  # UUID valide mais non présent en base
+        "pays_id": uuid4(),  # On passe l'objet UUID directement
     }
-    response = client.post("/campus/", json=payload, headers=admin_headers)
+    response = client.post(
+        "/campus/", json=jsonable_encoder(payload), headers=admin_headers
+    )
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -49,7 +54,6 @@ def test_create_campus_invalid_pays(client, admin_headers):
 
 
 def test_list_campus_pagination(client, test_campus):
-    """Inspiré de test_get_organisations_pagination."""
     response = client.get("/campus/?limit=5&offset=0")
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
@@ -60,7 +64,8 @@ def test_list_campus_pagination(client, test_campus):
 def test_get_one_campus(client, test_campus):
     response = client.get(f"/campus/{test_campus.id}")
     assert response.status_code == status.HTTP_200_OK
-    assert response.json()["id"] == test_campus.id
+    # CORRECTION : On compare le JSON (str) avec la version string de l'UUID
+    assert response.json()["id"] == str(test_campus.id)
 
 
 # --- TESTS DE MISE À JOUR (PATCH) ---
@@ -79,19 +84,12 @@ def test_update_campus_admin(client, admin_headers, test_campus):
 
 
 def test_delete_campus_admin(client, admin_headers, test_campus, session):
-    # --- AJOUT CRUCIAL ---
-    # On s'assure que l'objet test_campus est connu de la session actuelle
-    # et qu'il possède bien tous les attributs du modèle mis à jour.
-    session.add(test_campus)
-    session.refresh(test_campus)
-
     # Action
     response = client.delete(f"/campus/{test_campus.id}", headers=admin_headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
 
 def test_delete_campus_not_found(client, admin_headers):
-    """Inspiré de test_delete_organisation_not_found."""
-    fake_id = str(uuid4())
+    fake_id = uuid4()  # On utilise l'objet UUID
     response = client.delete(f"/campus/{fake_id}", headers=admin_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND

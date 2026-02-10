@@ -12,9 +12,9 @@ class ActiviteBase(SQLModel):
         description="Type d'activité (ex: Cours, Conférence, Atelier)",
     )
 
-    dateDebut: datetime = Field(description="Date et heure de début de l'activité")
+    date_debut: datetime = Field(description="Date et heure de début de l'activité")
 
-    dateFin: datetime = Field(description="Date et heure de fin de l'activité")
+    date_fin: datetime = Field(description="Date et heure de fin de l'activité")
 
     lieu: Optional[str] = Field(
         default=None, min_length=2, max_length=255, description="Lieu de l'activité"
@@ -42,8 +42,8 @@ class ActiviteBase(SQLModel):
     # ======================
     @model_validator(mode="after")
     def validate_dates(self):
-        if self.dateFin <= self.dateDebut:
-            raise ValueError("dateFin doit être postérieure à dateDebut")
+        if self.date_fin <= self.date_debut:
+            raise ValueError("date_fin doit être postérieure à date_debut")
         return self
 
 
@@ -55,17 +55,17 @@ class ActiviteCreate(ActiviteBase):
 
 class ActiviteUpdate(SQLModel):
     type: Optional[str] = Field(None, min_length=2, max_length=100)
-    dateDebut: Optional[datetime] = None
-    dateFin: Optional[datetime] = None
+    date_debut: Optional[datetime] = None
+    date_fin: Optional[datetime] = None
     lieu: Optional[str] = Field(None, min_length=2, max_length=255)
     description: Optional[str] = Field(None, max_length=1000)
     # campus_id: Optional[str] = Field(None, min_length=36, max_length=36)
 
     @model_validator(mode="after")
     def validate_dates(self):
-        if self.dateDebut and self.dateFin:
-            if self.dateFin <= self.dateDebut:
-                raise ValueError("dateFin doit être postérieure à dateDebut")
+        if self.date_debut and self.date_fin:
+            if self.date_fin <= self.date_debut:
+                raise ValueError("date_fin doit être postérieure à date_debut")
         return self
 
 
