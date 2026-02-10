@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import field_validator
+from pydantic import ConfigDict, field_validator
 from sqlmodel import Field, SQLModel
 
 
@@ -49,6 +49,8 @@ class CampusUpdate(SQLModel):
 class CampusRead(CampusBase):
     id: str
     pays_id: str
+    model_config = ConfigDict(from_attributes=True)  # type: ignore
+
     # Note : On inclut généralement PaysRead ici si importé,
     # sinon on reste sur les types simples pour éviter les cycles.
 

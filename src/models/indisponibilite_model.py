@@ -3,18 +3,16 @@ from typing import Optional
 from pydantic import ConfigDict, field_validator, model_validator
 from sqlmodel import Field, SQLModel
 
-from .chantre_model import ChantreRead
-
 
 # -------------------------
 # BASE
 # -------------------------
 class IndisponibiliteBase(SQLModel):
-    dateDebut: Optional[str] = Field(
+    date_debut: Optional[str] = Field(
         default=None,
         description="Date de début d'indisponibilité (format ISO YYYY-MM-DD)",
     )
-    dateFin: Optional[str] = Field(
+    date_fin: Optional[str] = Field(
         default=None,
         description="Date de fin d'indisponibilité (format ISO YYYY-MM-DD)",
     )
@@ -27,10 +25,7 @@ class IndisponibiliteBase(SQLModel):
         default=False, description="Indique si l'indisponibilité est validée"
     )
 
-    # ======================
-    # VALIDATION CHAMPS
-    # ======================
-    @field_validator("dateDebut", "dateFin")
+    @field_validator("date_debut", "date_fin")
     @classmethod
     def validate_date_iso(cls, v: Optional[str]):
         if v is None:
@@ -42,18 +37,17 @@ class IndisponibiliteBase(SQLModel):
             year, month, day = map(int, parts)
             if not (1 <= month <= 12 and 1 <= day <= 31 and year > 1900):
                 raise ValueError
-        except Exception as e:
-            raise ValueError("Les dates doivent respecter le format YYYY-MM-DD") from e
+        except Exception as exc:
+            raise ValueError(
+                "Les dates doivent respecter le format YYYY-MM-DD"
+            ) from exc
         return v
 
-    # ======================
-    # VALIDATION METIER
-    # ======================
     @model_validator(mode="after")
     def validate_date_range(self):
-        if self.dateDebut and self.dateFin:
-            if self.dateFin < self.dateDebut:
-                raise ValueError("dateFin doit être postérieure ou égale à dateDebut")
+        if self.date_debut and self.date_fin:
+            if self.date_fin < self.date_debut:
+                raise ValueError("date_fin doit être postérieure ou égale à date_debut")
         return self
 
 
@@ -61,11 +55,7 @@ class IndisponibiliteBase(SQLModel):
 # CREATE
 # -------------------------
 class IndisponibiliteCreate(IndisponibiliteBase):
-    chantre_id: str = Field(
-        min_length=36,
-        max_length=36,
-        description="UUID du chantre concerné",
-    )
+    membre_id: str = Field(description="UUID du membre concerné")
 
 
 # -------------------------
@@ -73,7 +63,7 @@ class IndisponibiliteCreate(IndisponibiliteBase):
 # -------------------------
 class IndisponibiliteRead(IndisponibiliteBase):
     id: str
-    chantre: Optional["ChantreRead"] = None
+    membre_id: str  # Ajouté pour la lecture complète
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
 
@@ -81,12 +71,12 @@ class IndisponibiliteRead(IndisponibiliteBase):
 # UPDATE
 # -------------------------
 class IndisponibiliteUpdate(SQLModel):
-    dateDebut: Optional[str] = None
-    dateFin: Optional[str] = None
+    date_debut: Optional[str] = None
+    date_fin: Optional[str] = None
     motif: Optional[str] = None
     validee: Optional[bool] = None
 
-    @field_validator("dateDebut", "dateFin")
+    @field_validator("date_debut", "date_fin")
     @classmethod
     def validate_date_iso(cls, v: Optional[str]):
         if v is None:
@@ -98,15 +88,17 @@ class IndisponibiliteUpdate(SQLModel):
             year, month, day = map(int, parts)
             if not (1 <= month <= 12 and 1 <= day <= 31 and year > 1900):
                 raise ValueError
-        except Exception as e:
-            raise ValueError("Les dates doivent respecter le format YYYY-MM-DD") from e
+        except Exception as exc:
+            raise ValueError(
+                "Les dates doivent respecter le format YYYY-MM-DD"
+            ) from exc
         return v
 
     @model_validator(mode="after")
     def validate_date_range(self):
-        if self.dateDebut and self.dateFin:
-            if self.dateFin < self.dateDebut:
-                raise ValueError("dateFin doit être postérieure ou égale à dateDebut")
+        if self.date_debut and self.date_fin:
+            if self.date_fin < self.date_debut:
+                raise ValueError("date_fin doit être postérieure ou égale à date_debut")
         return self
 
 
