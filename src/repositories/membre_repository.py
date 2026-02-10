@@ -1,6 +1,6 @@
 from typing import Any, List, Optional, cast
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from models import Membre
 from repositories.base_repository import BaseRepository
@@ -16,6 +16,7 @@ class MembreRepository(BaseRepository[Membre]):
             cast(Any, Membre.ministere),
             cast(Any, Membre.pole),
             cast(Any, Membre.utilisateur),
+            cast(Any, Membre.roles_assoc),
         ]
 
     def get_by_id(
@@ -24,3 +25,24 @@ class MembreRepository(BaseRepository[Membre]):
         """Surcharge pour inclure les relations par défaut si aucune n'est spécifiée."""
         rels = load_relations if load_relations is not None else self.default_relations
         return super().get_by_id(identifiant, load_relations=rels)
+
+    # --- MÉTHODE CORRIGÉE POUR MYPY ---
+    def get_membre_with_roles(self, membre_id: str) -> Optional[Membre]:
+        """Récupère un membre avec ses rôles chargés en optimisant les requêtes."""
+
+        # On force Mypy à comprendre que ce sont des relations SQLAlchemy
+        statement = (
+            select(Membre).where(Membre.id == membre_id)
+            # .options(
+            #     selectinload(cast(Any, Membre.roles_assoc)).selectinload(
+            #         cast(Any, MembreRole.role)
+            #     )
+            # )
+        )
+
+        # unique() est requis lors de l'utilisation de chargements de relations
+        # pour garantir l'unicité des objets retournés par le résultat.
+        result = self.db.exec(statement).unique().first()
+        if result:
+            self.db.refresh(result)
+        return result

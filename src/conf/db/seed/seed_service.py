@@ -16,7 +16,7 @@ from models import (
     Equipe_Membre,
     Indisponibilite,
     Membre,
-    Membre_Role,
+    MembreRole,
     Ministere,
     OrganisationICC,
     Pays,
@@ -220,10 +220,10 @@ class SeedService:
                 is_principal = index_r == 0
 
                 self._get_or_create(
-                    Membre_Role,
+                    MembreRole,
                     membre_id=membre.id,
                     role_code=role_code,
-                    defaults={"niveau": "CONFIRME", "is_principal": is_principal},
+                    defaults={"niveau": "DEBUTANT", "is_principal": is_principal},
                 )
                 self.logger.debug(f"   - Rôle {role_code} assigné à {info['nom']}")
 

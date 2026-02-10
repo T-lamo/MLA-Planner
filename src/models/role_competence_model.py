@@ -42,3 +42,11 @@ class RoleCompetenceUpdate(SQLModel):
 # -------------------------
 class RoleCompetenceRead(RoleCompetenceBase):
     model_config = ConfigDict(from_attributes=True)  # type: ignore
+
+
+__all__ = [
+    "RoleCompetenceBase",
+    "RoleCompetenceCreate",
+    "RoleCompetenceUpdate",
+    "RoleCompetenceRead",
+]
