@@ -4,6 +4,7 @@ from typing import List, Optional
 from pydantic import ConfigDict, EmailStr, field_validator
 from sqlmodel import Field, SQLModel
 
+from models.membre_role_model import MembreRoleRead
 from models.utilisateur_model import UtilisateurRead
 
 
@@ -46,6 +47,7 @@ class MembreRead(MembreBase):
     ministere_id: Optional[str] = None
     pole_id: Optional[str] = None
     utilisateur: Optional[UtilisateurRead] = None
+    roles_assoc: List[MembreRoleRead] = []
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
 

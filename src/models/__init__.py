@@ -9,8 +9,12 @@ from .affectation_role_model import __all__ as affectation_role
 from .base_pagination import *  # noqa: F401,F403
 from .campus_model import *  # noqa: F401,F403
 from .campus_model import __all__ as campus
+from .categorie_role_model import *  # noqa: F401,F403
+from .categorie_role_model import __all__ as category_role
 from .membre_model import *  # noqa: F401,F403
 from .membre_model import __all__ as membres
+from .membre_role_model import *  # noqa: F401,F403
+from .membre_role_model import __all__ as membre_role
 from .ministere_model import *  # noqa: F401,F403
 from .ministere_model import __all__ as ministere
 from .organisationicc_model import *  # noqa: F401,F403
@@ -21,6 +25,8 @@ from .permission_model import *  # noqa: F401,F403
 from .permission_model import __all__ as permission_model
 from .pole_model import *  # noqa: F401,F403
 from .pole_model import __all__ as pole_model
+from .role_competence_model import *  # noqa: F401,F403
+from .role_competence_model import __all__ as role_competence
 from .role_model import *  # noqa: F401,F403
 from .role_model import __all__ as roles
 from .schema_db_model import *  # noqa: F401,F403
@@ -49,4 +55,7 @@ __all__: List[str] = (
     + list(organisation)
     + list(pays)
     + list(campus)
+    + list(category_role)
+    + list(role_competence)
+    + list(membre_role)
 )

@@ -8,9 +8,10 @@ from .activite_model import ActiviteBase
 from .affectation_context_model import AffectationContexteBase
 from .affectation_role_model import AffectationRoleBase
 from .campus_model import CampusBase
-from .category_role_model import CategorieRoleBase
+from .categorie_role_model import CategorieRoleBase
 from .indisponibilite_model import IndisponibiliteBase
 from .membre_model import MembreBase
+from .membre_role_model import MembreRoleBase
 from .ministere_model import MinistereBase
 from .organisationicc_model import OrganisationICCBase
 from .pays_model import PaysBase
@@ -33,20 +34,12 @@ class CategorieRole(CategorieRoleBase, table=True):  # type: ignore
 class RoleCompetence(RoleCompetenceBase, table=True):  # type: ignore
     __tablename__ = "t_rolecompetence"
     categorie: Optional[CategorieRole] = Relationship(back_populates="roles")
-    membres_assoc: List["Membre_Role"] = Relationship(back_populates="role")
+    membres_assoc: List["MembreRole"] = Relationship(back_populates="role")
     affectations: List["Affectation"] = Relationship(back_populates="role_competence")
 
 
-class Membre_Role(SQLModel, table=True):  # type: ignore
-    __tablename__ = "t_membre_role"
-    membre_id: str = Field(
-        foreign_key="t_membre.id", primary_key=True, ondelete="CASCADE"
-    )
-    role_code: str = Field(
-        foreign_key="t_rolecompetence.code", primary_key=True, ondelete="CASCADE"
-    )
-    niveau: str = Field(default="DEBUTANT")
-    is_principal: bool = Field(default=False)
+class MembreRole(MembreRoleBase, table=True):  # type: ignore
+    __tablename__ = "t_MembreRole"
     membre: "Membre" = Relationship(back_populates="roles_assoc")
     role: "RoleCompetence" = Relationship(back_populates="membres_assoc")
 
@@ -141,7 +134,7 @@ class Membre(MembreBase, table=True):  # type: ignore
     campus: Optional["Campus"] = Relationship(back_populates="membres")
     ministere: Optional["Ministere"] = Relationship(back_populates="membres")
     pole: Optional["Pole"] = Relationship(back_populates="membres")
-    roles_assoc: List["Membre_Role"] = Relationship(back_populates="membre")
+    roles_assoc: List["MembreRole"] = Relationship(back_populates="membre")
     affectations: List["Affectation"] = Relationship(back_populates="membre")
     responsabilites: List["Responsabilite"] = Relationship(back_populates="membre")
     equipes_assoc: List["Equipe_Membre"] = Relationship(back_populates="membre")
@@ -334,7 +327,7 @@ class AffectationContexte(AffectationContexteBase, table=True):  # type: ignore
 __all__ = [
     "CategorieRole",
     "RoleCompetence",
-    "Membre_Role",
+    "MembreRole",
     "StatutPlanning",
     "TypeResponsabilite",
     "OrganisationICC",

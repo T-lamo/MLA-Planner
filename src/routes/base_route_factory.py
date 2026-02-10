@@ -35,6 +35,9 @@ class CRUDRouterFactory:
 
         self._setup_routes()
 
+    def get_service(self, db: Session = Depends(Database.get_session)):
+        return self.service_class(db)
+
     def _setup_routes(self):
         # pylint: disable=too-many-locals
         # On utilise des alias snake_case pour satisfaire Pylint
