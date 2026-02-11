@@ -1,8 +1,10 @@
 from typing import Any, List, Optional, cast
 
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from models import Membre
+from models.schema_db_model import MembreRole
 from repositories.base_repository import BaseRepository
 
 
@@ -32,12 +34,13 @@ class MembreRepository(BaseRepository[Membre]):
 
         # On force Mypy à comprendre que ce sont des relations SQLAlchemy
         statement = (
-            select(Membre).where(Membre.id == membre_id)
-            # .options(
-            #     selectinload(cast(Any, Membre.roles_assoc)).selectinload(
-            #         cast(Any, MembreRole.role)
-            #     )
-            # )
+            select(Membre)
+            .where(Membre.id == membre_id)
+            .options(
+                selectinload(cast(Any, Membre.roles_assoc)).selectinload(
+                    cast(Any, MembreRole.role)
+                )
+            )
         )
 
         # unique() est requis lors de l'utilisation de chargements de relations

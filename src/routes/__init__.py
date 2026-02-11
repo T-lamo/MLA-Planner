@@ -6,6 +6,8 @@ from core.auth.auth_route import router as auth_router
 
 from .campus_router import router as campus
 from .categorie_role_router import router as category_role
+from .equipe_router import router as equipe
+from .indisponibilite_router import router as indisponibilite
 from .membre_role_router import router as membre_role
 from .membre_router import router as member
 from .ministere_router import router as ministre
@@ -24,8 +26,8 @@ router.include_router(member)
 router.include_router(pole)
 router.include_router(category_role)
 router.include_router(role_competence)
-router.include_router(
-    membre_role
-)  # Nouveau routeur pour les affectations membres-rôles
+router.include_router(membre_role)
+router.include_router(indisponibilite)
+router.include_router(equipe)  # Doit être après membre et ministre pour les FK
 
 __all__ = ["router"]

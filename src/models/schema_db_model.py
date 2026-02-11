@@ -4,6 +4,8 @@ from typing import List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from models.equipe_model import EquipeBase
+
 from .activite_model import ActiviteBase
 from .affectation_context_model import AffectationContexteBase
 from .affectation_role_model import AffectationRoleBase
@@ -39,7 +41,7 @@ class RoleCompetence(RoleCompetenceBase, table=True):  # type: ignore
 
 
 class MembreRole(MembreRoleBase, table=True):  # type: ignore
-    __tablename__ = "t_MembreRole"
+    __tablename__ = "t_membre_role"
     membre: "Membre" = Relationship(back_populates="roles_assoc")
     role: "RoleCompetence" = Relationship(back_populates="membres_assoc")
 
@@ -137,7 +139,7 @@ class Membre(MembreBase, table=True):  # type: ignore
     roles_assoc: List["MembreRole"] = Relationship(back_populates="membre")
     affectations: List["Affectation"] = Relationship(back_populates="membre")
     responsabilites: List["Responsabilite"] = Relationship(back_populates="membre")
-    equipes_assoc: List["Equipe_Membre"] = Relationship(back_populates="membre")
+    equipes_assoc: List["EquipeMembre"] = Relationship(back_populates="membre")
     indisponibilites: List["Indisponibilite"] = Relationship(back_populates="membre")
     utilisateur: Optional["Utilisateur"] = Relationship(
         back_populates="membre", sa_relationship_kwargs={"uselist": False}
@@ -247,7 +249,7 @@ class TokenBlacklist(SQLModel, table=True):  # type: ignore
 # -------------------------
 
 
-class Equipe_Membre(SQLModel, table=True):  # type: ignore
+class EquipeMembre(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_equipe_membre"
     equipe_id: str = Field(
         foreign_key="t_equipe.id", primary_key=True, ondelete="CASCADE"
@@ -259,14 +261,18 @@ class Equipe_Membre(SQLModel, table=True):  # type: ignore
     membre: Optional["Membre"] = Relationship(back_populates="equipes_assoc")
 
 
-class Equipe(SQLModel, table=True):  # type: ignore
+# -------------------------
+# 1. MODÈLE DB (Table)
+# -------------------------
+class Equipe(EquipeBase, table=True):  # type: ignore
     __tablename__ = "t_equipe"
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    nom: str
-    active: bool = Field(default=True)
+    # Clé étrangère
     ministere_id: str = Field(foreign_key="t_ministere.id", ondelete="CASCADE")
+
+    # Relations
     ministere: Optional["Ministere"] = Relationship(back_populates="equipes")
-    membres_assoc: List["Equipe_Membre"] = Relationship(back_populates="equipe")
+    membres_assoc: List["EquipeMembre"] = Relationship(back_populates="equipe")
 
 
 class RolePermission(SQLModel, table=True):  # type: ignore
@@ -344,7 +350,7 @@ __all__ = [
     "Utilisateur",
     "TokenBlacklist",
     "Equipe",
-    "Equipe_Membre",
+    "EquipeMembre",
     "Role",
     "Permission",
     "RolePermission",

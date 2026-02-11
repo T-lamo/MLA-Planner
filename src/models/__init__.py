@@ -11,6 +11,12 @@ from .campus_model import *  # noqa: F401,F403
 from .campus_model import __all__ as campus
 from .categorie_role_model import *  # noqa: F401,F403
 from .categorie_role_model import __all__ as category_role
+from .equipe_membre import *  # noqa: F401,F403
+from .equipe_membre import __all__ as equipe_membre
+from .equipe_model import *  # noqa: F401,F403
+from .equipe_model import __all__ as equipe
+from .indisponibilite_model import *  # noqa: F401,F403
+from .indisponibilite_model import __all__ as indisponibilite
 from .membre_model import *  # noqa: F401,F403
 from .membre_model import __all__ as membres
 from .membre_role_model import *  # noqa: F401,F403
@@ -58,4 +64,7 @@ __all__: List[str] = (
     + list(category_role)
     + list(role_competence)
     + list(membre_role)
+    + list(indisponibilite)
+    + list(equipe)
+    + list(equipe_membre)
 )

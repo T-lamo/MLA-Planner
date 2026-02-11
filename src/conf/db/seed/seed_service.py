@@ -13,7 +13,7 @@ from models import (
     Campus,
     CategorieRole,
     Equipe,
-    Equipe_Membre,
+    EquipeMembre,
     Indisponibilite,
     Membre,
     MembreRole,
@@ -333,7 +333,7 @@ class SeedService:
             user = user_list[data["user_index"]]
             if equipe and user.membre_id:
                 self._get_or_create(
-                    Equipe_Membre, equipe_id=equipe.id, membre_id=user.membre_id
+                    EquipeMembre, equipe_id=equipe.id, membre_id=user.membre_id
                 )
 
     def _seed_responsabilites(self, user_list, min_map, pole_map):
