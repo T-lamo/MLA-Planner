@@ -2,6 +2,7 @@
 from typing import Any, Generic, List, Optional, Type, TypeVar, cast
 
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.strategy_options import Load
 from sqlmodel import Session, SQLModel, func, select
 
 T = TypeVar("T", bound=SQLModel)
@@ -14,14 +15,19 @@ class BaseRepository(Generic[T]):
         self.default_relations: List[Any] = []
 
     def _get_base_query(self, load_relations: Optional[List[Any]] = None):
-        """Construit la requête de base avec ou sans relations."""
         statement = select(self.model)
-        # Filtre global pour exclure les soft-deleted des résultats API
         if hasattr(self.model, "deleted_at"):
             statement = statement.where(cast(Any, self.model).deleted_at.is_(None))
+
         if load_relations:
             for rel in load_relations:
-                statement = statement.options(selectinload(rel))
+                # SI c'est déjà une option (ex: selectinload(...)),
+                # on l'applique directement
+                if isinstance(rel, Load):
+                    statement = statement.options(rel)
+                # SINON, on l'emballe dans un selectinload par défaut
+                else:
+                    statement = statement.options(selectinload(rel))
         return statement
 
     def create(self, obj: T) -> T:
@@ -33,7 +39,8 @@ class BaseRepository(Generic[T]):
     def _get_effective_relations(
         self, load_relations: Optional[List[Any]]
     ) -> List[Any]:
-        """Détermine s'il faut utiliser les relations fournies ou celles par défaut."""
+        """Détermine s'il faut utiliser les relations fournies
+        ou celles par défaut."""
         return load_relations if load_relations is not None else self.default_relations
 
     def get_by_id(

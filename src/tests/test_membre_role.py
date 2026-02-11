@@ -10,7 +10,7 @@ def test_assign_role_to_membre_success(
     client, admin_headers, test_membre, test_role_comp
 ):
     payload = {
-        "membre_id": test_membre.id,  # Sera ignoré au profit de l'ID en URL par le service
+        "membre_id": test_membre.id,
         "role_code": test_role_comp.code,
         "niveau": "EXPERT",
     }

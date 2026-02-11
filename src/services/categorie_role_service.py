@@ -28,7 +28,7 @@ class CategorieRoleService(
         db_obj = CategorieRole.model_validate(data)
         return self.repo.create(db_obj)
 
-    def update(self, code: str, data: CategorieRoleUpdate) -> CategorieRole:
-        db_obj = self.get_one(code)
+    def update(self, identifiant: str, data: CategorieRoleUpdate) -> CategorieRole:
+        db_obj = self.get_one(identifiant)
         update_data = data.model_dump(exclude_unset=True)
         return self.repo.update(db_obj, update_data)
