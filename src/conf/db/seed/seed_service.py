@@ -195,7 +195,7 @@ class SeedService:
                     "telephone": f"012345678{i}",
                     "ministere_id": min_map[m_nom].id,
                     "pole_id": pole_map[p_nom].id,
-                    "dateInscription": "2024-01-01",
+                    "date_inscription": "2024-01-01",
                     "actif": True,
                 },
             )

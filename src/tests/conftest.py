@@ -1,4 +1,5 @@
 import os
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,7 +9,16 @@ from conf.db.database import Database
 from core.auth.security import create_access_token, get_password_hash
 from main import app
 from mla_enum import RoleName
-from models import AffectationRole, Role, Utilisateur
+from models import (
+    AffectationRole,
+    Campus,
+    Ministere,
+    OrganisationICC,
+    Pays,
+    Pole,
+    Role,
+    Utilisateur,
+)
 
 # pylint: disable=redefined-outer-name
 
@@ -38,11 +48,11 @@ def setup_database():
     Initialise le schéma de base de données une seule fois pour toute la session.
     """
     # Création des tables sur le vrai Postgres
+    SQLModel.metadata.drop_all(engine)
     SQLModel.metadata.create_all(engine)
     yield
     # Optionnel : on peut drop à la fin, mais en CI le
     # container est détruit de toute façon
-    SQLModel.metadata.drop_all(engine)
 
 
 @pytest.fixture(name="session")
@@ -168,3 +178,78 @@ def user_headers(test_user):
         }
     )
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def test_org(session: Session) -> OrganisationICC:
+    """Fixture globale pour créer une organisation."""
+    org = OrganisationICC(
+        nom=f"Org Test {uuid4()}", code=str(uuid4())[:5], date_creation="2024-01-01"
+    )
+    session.add(org)
+    session.commit()
+    session.refresh(org)
+    return org
+
+
+@pytest.fixture
+def test_pays(session: Session, test_org: OrganisationICC) -> Pays:
+    """Fixture globale pour créer un pays."""
+    pays = Pays(
+        nom=f"Pays {uuid4()}",
+        code=str(uuid4())[:2].upper(),
+        organisation_id=test_org.id,
+        date_creation="2024-01-01",
+    )
+    session.add(pays)
+    session.commit()
+    session.refresh(pays)
+    return pays
+
+
+@pytest.fixture
+def test_campus(session: Session, test_pays: Pays) -> Campus:
+    """Fixture globale pour créer un campus."""
+    campus = Campus(
+        nom=f"Campus Test {uuid4()}",
+        ville="Test Ville",
+        pays_id=test_pays.id,
+        date_creation="2024-01-01",
+        deleted_at=None,
+    )
+    session.add(campus)
+    session.commit()
+    session.refresh(campus)
+    return campus
+
+
+@pytest.fixture
+def test_ministere(session: Session, test_campus: Campus) -> Ministere:
+    """Fixture pour créer un ministère lié à un campus."""
+
+    ministere = Ministere(
+        nom=f"Ministere {uuid4()}",
+        date_creation="2024-01-01",
+        campus_id=test_campus.id,
+        actif=True,
+    )
+    session.add(ministere)
+    session.commit()
+    session.refresh(ministere)
+    return ministere
+
+
+@pytest.fixture
+def test_pole(session: Session, test_ministere: Ministere) -> Pole:
+    """Fixture pour créer un pôle lié à un ministère."""
+
+    pole = Pole(
+        nom=f"Pole Test {uuid4()}",
+        description="Description test",
+        ministere_id=test_ministere.id,
+        active=True,
+    )
+    session.add(pole)
+    session.commit()
+    session.refresh(pole)
+    return pole

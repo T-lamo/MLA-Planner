@@ -1,24 +1,34 @@
+# Utilisation d'annotations différées pour éviter les cycles d'import
+from __future__ import annotations
+
 from typing import Optional
+from uuid import UUID
 
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
-from models import MinistereRead
+from models.ministere_model import MinistereRead
+from utils.validator import NotBlankFieldsMixin
 
 
 # -------------------------
 # BASE
 # -------------------------
-class PoleBase(SQLModel):
-    nom: str = Field(max_length=100)
-    description: Optional[str] = None
-    active: bool = True
+class PoleBase(NotBlankFieldsMixin, SQLModel):
+    __not_blank_fields__ = ("nom",)
+
+    # On ajoute la contrainte de longueur directement dans le type pour Pydantic
+    nom: str = Field(index=True, max_length=100, description="Nom unique du pôle")
+    description: Optional[str] = Field(default=None, max_length=500)
+    active: bool = Field(default=True)
 
     @field_validator("nom")
     @classmethod
-    def nom_not_blank(cls, v: str):
-        if not v.strip():
-            raise ValueError("Le nom du pôle ne peut pas être vide")
+    def nom_not_blank(cls, v: str) -> str:
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError("Le nom du pôle ne peut pas être vide")
         return v
 
 
@@ -26,32 +36,41 @@ class PoleBase(SQLModel):
 # CREATE
 # -------------------------
 class PoleCreate(PoleBase):
-    ministere_id: str  # obligatoire pour créer un pôle
+    # Utilisation de UUID pour la cohérence avec les standards SQL
+    ministere_id: UUID
 
 
 # -------------------------
 # READ
 # -------------------------
 class PoleRead(PoleBase):
-    id: str
+    id: UUID
+    # ministere_id reste présent pour le front-end
+    ministere_id: UUID
     ministere: Optional["MinistereRead"] = None
-    membres_count: Optional[int] = 0
+    membres_count: int = 0
 
 
 # -------------------------
 # UPDATE
 # -------------------------
-class PoleUpdate(SQLModel):
+# On hérite de SQLModel directement mais on peut réutiliser la validation de Base
+class PoleUpdate(NotBlankFieldsMixin, SQLModel):
+    __not_blank_fields__ = ("nom",)
+
     nom: Optional[str] = None
     description: Optional[str] = None
     active: Optional[bool] = None
-    ministere_id: Optional[str] = None
+    ministere_id: Optional[UUID] = None
 
+    # On réutilise le validateur de la classe de base
     @field_validator("nom")
     @classmethod
-    def nom_not_blank(cls, v):
-        if v is not None and not v.strip():
-            raise ValueError("Le nom du pôle ne peut pas être vide")
+    def nom_not_blank(cls, v: str) -> str:
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError("Le nom du pôle ne peut pas être vide")
         return v
 
 

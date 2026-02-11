@@ -51,7 +51,6 @@ class CampusRead(CampusBase):
     pays_id: str
     # Note : On inclut généralement PaysRead ici si importé,
     # sinon on reste sur les types simples pour éviter les cycles.
-    # pays: Optional["PaysRead"] = None
 
 
 __all__ = [
