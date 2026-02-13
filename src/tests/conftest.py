@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -10,6 +11,7 @@ from core.auth.security import create_access_token, get_password_hash
 from main import app
 from mla_enum import RoleName
 from models import (
+    Activite,
     AffectationRole,
     Campus,
     CategorieRole,
@@ -22,6 +24,7 @@ from models import (
     RoleCompetence,
     Utilisateur,
 )
+from models.schema_db_model import StatutPlanning
 
 # pylint: disable=redefined-outer-name
 
@@ -293,3 +296,47 @@ def test_role_comp(session: Session, test_cat: CategorieRole) -> RoleCompetence:
     session.commit()
     session.refresh(role)
     return role
+
+
+@pytest.fixture
+def test_activite(session: Session, test_campus, test_ministere) -> Activite:
+    """
+    Fixture pour créer une activité valide.
+    Répond aux contraintes du nouveau schéma (type, ministere_organisateur, dates).
+    """
+    activite = Activite(
+        nom=f"Activite Test {uuid4().hex[:6]}",
+        type="Réunion",  # Valeur requise par la contrainte NOT NULL
+        campus_id=test_campus.id,
+        ministere_organisateur_id=test_ministere.id,
+        date_debut=datetime.now(),
+        date_fin=datetime.now() + timedelta(hours=2),
+    )
+
+    session.add(activite)
+    session.commit()
+    session.refresh(activite)
+    return activite
+
+
+@pytest.fixture
+def activite_data(test_campus, test_ministere):
+    return {
+        "type": "Culte",
+        "date_debut": (datetime.now() + timedelta(days=1)).isoformat(),
+        "date_fin": (datetime.now() + timedelta(days=1, hours=2)).isoformat(),
+        "lieu": "Auditorium Principal",
+        "description": "Culte dominical",
+        "campus_id": test_campus.id,
+        "ministere_organisateur_id": test_ministere.id,
+    }
+
+
+@pytest.fixture(autouse=True)
+def seed_planning_status(session: Session):
+    """Populate the reference table for statuses before each test."""
+    codes = ["BROUILLON", "PUBLIE", "ANNULE"]
+    for code in codes:
+        # We use merge to avoid conflicts if the status already exists
+        session.merge(StatutPlanning(code=code, libelle=code.capitalize()))
+    session.commit()

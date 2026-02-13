@@ -14,7 +14,7 @@ def test_create_membre_invalid_uuid_format(client, admin_headers):
         "pole_id": "pas-un-uuid",  # Déclenche désormais 422 grâce au type UUID
     }
     response = client.post("/membres/", json=payload, headers=admin_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 def test_create_membre_404_on_non_existent_pole(client, admin_headers, test_campus):
