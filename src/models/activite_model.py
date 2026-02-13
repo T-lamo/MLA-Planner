@@ -23,7 +23,8 @@ class ActiviteBase(SQLModel):
     description: Optional[str] = Field(
         default=None, max_length=1000, description="Description détaillée de l'activité"
     )
-
+    campus_id: str = Field(description="ID du campus")
+    ministere_organisateur_id: str = Field(description="ID du ministère organisateur")
     # campus_id: str = Field(min_length=36, max_length=36, description="UUID du campus")
 
     # ======================

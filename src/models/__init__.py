@@ -4,6 +4,8 @@ from .activite_model import *  # noqa: F401,F403
 from .activite_model import __all__ as activite
 from .affectation_context_model import *  # noqa: F401,F403
 from .affectation_context_model import __all__ as affectation_context
+from .affectation_model import *  # noqa: F401,F403
+from .affectation_model import __all__ as affectation
 from .affectation_role_model import *  # noqa: F401,F403
 from .affectation_role_model import __all__ as affectation_role
 from .base_pagination import *  # noqa: F401,F403
@@ -29,6 +31,8 @@ from .pays_model import *  # noqa: F401,F403
 from .pays_model import __all__ as pays
 from .permission_model import *  # noqa: F401,F403
 from .permission_model import __all__ as permission_model
+from .planning_model import *  # noqa: F401,F403
+from .planning_model import __all__ as planning
 from .pole_model import *  # noqa: F401,F403
 from .pole_model import __all__ as pole_model
 from .role_competence_model import *  # noqa: F401,F403
@@ -37,6 +41,8 @@ from .role_model import *  # noqa: F401,F403
 from .role_model import __all__ as roles
 from .schema_db_model import *  # noqa: F401,F403
 from .schema_db_model import __all__ as schema_dbs
+from .slot_model import *  # noqa: F401,F403
+from .slot_model import __all__ as slot_model
 from .utilisateur_model import *  # noqa: F401,F403
 from .utilisateur_model import __all__ as utilisateurs
 from .voix_model import *  # noqa: F401,F403
@@ -67,4 +73,7 @@ __all__: List[str] = (
     + list(indisponibilite)
     + list(equipe)
     + list(equipe_membre)
+    + list(affectation)
+    + list(planning)
+    + list(slot_model)
 )
