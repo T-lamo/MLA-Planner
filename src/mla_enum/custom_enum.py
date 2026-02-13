@@ -16,4 +16,11 @@ class VoixEnum(str, Enum):
     LEAD = "LEAD"
 
 
-__all__ = ["RoleName", "VoixEnum"]
+# 1. Définition des choix pour le niveau (Sécurité des données)
+class NiveauChantre(str, Enum):
+    DEBUTANT = "Débutant"
+    INTERMEDIAIRE = "Intermédiaire"
+    AVANCE = "Avancé"
+
+
+__all__ = ["RoleName", "VoixEnum", "NiveauChantre"]

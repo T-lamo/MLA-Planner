@@ -12,11 +12,14 @@ from mla_enum import RoleName
 from models import (
     AffectationRole,
     Campus,
+    CategorieRole,
+    Membre,
     Ministere,
     OrganisationICC,
     Pays,
     Pole,
     Role,
+    RoleCompetence,
     Utilisateur,
 )
 
@@ -253,3 +256,40 @@ def test_pole(session: Session, test_ministere: Ministere) -> Pole:
     session.commit()
     session.refresh(pole)
     return pole
+
+
+@pytest.fixture
+def test_membre(session: Session, test_campus: Campus) -> Membre:
+    """Fixture pour créer un membre valide."""
+    membre = Membre(
+        nom="Soro",
+        prenom="Jean",
+        email=f"jean.{uuid4()}@test.com",
+        actif=True,
+        campus_id=test_campus.id,
+    )
+    session.add(membre)
+    session.commit()
+    session.refresh(membre)
+    return membre
+
+
+@pytest.fixture
+def test_cat(session):
+    """Crée une catégorie de base pour les rôles."""
+    cat = CategorieRole(code="TECH", libelle="Technique")
+    session.add(cat)
+    session.commit()
+    return cat
+
+
+@pytest.fixture
+def test_role_comp(session: Session, test_cat: CategorieRole) -> RoleCompetence:
+    """Fixture pour créer un rôle de compétence lié à la catégorie de test."""
+    role = RoleCompetence(
+        code="DEV_PYTHON", libelle="Développeur Python", categorie_code=test_cat.code
+    )
+    session.add(role)
+    session.commit()
+    session.refresh(role)
+    return role

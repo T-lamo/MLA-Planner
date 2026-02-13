@@ -2,12 +2,10 @@
 from __future__ import annotations
 
 from typing import Optional
-from uuid import UUID
 
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
-from models.ministere_model import MinistereRead
 from utils.validator import NotBlankFieldsMixin
 
 
@@ -36,18 +34,16 @@ class PoleBase(NotBlankFieldsMixin, SQLModel):
 # CREATE
 # -------------------------
 class PoleCreate(PoleBase):
-    # Utilisation de UUID pour la cohérence avec les standards SQL
-    ministere_id: UUID
+    ministere_id: str
 
 
 # -------------------------
 # READ
 # -------------------------
 class PoleRead(PoleBase):
-    id: UUID
+    id: str
     # ministere_id reste présent pour le front-end
-    ministere_id: UUID
-    ministere: Optional["MinistereRead"] = None
+    ministere_id: str
     membres_count: int = 0
 
 
@@ -61,7 +57,7 @@ class PoleUpdate(NotBlankFieldsMixin, SQLModel):
     nom: Optional[str] = None
     description: Optional[str] = None
     active: Optional[bool] = None
-    ministere_id: Optional[UUID] = None
+    ministere_id: Optional[str] = None
 
     # On réutilise le validateur de la classe de base
     @field_validator("nom")
@@ -80,3 +76,5 @@ __all__ = [
     "PoleRead",
     "PoleUpdate",
 ]
+
+PoleRead.model_rebuild()

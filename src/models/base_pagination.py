@@ -11,3 +11,4 @@ class PaginatedResponse(SQLModel, Generic[T]):
     limit: int
     offset: int
     data: List[T]
+    model_config = {"from_attributes": True}

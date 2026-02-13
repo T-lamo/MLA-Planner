@@ -2,6 +2,7 @@
 from typing import Any, Generic, List, Optional, Type, TypeVar, cast
 
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.strategy_options import Load
 from sqlmodel import Session, SQLModel, func, select
 
 T = TypeVar("T", bound=SQLModel)
@@ -11,16 +12,22 @@ class BaseRepository(Generic[T]):
     def __init__(self, db: Session, model: Type[T]):
         self.db = db
         self.model = model
+        self.default_relations: List[Any] = []
 
     def _get_base_query(self, load_relations: Optional[List[Any]] = None):
-        """Construit la requête de base avec ou sans relations."""
         statement = select(self.model)
-        # Filtre global pour exclure les soft-deleted des résultats API
         if hasattr(self.model, "deleted_at"):
             statement = statement.where(cast(Any, self.model).deleted_at.is_(None))
+
         if load_relations:
             for rel in load_relations:
-                statement = statement.options(selectinload(rel))
+                # SI c'est déjà une option (ex: selectinload(...)),
+                # on l'applique directement
+                if isinstance(rel, Load):
+                    statement = statement.options(rel)
+                # SINON, on l'emballe dans un selectinload par défaut
+                else:
+                    statement = statement.options(selectinload(rel))
         return statement
 
     def create(self, obj: T) -> T:
@@ -29,26 +36,31 @@ class BaseRepository(Generic[T]):
         self.db.refresh(obj)
         return obj
 
+    def _get_effective_relations(
+        self, load_relations: Optional[List[Any]]
+    ) -> List[Any]:
+        """Détermine s'il faut utiliser les relations fournies
+        ou celles par défaut."""
+        return load_relations if load_relations is not None else self.default_relations
+
     def get_by_id(
         self, identifiant: Any, load_relations: Optional[List[Any]] = None
     ) -> Optional[T]:
-        # On cast le modèle en Any pour accéder à l'attribut .id sans erreur Mypy
-        # SQLModel utilise des métaclasses, ce qui rend l'accès
-        # direct difficile pour le linting statique
+        rels = self._get_effective_relations(load_relations)
         model_id = cast(Any, self.model).id
-        statement = self._get_base_query(load_relations).where(
-            model_id == str(identifiant)
-        )
+        statement = self._get_base_query(rels).where(model_id == str(identifiant))
         return self.db.exec(statement).unique().first()
 
     def get_paginated(
         self, limit: int, offset: int, load_relations: Optional[List[Any]] = None
     ) -> List[T]:
-        statement = self._get_base_query(load_relations).offset(offset).limit(limit)
+        rels = self._get_effective_relations(load_relations)
+        statement = self._get_base_query(rels).offset(offset).limit(limit)
         return list(self.db.exec(statement).unique().all())
 
     def list_all(self, load_relations: Optional[List[Any]] = None) -> List[T]:
-        statement = self._get_base_query(load_relations)
+        rels = self._get_effective_relations(load_relations)
+        statement = self._get_base_query(rels)
         return list(self.db.exec(statement).unique().all())
 
     def count(self) -> int:
