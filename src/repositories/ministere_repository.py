@@ -15,8 +15,8 @@ class MinistereRepository(BaseRepository[Ministere]):
         self.relations = [
             cast(Any, Ministere.poles),
             cast(Any, Ministere.membres),
-            cast(Any, Ministere.equipes),
-            cast(Any, Ministere.campus),
+            # cast(Any, Ministere.equipes),
+            # cast(Any, Ministere.campus),
         ]
 
     def get_by_id(

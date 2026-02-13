@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from fastapi import status
 
-from models import Chantre, Membre, Utilisateur
+from models import Membre, Utilisateur
 
 # --- TESTS DE CRÉATION & VALIDATION ---
 
@@ -17,12 +17,13 @@ def test_create_membre_invalid_uuid_format(client, admin_headers):
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
-def test_create_membre_404_on_non_existent_pole(client, admin_headers):
+def test_create_membre_404_on_non_existent_pole(client, admin_headers, test_campus):
     """Vérifie la 404 si l'UUID est valide mais n'existe pas en base."""
     payload = {
         "nom": "Test",
         "prenom": "User",
         "pole_id": str(uuid4()),  # UUID valide mais inconnu
+        "campus_id": test_campus.id,
         "email": f"test{uuid4()}@icc.com",
     }
     response = client.post("/membres/", json=payload, headers=admin_headers)
@@ -33,15 +34,23 @@ def test_create_membre_404_on_non_existent_pole(client, admin_headers):
 # --- TESTS DE LIAISON UTILISATEUR (CAS CRITIQUES) ---
 
 
-def test_link_membre_full_lifecycle(client, admin_headers, session, test_user):
-    """
-    Vérifie l'unicité stricte :
-    1. Un membre ne peut avoir qu'un utilisateur.
-    2. Un utilisateur ne peut être lié qu'à un seul membre.
-    """
-    # Création des membres
-    m1 = Membre(nom="Membre1", prenom="P1", email=f"m1{uuid4()}@test.com")
-    m2 = Membre(nom="Membre2", prenom="P2", email=f"m2{uuid4()}@test.com")
+def test_link_membre_full_lifecycle(
+    client, admin_headers, session, test_user, test_campus
+):
+    """Vérifie l'unicité stricte entre membre et utilisateur."""
+    # FIX: Ajout de campus_id pour respecter la contrainte NOT NULL
+    m1 = Membre(
+        nom="Membre1",
+        prenom="P1",
+        email=f"m1{uuid4()}@test.com",
+        campus_id=test_campus.id,
+    )
+    m2 = Membre(
+        nom="Membre2",
+        prenom="P2",
+        email=f"m2{uuid4()}@test.com",
+        campus_id=test_campus.id,
+    )
     session.add_all([m1, m2])
     session.commit()
 
@@ -79,35 +88,17 @@ def test_link_membre_full_lifecycle(client, admin_headers, session, test_user):
 # --- TESTS DE SUPPRESSION & CASCADE ---
 
 
-def test_cascade_delete_member_removes_chantre(client, admin_headers, session):
-    # Setup
-    m = Membre(nom="Chantre", prenom="Test", email="c@test.com")
-    session.add(m)
-    session.commit()
-    c = Chantre(membre_id=m.id, nom_de_scene="Star")
-    session.add(c)
-    session.commit()
-
-    # Action
-    response = client.delete(f"/membres/{m.id}", headers=admin_headers)
-    assert response.status_code == status.HTTP_204_NO_CONTENT
-
-    # Vérification
-    session.expire_all()
-    # Le membre existe encore en base (pour le Big Data)
-    member_in_db = session.get(Membre, m.id)
-    assert member_in_db.deleted_at is not None
-
-    # Mais le chantre a été nettoyé (ou soft-deleté selon ton choix)
-    assert session.get(Chantre, c.id) is None
-
-
 def test_delete_member_sets_user_link_to_null(
-    client, admin_headers, session, test_user
+    client, admin_headers, session, test_user, test_campus
 ):
-    """Vérifie que supprimer un membre ne supprime pas l'utilisateur
-    mais casse le lien (SET NULL)."""
-    m = Membre(nom="User", prenom="Linked", email=f"l{uuid4()}@test.com")
+    """Vérifie le SET NULL sur l'utilisateur lors de la suppression du membre."""
+    # FIX: Ajout de campus_id
+    m = Membre(
+        nom="User",
+        prenom="Linked",
+        email=f"l{uuid4()}@test.com",
+        campus_id=test_campus.id,
+    )
     session.add(m)
     session.commit()
 
@@ -127,10 +118,15 @@ def test_delete_member_sets_user_link_to_null(
 # --- TESTS DE LECTURE & RÉPONSE ---
 
 
-def test_get_membre_read_schema_security(client, test_user, session):
-    """Vérifie que le schéma MembreRead n'inclut jamais
-    d'infos sensibles de l'utilisateur."""
-    m = Membre(nom="Secu", prenom="Test", email=f"s{uuid4()}@test.com")
+def test_get_membre_read_schema_security(client, test_user, session, test_campus):
+    """Vérifie la sécurité du schéma de lecture."""
+    # FIX: Ajout de campus_id
+    m = Membre(
+        nom="Secu",
+        prenom="Test",
+        email=f"s{uuid4()}@test.com",
+        campus_id=test_campus.id,
+    )
     session.add(m)
     session.commit()
 

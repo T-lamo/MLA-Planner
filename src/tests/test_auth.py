@@ -2,6 +2,7 @@ from datetime import timedelta
 
 import pytest
 from fastapi import status
+from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlmodel import Session
@@ -12,8 +13,7 @@ from mla_enum import RoleName
 from models import Utilisateur
 
 # pylint: disable=redefined-outer-name, unused-argument, too-many-arguments
-# pylint: disable = too-many-positional-arguments
-
+# pylint: disable=too-many-positional-arguments
 
 # --- TESTS DE CONNEXION (LOGIN) ---
 
@@ -27,20 +27,17 @@ from models import Utilisateur
         ("banned_user", "password123", status.HTTP_403_FORBIDDEN),
     ],
 )
-# pylint: disable=too-many-arguments
 def test_login_flow(
     client: TestClient,
     test_user,
     inactive_user,
     username,
     password,
-    expected_status,  # type: ignore
+    expected_status,
 ):
-    """
-    Teste les différents scénarios de login.
-    Note: On injecte test_user et inactive_user
-    pour qu'ils soient présents en DB.
-    """
+    """Teste les différents scénarios de login."""
+    # Les données de formulaire (OAuth2PasswordRequestForm) sont envoyées en form-data,
+    # donc pas besoin de jsonable_encoder ici, les chaînes suffisent.
     response = client.post(
         "/auth/token", data={"username": username, "password": password}
     )
@@ -75,7 +72,7 @@ def test_get_me_expired_token(client: TestClient, test_user: Utilisateur):
     """Vérifie le rejet d'un token expiré."""
     token, _ = create_access_token(
         data={"sub": test_user.username},
-        expires_delta=timedelta(minutes=-1),  # Expire il y a une minute
+        expires_delta=timedelta(minutes=-1),
     )
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get("/auth/users/me", headers=headers)
@@ -101,8 +98,11 @@ def test_change_password_own_account(client: TestClient, test_user: Utilisateur)
 
     payload = {"current_password": "password123", "new_password": "newsecurepassword"}
 
+    # Correction : str(test_user.id) pour l'URL
     response = client.patch(
-        f"/auth/utilisateurs/{test_user.id}/password", json=payload, headers=headers
+        f"/auth/utilisateurs/{str(test_user.id)}/password",
+        json=jsonable_encoder(payload),
+        headers=headers,
     )
     assert response.status_code == status.HTTP_200_OK
 
@@ -114,7 +114,9 @@ def test_change_password_invalid_length(client: TestClient, test_user: Utilisate
 
     payload = {"current_password": "password123", "new_password": "123"}
     response = client.patch(
-        f"/auth/utilisateurs/{test_user.id}/password", json=payload, headers=headers
+        f"/auth/utilisateurs/{str(test_user.id)}/password",
+        json=jsonable_encoder(payload),
+        headers=headers,
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
@@ -128,8 +130,11 @@ def test_change_password_forbidden_for_other_user(
 
     payload = {"current_password": "adminpass", "new_password": "hackpassword"}
 
+    # Tentative de changement sur le compte admin
     response = client.patch(
-        f"/auth/utilisateurs/{test_admin.id}/password", json=payload, headers=headers
+        f"/auth/utilisateurs/{str(test_admin.id)}/password",
+        json=jsonable_encoder(payload),
+        headers=headers,
     )
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
@@ -142,8 +147,10 @@ def test_password_rotation_invalidates_old_login(
     headers = {"Authorization": f"Bearer {token}"}
 
     client.patch(
-        f"/auth/utilisateurs/{test_user.id}/password",
-        json={"current_password": "password123", "new_password": "NewPassword123!"},
+        f"/auth/utilisateurs/{str(test_user.id)}/password",
+        json=jsonable_encoder(
+            {"current_password": "password123", "new_password": "NewPassword123!"}
+        ),
         headers=headers,
     )
 
@@ -159,8 +166,7 @@ def test_password_rotation_invalidates_old_login(
 def test_active_status_middleware_enforcement(
     client: TestClient, test_user: Utilisateur, session: Session
 ):
-    """Vérifie que le middleware bloque un utilisateur
-    désactivé même avec un token valide."""
+    """Vérifie que le middleware bloque un utilisateur désactivé."""
     token, _ = create_access_token(data={"sub": test_user.username})
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -199,18 +205,22 @@ def test_jwt_payload_contains_context(client: TestClient, test_admin: Utilisateu
 
     assert payload["sub"] == test_admin.username
     assert "context" in payload
-    assert any(ctx["role"] == RoleName.ADMIN for ctx in payload["context"])
+    # Conversion de l'énumération en string pour la comparaison si nécessaire
+    assert any(
+        ctx["role"] == RoleName.ADMIN.value or ctx["role"] == RoleName.ADMIN
+        for ctx in payload["context"]
+    )
 
 
 def test_logout_and_token_invalidation(client: TestClient, test_user: Utilisateur):
-    # 1. Login pour obtenir un token
+    # 1. Login
     login_res = client.post(
         "/auth/token", data={"username": "active_user", "password": "password123"}
     )
     token = login_res.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
-    # 2. Vérifier que le token fonctionne
+    # 2. Vérifier
     me_res = client.get("/auth/users/me", headers=headers)
     assert me_res.status_code == 200
 
@@ -218,7 +228,7 @@ def test_logout_and_token_invalidation(client: TestClient, test_user: Utilisateu
     logout_res = client.post("/auth/logout", headers=headers)
     assert logout_res.status_code == 200
 
-    # 4. Vérifier que le token est maintenant rejeté
+    # 4. Invalidation
     revoked_res = client.get("/auth/users/me", headers=headers)
     assert revoked_res.status_code == 401
     assert revoked_res.json()["detail"] == "Cette session a été fermée (déconnexion)"

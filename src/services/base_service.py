@@ -55,6 +55,20 @@ class BaseService(Generic[C, R, U, T]):
                 f"Action impossible sur {self.resource_name}"
             ) from exc
 
+    def create(self, data: C) -> T:
+        """Crée une instance en utilisant le repo."""
+        # On convertit le schéma Pydantic/SQLModel en modèle DB
+        # model_validate est la méthode SQLModel/Pydantic v2
+        db_obj = self.repo.model.model_validate(data)
+        return self.repo.create(db_obj)
+
+    def update(self, identifiant: str, data: U) -> T:
+        """Met à jour une ressource existante."""
+        obj = self.get_one(identifiant)
+        # Convert Pydantic model to dict, excluding unset fields
+        update_data = data.model_dump(exclude_unset=True)
+        return self.repo.update(obj, update_data)
+
     def _after_delete_hook(self, obj: T) -> None:
         """
         Hook destiné à être surchargé dans les services enfants
