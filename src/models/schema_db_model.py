@@ -4,7 +4,10 @@ from typing import List, Optional
 
 from sqlmodel import Field, Relationship, SQLModel
 
+from models.affectation_model import AffectationBase
 from models.equipe_model import EquipeBase
+from models.planning_model import PlanningServiceBase
+from models.slot_model import SlotBase
 
 from .activite_model import ActiviteBase
 from .affectation_context_model import AffectationContexteBase
@@ -37,7 +40,6 @@ class RoleCompetence(RoleCompetenceBase, table=True):  # type: ignore
     __tablename__ = "t_rolecompetence"
     categorie: Optional[CategorieRole] = Relationship(back_populates="roles")
     membres_assoc: List["MembreRole"] = Relationship(back_populates="role")
-    affectations: List["Affectation"] = Relationship(back_populates="role_competence")
 
 
 class MembreRole(MembreRoleBase, table=True):  # type: ignore
@@ -159,33 +161,54 @@ class Activite(ActiviteBase, table=True):  # type: ignore
     campus: Optional["Campus"] = Relationship(back_populates="activites")
     planning_services: List["PlanningService"] = Relationship(back_populates="activite")
     responsabilites: List["Responsabilite"] = Relationship(back_populates="activite")
+    ministere_organisateur_id: str = Field(
+        foreign_key="t_ministere.id", ondelete="CASCADE"
+    )
 
 
-class PlanningService(SQLModel, table=True):  # type: ignore
+class Slot(SlotBase, table=True):  # type: ignore
+    __tablename__ = "t_slot"
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
+    planning: Optional["PlanningService"] = Relationship(back_populates="slots")
+    affectations: List["Affectation"] = Relationship(back_populates="slot")
+
+
+class PlanningService(PlanningServiceBase, table=True):  # type: ignore
     __tablename__ = "t_planningservice"
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    deleted_at: Optional[datetime] = Field(default=None, index=True)
-    statut_code: str = Field(foreign_key="t_statutplanning.code", ondelete="CASCADE")
-    activite_id: str = Field(foreign_key="t_activite.id", ondelete="CASCADE")
+    deleted_at: Optional[datetime] = None
     activite: Optional["Activite"] = Relationship(back_populates="planning_services")
-    statut: Optional["StatutPlanning"] = Relationship(back_populates="plannings")
-    affectations: List["Affectation"] = Relationship(back_populates="planning_service")
+    statut: Optional[StatutPlanning] = Relationship(back_populates="plannings")
+    slots: List["Slot"] = Relationship(
+        back_populates="planning",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
 
 
-class Affectation(SQLModel, table=True):  # type: ignore
+class StatutAffectation(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_statutaffectation"
+    code: str = Field(primary_key=True, max_length=20)
+    libelle: Optional[str] = None
+    affectations: List["Affectation"] = Relationship(back_populates="statut_aff")
+
+
+class Affectation(AffectationBase, table=True):  # type: ignore
     __tablename__ = "t_affectation"
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    planning_id: str = Field(foreign_key="t_planningservice.id", ondelete="CASCADE")
-    membre_id: str = Field(foreign_key="t_membre.id", ondelete="CASCADE")
-    role_code: str = Field(foreign_key="t_rolecompetence.code", ondelete="CASCADE")
-    presence_confirmee: bool = Field(default=False)
-    planning_service: Optional["PlanningService"] = Relationship(
+
+    slot: Optional[Slot] = Relationship(back_populates="affectations")
+    statut_aff: Optional[StatutAffectation] = Relationship(
         back_populates="affectations"
     )
     membre: Optional["Membre"] = Relationship(back_populates="affectations")
-    role_competence: Optional["RoleCompetence"] = Relationship(
-        back_populates="affectations"
-    )
+
+    # __table_args__ = (
+    #     ForeignKeyConstraint(
+    #         ["membre_id", "role_code"],
+    #         ["t_membre_role.membre_id", "t_membre_role.role_code"],
+    #         ondelete="CASCADE",
+    #     ),
+    # )
 
 
 # -------------------------
@@ -196,8 +219,8 @@ class Affectation(SQLModel, table=True):  # type: ignore
 class Responsabilite(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_responsabilite"
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    dateDebut: Optional[str] = None
-    dateFin: Optional[str] = None
+    date_debut: Optional[str] = None
+    date_fin: Optional[str] = None
     actif: bool = Field(default=True)
     type_code: str = Field(foreign_key="t_typeresponsabilite.code", ondelete="CASCADE")
     membre_id: str = Field(foreign_key="t_membre.id", ondelete="CASCADE")
@@ -333,6 +356,8 @@ class AffectationContexte(AffectationContexteBase, table=True):  # type: ignore
 __all__ = [
     "CategorieRole",
     "RoleCompetence",
+    "Slot",
+    "StatutAffectation",
     "MembreRole",
     "StatutPlanning",
     "TypeResponsabilite",

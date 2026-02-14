@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -8,8 +9,9 @@ from sqlmodel import Session, SQLModel, select
 from conf.db.database import Database
 from core.auth.security import create_access_token, get_password_hash
 from main import app
-from mla_enum import RoleName
+from mla_enum import AffectationStatusCode, RoleName
 from models import (
+    Activite,
     AffectationRole,
     Campus,
     CategorieRole,
@@ -17,11 +19,15 @@ from models import (
     Ministere,
     OrganisationICC,
     Pays,
+    PlanningService,
     Pole,
     Role,
     RoleCompetence,
+    Slot,
+    StatutPlanning,
     Utilisateur,
 )
+from models.schema_db_model import MembreRole, StatutAffectation
 
 # pylint: disable=redefined-outer-name
 
@@ -293,3 +299,123 @@ def test_role_comp(session: Session, test_cat: CategorieRole) -> RoleCompetence:
     session.commit()
     session.refresh(role)
     return role
+
+
+@pytest.fixture
+def test_activite(session: Session, test_campus, test_ministere) -> Activite:
+    """
+    Fixture pour créer une activité valide.
+    Répond aux contraintes du nouveau schéma (type, ministere_organisateur, dates).
+    """
+    activite = Activite(
+        nom=f"Activite Test {uuid4().hex[:6]}",
+        type="Réunion",  # Valeur requise par la contrainte NOT NULL
+        campus_id=test_campus.id,
+        ministere_organisateur_id=test_ministere.id,
+        date_debut=datetime.now(),
+        date_fin=datetime.now() + timedelta(hours=2),
+    )
+
+    session.add(activite)
+    session.commit()
+    session.refresh(activite)
+    return activite
+
+
+@pytest.fixture
+def activite_data(test_campus, test_ministere):
+    return {
+        "type": "Culte",
+        "date_debut": (datetime.now() + timedelta(days=1)).isoformat(),
+        "date_fin": (datetime.now() + timedelta(days=1, hours=2)).isoformat(),
+        "lieu": "Auditorium Principal",
+        "description": "Culte dominical",
+        "campus_id": test_campus.id,
+        "ministere_organisateur_id": test_ministere.id,
+    }
+
+
+@pytest.fixture(autouse=True)
+def seed_planning_status(session: Session):
+    """Populate the reference table for statuses before each test."""
+    codes = ["BROUILLON", "PUBLIE", "ANNULE"]
+    for code in codes:
+        # We use merge to avoid conflicts if the status already exists
+        session.merge(StatutPlanning(code=code, libelle=code.capitalize()))
+    session.commit()
+
+
+@pytest.fixture
+def test_slot(session, test_planning):
+    """Fixture pour créer un Slot (créneau) valide."""
+    # On définit des dates cohérentes avec l'activité parente si possible
+    maintenant = datetime.now()
+    slot = Slot(
+        id=str(uuid4()),
+        planning_id=test_planning.id,
+        nom_creneau="Session de Louange",
+        date_debut=maintenant + timedelta(hours=1),
+        date_fin=maintenant + timedelta(hours=2),
+    )
+    session.add(slot)
+    session.commit()
+    session.refresh(slot)
+    return slot
+
+
+@pytest.fixture
+def test_statut_brouillon(session):
+    """
+    Assure que le statut BROUILLON existe dans la table de référence.
+    C'est crucial car statut_code est une foreign_key.
+    """
+
+    statut = session.get(StatutPlanning, "BROUILLON")
+    if not statut:
+        statut = StatutPlanning(code="BROUILLON")  # libelle="Brouillon"
+        session.add(statut)
+        session.commit()
+        session.refresh(statut)
+    return statut
+
+
+@pytest.fixture
+def test_planning(session, test_activite, test_statut_brouillon):
+    """Fixture pour créer un PlanningService lié à une Activité."""
+    planning = PlanningService(
+        id=str(uuid4()),
+        activite_id=test_activite.id,
+        statut_code=test_statut_brouillon.code,
+    )
+    session.add(planning)
+    session.commit()
+    session.refresh(planning)
+    return planning
+
+
+@pytest.fixture
+def test_membre_role(session, test_membre, test_role_comp):
+    """
+    Crée le lien MembreRole (MembreRole).
+    """
+    membre_role = MembreRole(
+        membre_id=test_membre.id,
+        role_code=test_role_comp.code,
+        niveau="INTERMEDIAIRE",
+        is_principal=True,
+    )
+    session.add(membre_role)
+    session.commit()
+    session.refresh(membre_role)
+    return membre_role
+
+
+@pytest.fixture(autouse=True)
+def seed_affectation_status(session: Session):
+    """Popule la table de référence des statuts d'affectation."""
+
+    for status in AffectationStatusCode:
+        session.merge(
+            StatutAffectation(code=status.value, libelle=status.value.capitalize())
+        )
+    session.commit()
