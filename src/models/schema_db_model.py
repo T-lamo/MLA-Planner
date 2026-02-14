@@ -2,7 +2,6 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from sqlalchemy import ForeignKeyConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 from models.affectation_model import AffectationBase
@@ -203,13 +202,13 @@ class Affectation(AffectationBase, table=True):  # type: ignore
     )
     membre: Optional["Membre"] = Relationship(back_populates="affectations")
 
-    __table_args__ = (
-        ForeignKeyConstraint(
-            ["membre_id", "role_code"],
-            ["t_membre_role.membre_id", "t_membre_role.role_code"],
-            ondelete="CASCADE",
-        ),
-    )
+    # __table_args__ = (
+    #     ForeignKeyConstraint(
+    #         ["membre_id", "role_code"],
+    #         ["t_membre_role.membre_id", "t_membre_role.role_code"],
+    #         ondelete="CASCADE",
+    #     ),
+    # )
 
 
 # -------------------------
