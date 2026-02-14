@@ -61,3 +61,19 @@ class PlanningRepository(BaseRepository[PlanningService]):
         # self.db.commit()
         # self.db.refresh(affectation)
         return affectation
+
+    def get_planning_with_activity(self, planning_id: str):
+        """Récupère le planning et son activité parente (évite N+1)."""
+        return self.db.exec(
+            select(PlanningService)
+            .where(PlanningService.id == planning_id)
+            .options(selectinload(PlanningService.activite))  # type: ignore
+        ).first()
+
+    def get_slots_by_planning(self, planning_id: str):
+        """Récupère tous les slots d'un planning pour vérifier les collisions."""
+        return self.db.exec(select(Slot).where(Slot.planning_id == planning_id)).all()
+
+    def save_slot(self, slot: Slot) -> Slot:
+        self.db.add(slot)
+        return slot

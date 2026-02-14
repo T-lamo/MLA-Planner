@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
+from pydantic import model_validator
 from sqlmodel import Field, SQLModel
 
 
@@ -18,7 +19,13 @@ class SlotUpdate(SQLModel):
 
 
 class SlotCreate(SlotBase):
-    pass
+    @model_validator(mode="after")
+    def validate_chronology(self):
+        if self.date_fin <= self.date_debut:
+            raise ValueError(
+                "La date de fin doit être strictement supérieure à la date de début"
+            )
+        return self
 
 
 class SlotRead(SlotBase):
