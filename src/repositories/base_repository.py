@@ -32,7 +32,7 @@ class BaseRepository(Generic[T]):
 
     def create(self, obj: T) -> T:
         self.db.add(obj)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(obj)
         return obj
 
@@ -71,10 +71,10 @@ class BaseRepository(Generic[T]):
         for key, value in update_data.items():
             setattr(db_obj, key, value)
         self.db.add(db_obj)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(db_obj)
         return db_obj
 
     def delete(self, db_obj: T) -> None:
         self.db.delete(db_obj)
-        self.db.commit()
+        self.db.flush()

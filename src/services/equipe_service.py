@@ -27,7 +27,7 @@ class EquipeService(BaseService[EquipeCreate, EquipeRead, EquipeUpdate, Equipe])
         # 3. Créer le lien
         lien = EquipeMembre(equipe_id=equipe.id, membre_id=membre.id)
         self.db.add(lien)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(lien)
         return lien
 
@@ -38,4 +38,4 @@ class EquipeService(BaseService[EquipeCreate, EquipeRead, EquipeUpdate, Equipe])
             raise NotFoundException("Le membre ne fait pas partie de cette équipe.")
 
         self.db.delete(lien)
-        self.db.commit()
+        self.db.flush()

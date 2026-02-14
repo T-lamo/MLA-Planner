@@ -43,7 +43,7 @@ def test_create_slot_collision(session, test_planning, test_slot):
     test_slot.date_debut = activity.date_debut + timedelta(minutes=10)
     test_slot.date_fin = activity.date_debut + timedelta(minutes=50)
     session.add(test_slot)
-    session.commit()
+    session.flush()
 
     # Maintenant on crée la collision sur ce créneau Garanti "In-Bounds"
     data = SlotCreate(
@@ -70,7 +70,7 @@ def test_create_slot_overlap_start(session, test_planning, test_slot):
     test_slot.date_debut = activity.date_debut
     test_slot.date_fin = activity.date_debut + timedelta(minutes=60)
     session.add(test_slot)
-    session.commit()
+    session.flush()
 
     # 2. Nouveau slot : [T+30 min à T+90 min]
     # (On vérifie que T+90 min < activity.date_fin qui est généralement T+120 min)
@@ -92,7 +92,7 @@ def test_create_slot_overlap_end(session, test_planning, test_slot):
     test_slot.date_debut = test_planning.activite.date_debut + timedelta(hours=1)
     test_slot.date_fin = test_slot.date_debut + timedelta(hours=1)
     session.add(test_slot)
-    session.commit()
+    session.flush()
 
     # Nouveau slot : 09h30 - 10h30 (Collision à la fin)
     data = SlotCreate(
@@ -114,7 +114,7 @@ def test_create_slot_edge_to_edge_success(session, test_planning, test_slot):
     test_slot.date_debut = activity.date_debut
     test_slot.date_fin = activity.date_debut + timedelta(minutes=30)
     session.add(test_slot)
-    session.commit()
+    session.flush()
 
     # 2. Nouveau slot : de 30 min à 60 min (Succès car pas de chevauchement)
     data = SlotCreate(

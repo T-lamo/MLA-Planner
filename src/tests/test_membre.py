@@ -52,14 +52,14 @@ def test_link_membre_full_lifecycle(
         campus_id=test_campus.id,
     )
     session.add_all([m1, m2])
-    session.commit()
+    session.flush()
 
     # Création d'un second utilisateur
     user2 = Utilisateur(
         username=f"u{uuid4()}", email=f"e{uuid4()}@t.com", password="hash", actif=True
     )
     session.add(user2)
-    session.commit()
+    session.flush()
 
     # ACTION 1 : Lier m1 à test_user -> SUCCESS
     url = f"/membres/utilisateurs/{test_user.id}/link-membre?membre_id={m1.id}"
@@ -100,11 +100,11 @@ def test_delete_member_sets_user_link_to_null(
         campus_id=test_campus.id,
     )
     session.add(m)
-    session.commit()
+    session.flush()
 
     test_user.membre_id = m.id
     session.add(test_user)
-    session.commit()
+    session.flush()
 
     # Suppression du membre
     client.delete(f"/membres/{m.id}", headers=admin_headers)
@@ -128,11 +128,11 @@ def test_get_membre_read_schema_security(client, test_user, session, test_campus
         campus_id=test_campus.id,
     )
     session.add(m)
-    session.commit()
+    session.flush()
 
     test_user.membre_id = m.id
     session.add(test_user)
-    session.commit()
+    session.flush()
 
     response = client.get(f"/membres/{m.id}")
     data = response.json()

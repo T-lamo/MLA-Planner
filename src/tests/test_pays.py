@@ -46,7 +46,7 @@ def test_create_pays_invalid_org(client, admin_headers):
 def test_list_pays_contains_org_data(client, test_org, session):
     pays = Pays(nom="Bénin", code="BJ", organisation_id=test_org["id"])
     session.add(pays)
-    session.commit()
+    session.flush()
     session.refresh(pays)
     response = client.get("/pays/")
     data = response.json()
