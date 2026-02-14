@@ -1,10 +1,12 @@
 import uuid
+from datetime import datetime
 from typing import List, Optional
 
-from pydantic import field_validator
+from pydantic import BaseModel, field_validator
 from sqlmodel import Field, SQLModel
 
-from models.slot_model import SlotRead
+from .activite_model import ActiviteCreate
+from .slot_model import SlotCreate, SlotRead
 
 # Import de l'enum défini plus haut
 # from mla_enum import PlanningStatusCode
@@ -50,6 +52,32 @@ class PlanningServiceRead(PlanningServiceBase):
     slots: List["SlotRead"] = []
 
 
+class AssignmentSimpleCreate(BaseModel):
+    membre_id: str
+    role_code: str
+
+
+class SlotWithAssignmentsCreate(SlotCreate):
+    # On surcharge pour inclure les affectations dans le payload
+    affectations: List[AssignmentSimpleCreate]
+
+
+class SlotFullNested(
+    BaseModel
+):  # On n'hérite plus de SlotCreate pour éviter les IDs obligatoires
+    nom_creneau: str
+    date_debut: datetime
+    date_fin: datetime
+    # On omet volontairement planning_id ici
+    affectations: List[AssignmentSimpleCreate]
+
+
+class PlanningFullCreate(BaseModel):
+    activite: ActiviteCreate
+    planning: Optional[PlanningServiceCreate] = None
+    slots: List[SlotFullNested]
+
+
 # Pour éviter les problèmes de circularité avec SlotRead
 PlanningServiceRead.model_rebuild()
 
@@ -57,5 +85,8 @@ __all__ = [
     "PlanningServiceBase",
     "PlanningServiceCreate",
     "PlanningServiceRead",
-    "PlanningServiceUpdate",  # Correction orthographe
+    "PlanningServiceUpdate",
+    "PlanningFullCreate",
+    "SlotFullNested",
+    # Correction orthographe
 ]
