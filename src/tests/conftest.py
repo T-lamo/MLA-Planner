@@ -27,7 +27,7 @@ from models import (
     StatutPlanning,
     Utilisateur,
 )
-from models.schema_db_model import MembreRole, StatutAffectation
+from models.schema_db_model import Affectation, MembreRole, StatutAffectation
 
 # pylint: disable=redefined-outer-name
 
@@ -113,7 +113,7 @@ def test_user(session: Session) -> Utilisateur:
             email="active@test.com",
         )
         session.add(user)
-        session.commit()
+        session.flush()
         session.refresh(user)
     return user
 
@@ -147,7 +147,7 @@ def test_admin(session: Session) -> Utilisateur:
         aff = AffectationRole(utilisateur_id=user.id, role_id=admin_role.id)
         session.add(aff)
 
-    session.commit()
+    session.flush()
     session.refresh(user)
     return user
 
@@ -166,7 +166,7 @@ def inactive_user(session: Session) -> Utilisateur:
             email="banned@test.com",
         )
         session.add(user)
-        session.commit()
+        session.flush()
         session.refresh(user)
     return user
 
@@ -196,7 +196,7 @@ def test_org(session: Session) -> OrganisationICC:
         nom=f"Org Test {uuid4()}", code=str(uuid4())[:5], date_creation="2024-01-01"
     )
     session.add(org)
-    session.commit()
+    session.flush()
     session.refresh(org)
     return org
 
@@ -211,7 +211,7 @@ def test_pays(session: Session, test_org: OrganisationICC) -> Pays:
         date_creation="2024-01-01",
     )
     session.add(pays)
-    session.commit()
+    session.flush()
     session.refresh(pays)
     return pays
 
@@ -227,7 +227,7 @@ def test_campus(session: Session, test_pays: Pays) -> Campus:
         deleted_at=None,
     )
     session.add(campus)
-    session.commit()
+    session.flush()
     session.refresh(campus)
     return campus
 
@@ -243,7 +243,7 @@ def test_ministere(session: Session, test_campus: Campus) -> Ministere:
         actif=True,
     )
     session.add(ministere)
-    session.commit()
+    session.flush()
     session.refresh(ministere)
     return ministere
 
@@ -259,7 +259,7 @@ def test_pole(session: Session, test_ministere: Ministere) -> Pole:
         active=True,
     )
     session.add(pole)
-    session.commit()
+    session.flush()
     session.refresh(pole)
     return pole
 
@@ -275,7 +275,7 @@ def test_membre(session: Session, test_campus: Campus) -> Membre:
         campus_id=test_campus.id,
     )
     session.add(membre)
-    session.commit()
+    session.flush()
     session.refresh(membre)
     return membre
 
@@ -285,7 +285,7 @@ def test_cat(session):
     """Crée une catégorie de base pour les rôles."""
     cat = CategorieRole(code="TECH", libelle="Technique")
     session.add(cat)
-    session.commit()
+    session.flush()
     return cat
 
 
@@ -296,7 +296,7 @@ def test_role_comp(session: Session, test_cat: CategorieRole) -> RoleCompetence:
         code="DEV_PYTHON", libelle="Développeur Python", categorie_code=test_cat.code
     )
     session.add(role)
-    session.commit()
+    session.flush()
     session.refresh(role)
     return role
 
@@ -317,7 +317,7 @@ def test_activite(session: Session, test_campus, test_ministere) -> Activite:
     )
 
     session.add(activite)
-    session.commit()
+    session.flush()
     session.refresh(activite)
     return activite
 
@@ -342,7 +342,7 @@ def seed_planning_status(session: Session):
     for code in codes:
         # We use merge to avoid conflicts if the status already exists
         session.merge(StatutPlanning(code=code, libelle=code.capitalize()))
-    session.commit()
+    session.flush()
 
 
 @pytest.fixture
@@ -358,7 +358,7 @@ def test_slot(session, test_planning):
         date_fin=maintenant + timedelta(hours=2),
     )
     session.add(slot)
-    session.commit()
+    session.flush()
     session.refresh(slot)
     return slot
 
@@ -374,7 +374,7 @@ def test_statut_brouillon(session):
     if not statut:
         statut = StatutPlanning(code="BROUILLON")  # libelle="Brouillon"
         session.add(statut)
-        session.commit()
+        session.flush()
         session.refresh(statut)
     return statut
 
@@ -388,7 +388,7 @@ def test_planning(session, test_activite, test_statut_brouillon):
         statut_code=test_statut_brouillon.code,
     )
     session.add(planning)
-    session.commit()
+    session.flush()
     session.refresh(planning)
     return planning
 
@@ -405,7 +405,7 @@ def test_membre_role(session, test_membre, test_role_comp):
         is_principal=True,
     )
     session.add(membre_role)
-    session.commit()
+    session.flush()
     session.refresh(membre_role)
     return membre_role
 
@@ -418,4 +418,27 @@ def seed_affectation_status(session: Session):
         session.merge(
             StatutAffectation(code=status.value, libelle=status.value.capitalize())
         )
-    session.commit()
+    session.flush()
+
+
+@pytest.fixture
+def test_affectation(session, test_slot, test_membre) -> Affectation:
+    """Fixture pour créer une affectation valide liée à un slot et un membre."""
+
+    # On s'assure que le statut existe (déjà fait par seed_affectation_status en autouse)
+
+    affectation = Affectation(
+        slot_id=test_slot.id,
+        membre_id=test_membre.id,
+        role_code="ROLE_TEST",
+        # Par défaut dans le workflow, une affectation est PROPOSE
+        statut_affectation_code=AffectationStatusCode.PROPOSE.value,
+        presence_confirmee=False,
+    )
+
+    session.add(affectation)
+    # Important : flush() au lieu de commit() pour ne pas fermer
+    # la transaction de la session de test
+    session.flush()
+    session.refresh(affectation)
+    return affectation

@@ -3,6 +3,8 @@ from uuid import uuid4
 
 from sqlmodel import Session
 
+from core.workflow_engine import WorkflowEngine, planning_transitions
+from mla_enum.custom_enum import PlanningStatusCode
 from models import (
     PlanningService,
     PlanningServiceCreate,
@@ -33,6 +35,7 @@ class PlanningServiceSvc(
         super().__init__(PlanningRepository(db), "Planning")
         self.db = db
         self.validator = ValidationEngine()
+        self.workflow = WorkflowEngine[PlanningStatusCode](planning_transitions)
 
     def create(self, data: PlanningServiceCreate) -> PlanningService:
         # 1. Manual validation of Activity existence
@@ -101,3 +104,36 @@ class PlanningServiceSvc(
             return planning_db
         except Exception as e:
             raise e
+
+    def _on_publish_hook(self, planning: PlanningService):
+        """Hook déclenché lors de la publication."""
+        logger.info(f"Sending notifications for planning {planning.id}")
+        # Logique d'envoi d'email ici
+
+    def update_planning_status(
+        self, planning_id: str, new_status: PlanningStatusCode
+    ) -> PlanningService:
+        planning = self.get_one(planning_id)
+        current_status = PlanningStatusCode(planning.statut_code)
+        try:
+            # 1. Validate and run hooks before DB changes
+            self.workflow.execute_transition(
+                current_status,
+                new_status,
+                hook=lambda: (
+                    self._on_publish_hook(planning)
+                    if new_status == PlanningStatusCode.PUBLIE
+                    else None
+                ),
+            )
+
+            # 2. Update DB state
+            planning.statut_code = new_status.value
+            self.db.add(planning)
+            self.db.commit()  # Or .flush() if managed externally
+            self.db.refresh(planning)
+            return planning
+        except Exception as e:
+            self.db.rollback()
+            logger.error(f"Failed status transition: {e}")
+            raise
