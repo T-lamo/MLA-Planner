@@ -19,7 +19,7 @@ def test_min(session: Session, test_campus: Campus) -> Ministere:
         date_creation="2024-01-01",
     )
     session.add(minis)
-    session.commit()
+    session.flush()
     session.refresh(minis)
     return minis
 

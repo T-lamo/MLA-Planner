@@ -21,10 +21,26 @@ class WorkflowEngine(Generic[T]):
         self.allowed_transitions = allowed_transitions
 
     def validate_transition(self, current_status: T, target_status: T):
-        if target_status not in self.allowed_transitions.get(current_status, []):
-            raise WorkflowError(
-                f"Transition impossible: {current_status.value} -> {target_status.value}"
-            )
+        # --- CORRECTION ICI ---
+        # On convertit les valeurs pour être sûr de comparer des strings (les .value)
+
+        current_val = (
+            current_status.value if hasattr(current_status, "value") else current_status
+        )
+        target_val = (
+            target_status.value if hasattr(target_status, "value") else target_status
+        )
+
+        # On convertit aussi les clés du dictionnaire pour la comparaison
+        allowed_keys = {
+            (k.value if hasattr(k, "value") else k): [
+                (v.value if hasattr(v, "value") else v) for v in transitions
+            ]
+            for k, transitions in self.allowed_transitions.items()
+        }
+
+        if target_val not in allowed_keys.get(current_val, []):
+            raise WorkflowError(f"Transition impossible: {current_val} -> {target_val}")
 
     def execute_transition(
         self,

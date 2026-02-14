@@ -40,6 +40,7 @@ def test_update_activite_partial(
     )
     session.add(act)
     session.commit()
+    session.refresh(act)
 
     update_payload = {"lieu": "Nouvelle Salle", "type": "séminaire"}
     response = client.patch(

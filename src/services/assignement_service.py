@@ -82,7 +82,7 @@ class AssignmentService:
 
             affectation.statut_affectation_code = new_status.value
             self.db.add(affectation)
-            self.db.commit()
+            self.db.flush()
             self.db.refresh(affectation)
             return affectation
         except Exception as e:

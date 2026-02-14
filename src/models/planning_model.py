@@ -5,7 +5,7 @@ from typing import List, Optional
 from pydantic import BaseModel, field_validator
 from sqlmodel import Field, SQLModel
 
-from .activite_model import ActiviteCreate
+from .activite_model import ActiviteCreate, ActiviteUpdate
 from .slot_model import SlotCreate, SlotRead
 
 # Import de l'enum défini plus haut
@@ -76,6 +76,27 @@ class PlanningFullCreate(BaseModel):
     activite: ActiviteCreate
     planning: Optional[PlanningServiceCreate] = None
     slots: List[SlotFullNested]
+
+
+class AffectationFullUpdate(BaseModel):
+    id: Optional[str] = None  # Si présent : update, si absent : create
+    membre_id: str
+    role_code: str
+    statut_affectation_code: Optional[str] = None
+
+
+class SlotFullUpdate(BaseModel):
+    id: Optional[str] = None
+    nom_creneau: str
+    date_debut: str
+    date_fin: str
+    affectations: List[AffectationFullUpdate] = []
+
+
+class PlanningFullUpdate(BaseModel):
+    activite: Optional[ActiviteUpdate] = None
+    statut_code: Optional[str] = None
+    slots: List[SlotFullUpdate] = []
 
 
 # Pour éviter les problèmes de circularité avec SlotRead

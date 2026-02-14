@@ -66,18 +66,18 @@ def setup_database():
 
 @pytest.fixture(name="session")
 def session_fixture():
-    """
-    Fournit une session isolée. Chaque test s'exécute dans une transaction
-    qui subit un rollback à la fin pour garantir l'isolation des données.
-    """
     connection = engine.connect()
+    # On commence une transaction externe
     transaction = connection.begin()
-    session = Session(bind=connection)
+
+    # On crée la session liée à cette connexion
+    # "join_transaction_mode='create_savepoint'" permet de gérer les commits internes
+    session = Session(bind=connection, join_transaction_mode="create_savepoint")
 
     yield session
 
     session.close()
-    transaction.rollback()
+    transaction.rollback()  # On annule tout à la fin pour garder la DB propre
     connection.close()
 
 
@@ -91,6 +91,7 @@ def client_fixture(session: Session):
         yield session
 
     app.dependency_overrides[Database.get_session] = get_session_override
+    app.dependency_overrides[Database.get_db_for_route] = get_session_override
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
@@ -437,7 +438,7 @@ def test_affectation(session, test_slot, test_membre) -> Affectation:
     )
 
     session.add(affectation)
-    # Important : flush() au lieu de commit() pour ne pas fermer
+    # Important : flush() au lieu de flush() pour ne pas fermer
     # la transaction de la session de test
     session.flush()
     session.refresh(affectation)

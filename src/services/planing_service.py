@@ -100,7 +100,7 @@ class PlanningServiceSvc(
                             membre_id=a_data.membre_id,
                             role_code=a_data.role_code,
                         )
-            self.db.commit()
+            self.db.flush()
             return planning_db
         except Exception as e:
             raise e
@@ -130,7 +130,7 @@ class PlanningServiceSvc(
             # 2. Update DB state
             planning.statut_code = new_status.value
             self.db.add(planning)
-            self.db.commit()  # Or .flush() if managed externally
+            self.db.flush()  # Or .flush() if managed externally
             self.db.refresh(planning)
             return planning
         except Exception as e:

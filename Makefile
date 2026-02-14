@@ -55,10 +55,13 @@ db-test-setup:
 
 # Lancer les tests : Setup DB auto + Pytest
 # On force ENV=testing pour que conftest.py utilise la bonne logique de protection
-test: 
-	@echo "🚀 Lancement des tests unitaires et d'intégration..."
-	DATABASE_URL=$(DB_TEST_URL) ENV=test pytest --cov=src --cov-report=term-missing -v
+FILE ?= src/tests
 
+# Lancer les tests : Setup DB auto + Pytest
+# Utilisation de $(FILE) pour permettre le ciblage
+test: 
+	@echo "🚀 Lancement des tests sur : $(FILE)"
+	DATABASE_URL=$(DB_TEST_URL) ENV=test pytest $(FILE) --cov=src --cov-report=term-missing -v
 # --- BASE DE DONNEES (DEV) ---
 
 # Supprime et recrée les tables sur la base de DEV

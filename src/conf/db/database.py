@@ -33,6 +33,20 @@ class Database:
             yield session
 
     @classmethod
+    def get_db_for_route(cls):
+        """Gère le cycle de vie de la session (commit/rollback) pour les routes."""
+        engine = cls.get_engine()
+        with Session(engine) as session:
+            try:
+                yield session
+                session.commit()
+            except Exception:
+                session.rollback()
+                raise
+            finally:
+                session.close()
+
+    @classmethod
     def init_db(cls):
         # pylint: disable=import-outside-toplevel
         # pylint: disable=unused-import

@@ -48,7 +48,7 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
 
         user.membre_id = membre.id
         self.db.add(user)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(user)
         return user
 
@@ -58,7 +58,7 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
             obj.utilisateur.membre_id = None
             self.db.add(obj.utilisateur)
 
-        self.db.commit()
+        self.db.flush()
 
     def get_roles_by_membre(self, membre_id: str) -> List[MembreRole]:
         """
@@ -92,7 +92,7 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
         db_obj.membre_id = membre_id  # Sécurité : force l'ID du membre de l'URL
 
         self.db.add(db_obj)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(db_obj)
         return db_obj
 
@@ -103,4 +103,4 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
             raise NotFoundException("Affectation membre/rôle introuvable.")
 
         self.db.delete(aff)
-        self.db.commit()
+        self.db.flush()
