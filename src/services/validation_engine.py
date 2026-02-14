@@ -1,6 +1,8 @@
 from sqlmodel import Session
 
 from core.exceptions import BadRequestException, NotFoundException
+from core.exceptions.exceptions import ConflictException
+from models.slot_model import SlotCreate
 from repositories.planning_repository import PlanningRepository
 
 
@@ -31,3 +33,42 @@ class ValidationEngine:
             )
 
         return True
+
+    @staticmethod
+    def validate_slot_timing(
+        _db: Session, slot_create: SlotCreate, repo: PlanningRepository
+    ):
+        # AC4 : Intégrité référentielle
+        planning = repo.get_planning_with_activity(slot_create.planning_id)
+        if not planning:
+            raise NotFoundException(f"Planning {slot_create.planning_id} non trouvé.")
+
+        # AC1 : Parentalité temporelle
+        activity = planning.activite
+        if (
+            slot_create.date_debut < activity.date_debut
+            or slot_create.date_fin > activity.date_fin
+        ):
+            raise BadRequestException(
+                f"Le slot doit être compris entre"
+                f"{activity.date_debut} et {activity.date_fin}"
+            )
+
+        # AC3 : Détection de collision
+        existing_slots = repo.get_slots_by_planning(slot_create.planning_id)
+        collision = None
+
+        for existing in existing_slots:
+            # Formule : (Start1 < End2) AND (End1 > Start2)
+            if (
+                slot_create.date_debut < existing.date_fin
+                and slot_create.date_fin > existing.date_debut
+            ):
+                collision = existing  # On stocke le slot qui cause le conflit
+                break  # On arrête la boucle dès qu'un conflit est trouvé
+
+        if collision:
+            raise ConflictException(
+                f"Collision avec le slot existant '{collision.nom_creneau}' "
+                f"({collision.date_debut} - {collision.date_fin})"
+            )

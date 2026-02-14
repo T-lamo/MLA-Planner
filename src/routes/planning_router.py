@@ -43,3 +43,9 @@ def create_slot_for_planning(
 
     slot_svc = SlotService(db)
     return slot_svc.add_slot_to_planning(planning_id, data)
+
+
+@router.post("/slots", response_model=SlotRead, status_code=status.HTTP_201_CREATED)
+def add_slot(slot_data: SlotCreate, db: Session = Depends(Database.get_session)):
+    service = PlanningServiceSvc(db)
+    return service.create_slot(slot_data)
