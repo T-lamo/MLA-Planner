@@ -35,7 +35,7 @@ class CRUDRouterFactory:
 
         self._setup_routes()
 
-    def get_service(self, db: Session = Depends(Database.get_session)):
+    def get_service(self, db: Session = Depends(Database.get_db_for_route)):
         return self.service_class(db)
 
     def _setup_routes(self):
@@ -46,7 +46,7 @@ class CRUDRouterFactory:
         schema_r = self.read_schema
         schema_u = self.update_schema
 
-        def get_service(db: Session = Depends(Database.get_session)):
+        def get_service(db: Session = Depends(Database.get_db_for_route)):
             return svc_cls(db)
 
         @self.router.get(
