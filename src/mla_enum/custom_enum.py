@@ -23,9 +23,6 @@ class NiveauChantre(str, Enum):
     AVANCE = "Avancé"
 
 
-__all__ = ["RoleName", "VoixEnum", "NiveauChantre"]
-
-
 class PlanningStatusCode(str, Enum):
     BROUILLON = "BROUILLON"
     PUBLIE = "PUBLIE"
@@ -39,3 +36,12 @@ class AffectationStatusCode(str, Enum):
     REFUSE = "REFUSE"
     PRESENT = "PRESENT"
     ABSENT = "ABSENT"
+
+
+__all__ = [
+    "RoleName",
+    "VoixEnum",
+    "NiveauChantre",
+    "PlanningStatusCode",
+    "AffectationStatusCode",
+]

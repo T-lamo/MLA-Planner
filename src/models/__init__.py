@@ -32,7 +32,7 @@ from .pays_model import __all__ as pays
 from .permission_model import *  # noqa: F401,F403
 from .permission_model import __all__ as permission_model
 from .planning_model import *  # noqa: F401,F403
-from .planning_model import __all__ as planning
+from .planning_model import __all__ as planning_model
 from .pole_model import *  # noqa: F401,F403
 from .pole_model import __all__ as pole_model
 from .role_competence_model import *  # noqa: F401,F403
@@ -73,7 +73,7 @@ __all__: List[str] = (
     + list(indisponibilite)
     + list(equipe)
     + list(equipe_membre)
-    + list(affectation)
-    + list(planning)
     + list(slot_model)
+    + list(planning_model)
+    + list(affectation)
 )

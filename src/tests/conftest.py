@@ -9,7 +9,7 @@ from sqlmodel import Session, SQLModel, select
 from conf.db.database import Database
 from core.auth.security import create_access_token, get_password_hash
 from main import app
-from mla_enum import RoleName
+from mla_enum import AffectationStatusCode, RoleName
 from models import (
     Activite,
     AffectationRole,
@@ -19,12 +19,15 @@ from models import (
     Ministere,
     OrganisationICC,
     Pays,
+    PlanningService,
     Pole,
     Role,
     RoleCompetence,
+    Slot,
+    StatutPlanning,
     Utilisateur,
 )
-from models.schema_db_model import StatutPlanning
+from models.schema_db_model import MembreRole, StatutAffectation
 
 # pylint: disable=redefined-outer-name
 
@@ -339,4 +342,80 @@ def seed_planning_status(session: Session):
     for code in codes:
         # We use merge to avoid conflicts if the status already exists
         session.merge(StatutPlanning(code=code, libelle=code.capitalize()))
+    session.commit()
+
+
+@pytest.fixture
+def test_slot(session, test_planning):
+    """Fixture pour créer un Slot (créneau) valide."""
+    # On définit des dates cohérentes avec l'activité parente si possible
+    maintenant = datetime.now()
+    slot = Slot(
+        id=str(uuid4()),
+        planning_id=test_planning.id,
+        nom_creneau="Session de Louange",
+        date_debut=maintenant + timedelta(hours=1),
+        date_fin=maintenant + timedelta(hours=2),
+    )
+    session.add(slot)
+    session.commit()
+    session.refresh(slot)
+    return slot
+
+
+@pytest.fixture
+def test_statut_brouillon(session):
+    """
+    Assure que le statut BROUILLON existe dans la table de référence.
+    C'est crucial car statut_code est une foreign_key.
+    """
+
+    statut = session.get(StatutPlanning, "BROUILLON")
+    if not statut:
+        statut = StatutPlanning(code="BROUILLON")  # libelle="Brouillon"
+        session.add(statut)
+        session.commit()
+        session.refresh(statut)
+    return statut
+
+
+@pytest.fixture
+def test_planning(session, test_activite, test_statut_brouillon):
+    """Fixture pour créer un PlanningService lié à une Activité."""
+    planning = PlanningService(
+        id=str(uuid4()),
+        activite_id=test_activite.id,
+        statut_code=test_statut_brouillon.code,
+    )
+    session.add(planning)
+    session.commit()
+    session.refresh(planning)
+    return planning
+
+
+@pytest.fixture
+def test_membre_role(session, test_membre, test_role_comp):
+    """
+    Crée le lien MembreRole (MembreRole).
+    """
+    membre_role = MembreRole(
+        membre_id=test_membre.id,
+        role_code=test_role_comp.code,
+        niveau="INTERMEDIAIRE",
+        is_principal=True,
+    )
+    session.add(membre_role)
+    session.commit()
+    session.refresh(membre_role)
+    return membre_role
+
+
+@pytest.fixture(autouse=True)
+def seed_affectation_status(session: Session):
+    """Popule la table de référence des statuts d'affectation."""
+
+    for status in AffectationStatusCode:
+        session.merge(
+            StatutAffectation(code=status.value, libelle=status.value.capitalize())
+        )
     session.commit()
