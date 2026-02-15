@@ -10,6 +10,7 @@ from conf.db.database import Database
 from core.auth.security import create_access_token, get_password_hash
 from main import app
 from mla_enum import AffectationStatusCode, RoleName
+from mla_enum.custom_enum import PlanningStatusCode
 from models import (
     Activite,
     AffectationRole,
@@ -28,6 +29,7 @@ from models import (
     Utilisateur,
 )
 from models.schema_db_model import Affectation, MembreRole, StatutAffectation
+from services.planing_service import PlanningServiceSvc
 
 # pylint: disable=redefined-outer-name
 
@@ -339,7 +341,12 @@ def activite_data(test_campus, test_ministere):
 @pytest.fixture(autouse=True)
 def seed_planning_status(session: Session):
     """Populate the reference table for statuses before each test."""
-    codes = ["BROUILLON", "PUBLIE", "ANNULE"]
+    codes = [
+        "BROUILLON",
+        "PUBLIE",
+        "ANNULE",
+        "TERMINE",
+    ]
     for code in codes:
         # We use merge to avoid conflicts if the status already exists
         session.merge(StatutPlanning(code=code, libelle=code.capitalize()))
@@ -381,12 +388,11 @@ def test_statut_brouillon(session):
 
 
 @pytest.fixture
-def test_planning(session, test_activite, test_statut_brouillon):
-    """Fixture pour créer un PlanningService lié à une Activité."""
+def test_planning(session, test_activite):
+    """Fixture simplifiée utilisant les codes de l'Enum."""
     planning = PlanningService(
-        id=str(uuid4()),
         activite_id=test_activite.id,
-        statut_code=test_statut_brouillon.code,
+        statut_code=PlanningStatusCode.BROUILLON.value,
     )
     session.add(planning)
     session.flush()
@@ -426,8 +432,8 @@ def seed_affectation_status(session: Session):
 def test_affectation(session, test_slot, test_membre) -> Affectation:
     """Fixture pour créer une affectation valide liée à un slot et un membre."""
 
-    # On s'assure que le statut existe (déjà fait par seed_affectation_status en autouse)
-
+    # On s'assure que le statut existe
+    # (déjà fait par seed_affectation_status en autouse)
     affectation = Affectation(
         slot_id=test_slot.id,
         membre_id=test_membre.id,
@@ -443,3 +449,9 @@ def test_affectation(session, test_slot, test_membre) -> Affectation:
     session.flush()
     session.refresh(affectation)
     return affectation
+
+
+@pytest.fixture
+def planning_svc(session):
+    """Injecte le service avec la session de transaction de test."""
+    return PlanningServiceSvc(session)
