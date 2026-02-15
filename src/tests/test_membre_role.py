@@ -38,7 +38,7 @@ def test_get_membre_roles_list(
 ):
     # Injection manuelle
     session.add(MembreRole(membre_id=test_membre.id, role_code=test_role_comp.code))
-    session.commit()
+    session.flush()
 
     response = client.get(f"/membres/{test_membre.id}/roles", headers=admin_headers)
     assert response.status_code == status.HTTP_200_OK
@@ -49,7 +49,7 @@ def test_remove_role_from_membre(
     client, admin_headers, test_membre, test_role_comp, session
 ):
     session.add(MembreRole(membre_id=test_membre.id, role_code=test_role_comp.code))
-    session.commit()
+    session.flush()
 
     url = f"/membres/{test_membre.id}/roles/{test_role_comp.code}"
     response = client.delete(url, headers=admin_headers)

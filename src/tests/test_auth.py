@@ -172,7 +172,7 @@ def test_active_status_middleware_enforcement(
 
     test_user.actif = False
     session.add(test_user)
-    session.commit()
+    session.flush()
 
     response = client.get("/auth/users/me", headers=headers)
     assert response.status_code == status.HTTP_403_FORBIDDEN

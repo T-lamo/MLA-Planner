@@ -5,7 +5,7 @@ APP_MODULE = src.main:app
 DB_TEST_URL = "postgresql+psycopg2://postgres:postgres@localhost:5432/mla_test_db"
 DB_ADMIN_SCRIPT = scripts/db_admin.py
 
-.PHONY: test run install lint format clean precommit db-reset db-seed db-setup db-test-setup activate flake autoflake radon
+.PHONY: test test-debug run install lint format clean precommit db-reset db-seed db-setup db-test-setup activate flake autoflake radon
 
 # --- DEVELOPPEMENT ---
 
@@ -55,10 +55,18 @@ db-test-setup:
 
 # Lancer les tests : Setup DB auto + Pytest
 # On force ENV=testing pour que conftest.py utilise la bonne logique de protection
-test: 
-	@echo "🚀 Lancement des tests unitaires et d'intégration..."
-	DATABASE_URL=$(DB_TEST_URL) ENV=test pytest --cov=src --cov-report=term-missing -v
+FILE ?= src/tests
 
+# Lancer les tests : Setup DB auto + Pytest
+# Utilisation de $(FILE) pour permettre le ciblage
+test: 
+	@echo "🚀 Lancement des tests sur : $(FILE)"
+	DATABASE_URL=$(DB_TEST_URL) ENV=test pytest --log-cli-level=INFO $(FILE) --cov=src --cov-report=term-missing -v
+
+
+test-debug:
+	@echo "🐛 Debugging workflow : $(FILE)"
+	DATABASE_URL=$(DB_TEST_URL) ENV=test pytest -s --log-cli-level=DEBUG $(FILE) -v
 # --- BASE DE DONNEES (DEV) ---
 
 # Supprime et recrée les tables sur la base de DEV
