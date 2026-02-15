@@ -58,7 +58,7 @@ class PlanningRepository(BaseRepository[PlanningService]):
 
     def create_assignment(self, affectation: Affectation) -> Affectation:
         self.db.add(affectation)
-        # self.db.commit()
+        # self.db.flush()
         # self.db.refresh(affectation)
         return affectation
 

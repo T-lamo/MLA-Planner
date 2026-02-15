@@ -25,7 +25,7 @@ class AuthRepository:
         """Met à jour le mot de passe hashé d'un utilisateur."""
         user.password = hashed_password
         self.db.add(user)
-        self.db.commit()
+        self.db.flush()
         self.db.refresh(user)
         return user
 
@@ -33,7 +33,7 @@ class AuthRepository:
         """Enregistre un identifiant de token dans la liste noire."""
         revoked_token = TokenBlacklist(jti=jti, expires_at=expires_at)
         self.db.add(revoked_token)
-        self.db.commit()
+        self.db.flush()
 
     def is_token_revoked(self, jti: str) -> bool:
         """Vérifie si un JTI est présent dans la table des révocations."""
