@@ -10,7 +10,7 @@ from models import (
     SlotCreate,
     SlotRead,
 )
-from models.planning_model import PlanningFullCreate
+from models.planning_model import PlanningFullCreate, PlanningFullUpdate
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.planing_service import PlanningServiceSvc
 from services.slot_service import SlotService
@@ -61,6 +61,20 @@ def create_full_planning_endpoint(
 ):
     svc = PlanningServiceSvc(db)
     return svc.create_full_planning(data)
+
+
+@router.patch("/{planning_id}/full", response_model=PlanningServiceRead)
+def update_full_planning_endpoint(
+    planning_id: str,
+    data: PlanningFullUpdate,
+    db: Session = Depends(Database.get_db_for_route),
+):
+    """
+    Mise à jour atomique du planning, de l'activité liée,
+    et synchronisation complète des slots et affectations.
+    """
+    svc = PlanningServiceSvc(db)
+    return svc.update_full_planning(planning_id, data)
 
 
 @router.patch("/{planning_id}/status", response_model=PlanningServiceRead)

@@ -110,18 +110,20 @@ def validate_and_create_payload(payload):
     except ValidationError as e:
         details = "\n".join(
             [
-                f"❌ {'.'.join(str(l) for l in error['loc'])}: {error['msg']}"
+                f"❌ {'.'.join(str(loc) for loc in error['loc'])}: {error['msg']}"
                 for error in e.errors()
             ]
         )
         pytest.fail(f"Erreur de validation Pydantic:{details}")
+        return None
 
 
 # --- TESTS ---
 
 
 def test_create_full_planning_minimal_payload(session, test_campus, test_ministere):
-    """Vérifie que le planning est créé avec le statut par défaut si 'planning' est None."""
+    """Vérifie que le planning est créé avec le
+    statut par défaut si 'planning' est None."""
     svc = PlanningServiceSvc(session)
 
     # On utilise un type unique pour ce test pour éviter les conflits en base
@@ -215,7 +217,8 @@ def test_atomic_integrity_on_slot_failure(session, test_campus, test_ministere):
         ],
     }
 
-    # On s'attend à une erreur (soit ValidationError de Pydantic, soit BadRequest du service)
+    # On s'attend à une erreur
+    # (soit ValidationError de Pydantic, soit BadRequest du service)
     with pytest.raises((BadRequestException, ValidationError)):
         svc.create_full_planning(PlanningFullCreate(**payload))
 

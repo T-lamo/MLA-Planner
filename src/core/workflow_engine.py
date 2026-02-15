@@ -53,7 +53,8 @@ class WorkflowEngine(Generic[T]):
 
         if hook:
             logger.info(
-                f"Exécution du hook pour transition {current_status.value} -> {target_status.value}"
+                f"Exécution du hook pour transition"
+                f"{current_status.value} -> {target_status.value}"
             )
             hook()
 

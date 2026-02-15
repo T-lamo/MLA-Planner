@@ -88,14 +88,15 @@ class AffectationFullUpdate(BaseModel):
 class SlotFullUpdate(BaseModel):
     id: Optional[str] = None
     nom_creneau: str
-    date_debut: str
-    date_fin: str
+    date_debut: datetime
+    date_fin: datetime
     affectations: List[AffectationFullUpdate] = []
 
 
 class PlanningFullUpdate(BaseModel):
     activite: Optional[ActiviteUpdate] = None
     statut_code: Optional[str] = None
+
     slots: List[SlotFullUpdate] = []
 
 
