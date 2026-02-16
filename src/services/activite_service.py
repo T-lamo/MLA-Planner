@@ -33,3 +33,8 @@ class ActiviteService(
             raise ConflictException(
                 "Erreur de contrainte lors de la mise à jour."
             ) from e
+
+    def hard_delete(self, activite_id: str) -> None:
+        """Supprime physiquement l'activité de la base de données."""
+        activite = self.get_one(activite_id)
+        self.repo.delete(activite)

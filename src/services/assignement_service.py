@@ -152,3 +152,13 @@ class AssignmentService:
                         logger.warning(
                             f"Données d'affectation incomplètes pour le slot {slot_id}"
                         )
+
+    # src/services/assignement_service.py
+    def delete_by_slot(self, slot_id: str) -> None:
+        """Supprime toutes les affectations liées à un créneau."""
+        db_affs = self.db.exec(
+            select(Affectation).where(Affectation.slot_id == slot_id)
+        ).all()
+        for aff in db_affs:
+            self.db.delete(aff)
+        self.db.flush()
