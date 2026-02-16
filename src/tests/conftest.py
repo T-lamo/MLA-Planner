@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta
+from typing import List
 from uuid import uuid4
 
 import pytest
@@ -27,6 +28,13 @@ from models import (
     Slot,
     StatutPlanning,
     Utilisateur,
+)
+from models.activite_model import ActiviteCreate
+from models.planning_model import (
+    AssignmentSimpleCreate,
+    PlanningFullCreate,
+    PlanningServiceCreate,
+    SlotFullNested,
 )
 from models.schema_db_model import Affectation, MembreRole, StatutAffectation
 from services.planing_service import PlanningServiceSvc
@@ -455,3 +463,85 @@ def test_affectation(session, test_slot, test_membre) -> Affectation:
 def planning_svc(session):
     """Injecte le service avec la session de transaction de test."""
     return PlanningServiceSvc(session)
+
+
+def _create_robust_members(session, campus_id, role_code) -> List[Membre]:
+    """Crée des membres avec les rôles nécessaires pour les tests."""
+    membres = []
+    for i in range(3):
+        m = Membre(
+            nom=f"NOM_{uuid4().hex[:4]}",
+            prenom=f"PRENOM_{i}",
+            email=f"robust_{i}_{uuid4().hex[:4]}@test.com",
+            campus_id=campus_id,
+            actif=True,
+        )
+        session.add(m)
+        session.flush()
+        m_role = MembreRole(
+            membre_id=m.id,
+            role_code=role_code,
+            niveau="EXPERT",
+            is_principal=True,
+        )
+        session.add(m_role)
+        membres.append(m)
+    return membres
+
+
+def _prepare_slots_payload(base_dt, membres, role_code) -> List[SlotFullNested]:
+    """Prépare les payloads de slots sans collision."""
+    slots = []
+    for s_idx in range(2):
+        start = base_dt + timedelta(hours=1 + (s_idx * 2))
+        end = start + timedelta(hours=2)
+        affs = [
+            AssignmentSimpleCreate(membre_id=str(m.id), role_code=role_code)
+            for m in membres
+        ]
+        slots.append(
+            SlotFullNested(
+                nom_creneau=f"Slot {s_idx}",
+                date_debut=start,
+                date_fin=end,
+                affectations=affs,
+            )
+        )
+    return slots
+
+
+# --- LA FIXTURE GLOBALE ---
+
+
+@pytest.fixture
+def robust_data_factory(session, test_campus, test_ministere, test_role_comp):
+    """
+    Générateur global de planning complexe.
+    Accessible depuis n'importe quel fichier de test (Service ou API).
+    """
+
+    def _create_complex_tree(status: str = "BROUILLON"):
+        base_date = datetime(2026, 6, 1, 8, 0, 0)
+
+        # Appel des fonctions utilitaires définies plus haut
+        membres = _create_robust_members(session, test_campus.id, test_role_comp.code)
+        session.flush()
+
+        full_data = PlanningFullCreate(
+            activite=ActiviteCreate(
+                nom=f"Event_{uuid4().hex[:4]}",
+                type="Culte",
+                campus_id=str(test_campus.id),
+                ministere_organisateur_id=str(test_ministere.id),
+                date_debut=base_date,
+                date_fin=base_date + timedelta(hours=15),
+            ),
+            planning=PlanningServiceCreate(
+                statut_code=status, activite_id=str(uuid4())
+            ),
+            slots=_prepare_slots_payload(base_date, membres, test_role_comp.code),
+        )
+
+        return PlanningServiceSvc(session).create_full_planning(full_data)
+
+    return _create_complex_tree

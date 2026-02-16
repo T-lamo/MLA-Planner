@@ -18,6 +18,7 @@ from models.planning_model import PlanningFullCreate, PlanningFullUpdate
 from repositories.planning_repository import PlanningRepository
 from services.activite_service import ActiviteService
 from services.slot_service import SlotService
+from utils.utils_func import extract_field  # Importation de l'utilitaire corrigé
 
 from .base_service import BaseService
 
@@ -37,13 +38,18 @@ class PlanningServiceSvc(
         self.db = db
         self.workflow = WorkflowEngine[PlanningStatusCode](planning_transitions)
 
+        # Injection des services dépendants pour éviter les réinstanciations
+        self.activite_svc = ActiviteService(self.db)
+        self.slot_svc = SlotService(self.db)
+
     def _on_publish_hook(self, planning: PlanningService):
         logger.info(f"Déclenchement des notifications pour le planning {planning.id}")
         # Logique d'envoi de mail/push ici
 
     def update_planning_status(
-        self, planning_id: str, new_status: PlanningStatusCode
+        self, planning_id: str, new_status: PlanningStatusCode, auto_flush: bool = True
     ) -> PlanningService:
+        """Met à jour le statut avec gestion du workflow."""
         planning = self.get_one(planning_id)
         current_status = PlanningStatusCode(planning.statut_code)
 
@@ -59,80 +65,112 @@ class PlanningServiceSvc(
 
         planning.statut_code = new_status.value
         self.db.add(planning)
-        self.db.flush()
+
+        if auto_flush:
+            self.db.flush()
+
         return planning
 
     def create_slot(self, slot_data: SlotCreate) -> Slot:
-        """
-        Rétablit la méthode pour corriger l'erreur src/routes/planning_router.py:53.
-        Délégué au SlotService.
-        """
-        return SlotService(self.db).add_slot_to_planning(
-            slot_data.planning_id, slot_data
-        )
+        """Délégué au SlotService."""
+        return self.slot_svc.add_slot_to_planning(slot_data.planning_id, slot_data)
 
     def create_full_planning(self, data: PlanningFullCreate) -> PlanningService:
-        """Crée un planning complet de façon atomique."""
+        """Crée un planning complet (Activité + Planning
+        + Slots + Affectations) de façon atomique."""
         logger.info("Début création planning complet")
         try:
-            # 1. Activité
-            activite_svc = ActiviteService(self.db)
-            activite_db = activite_svc.create(data.activite)
+            # 1. Création de l'Activité
+            activite_db = self.activite_svc.create(data.activite)
 
-            # 2. Planning
-            statut_initial = (
-                data.planning.statut_code
-                if data.planning
-                else PlanningStatusCode.BROUILLON.value
+            # 2. Création du Planning
+            statut_initial = extract_field(
+                data.planning, "statut_code", PlanningStatusCode.BROUILLON.value
             )
+
             p_create = PlanningServiceCreate(
                 activite_id=activite_db.id, statut_code=statut_initial
             )
             planning_db = self.create(p_create)
 
-            # 3. Slots & Affectations
-            SlotService(self.db).sync_planning_slots(planning_db.id, data.slots)
+            # 3. Synchronisation des Slots & Affectations
+            # On utilise le slot_svc injecté
+            self.slot_svc.sync_planning_slots(planning_db.id, data.slots)
+
             self.db.flush()
             self.db.refresh(planning_db)
             return planning_db
+
         except Exception as e:
-            logger.error(f"Erreur création planning complet : {str(e)}")
+            logger.error(f"Erreur fatale création planning complet : {str(e)}")
             raise e
 
     def update_full_planning(
         self, planning_id: str, data: PlanningFullUpdate
     ) -> PlanningService:
-        """Met à jour l'intégralité du planning de façon atomique."""
         planning = self.get_one(planning_id)
 
-        # 1. Vérification d'immutabilité
         if planning.statut_code in [
             PlanningStatusCode.TERMINE.value,
             PlanningStatusCode.ANNULE.value,
         ]:
             raise BadRequestException(
-                f"Planning {planning.statut_code}, modification interdite."
+                f"Le planning est {planning.statut_code}, modification interdite."
             )
 
         try:
-            # 2. Mise à jour du Statut
-            # Après (Nouvelle structure)
-            if data.planning and data.planning.statut_code:
-                if data.planning.statut_code != planning.statut_code:
-                    self.update_planning_status(
-                        planning_id, PlanningStatusCode(data.planning.statut_code)
-                    )
+            # 1. Mise à jour du Statut
+            new_status_code = extract_field(data.planning, "statut_code")
+            if new_status_code and new_status_code != planning.statut_code:
+                self.update_planning_status(
+                    planning_id, PlanningStatusCode(new_status_code), auto_flush=False
+                )
 
-            # 3. Mise à jour de l'Activité
+            # 2. Mise à jour de l'Activité
+            # Correction Mypy : Validation que activite_id n'est pas None
             if data.activite:
-                ActiviteService(self.db).update(planning.activite_id, data.activite)
+                if not planning.activite_id:
+                    raise BadRequestException(
+                        "L'activité liée au planning est manquante."
+                    )
+                self.activite_svc.update(str(planning.activite_id), data.activite)
 
-            # 4. Synchronisation Slots/Affectations
-            SlotService(self.db).sync_planning_slots(planning.id, data.slots)
+            # 3. Synchronisation Slots
+            slots_payload = extract_field(data, "slots", [])
+            self.slot_svc.sync_planning_slots(planning.id, slots_payload)
 
             self.db.flush()
             self.db.refresh(planning)
             return planning
+
         except Exception as e:
-            logger.error(f"Échec update complet : {str(e)}")
+            logger.error(f"Échec update complet Planning {planning_id} : {str(e)}")
+            raise e
+
+    def delete_full_planning(self, planning_id: str) -> None:
+        planning = self.get_one(planning_id)
+        activite_id = planning.activite_id
+
+        if planning.statut_code in [
+            PlanningStatusCode.PUBLIE.value,
+            PlanningStatusCode.TERMINE.value,
+        ]:
+            raise BadRequestException(
+                f"Suppression impossible : le planning est {planning.statut_code}."
+            )
+
+        try:
+            self.slot_svc.delete_by_planning(planning_id)
+            self.db.delete(planning)
+            self.db.flush()
+
+            # Correction Mypy : Cast explicite ou vérification
+            if not activite_id:
+                logger.warning(f"Planning {planning_id} supprimé sans activité liée.")
+            else:
+                self.activite_svc.hard_delete(str(activite_id))
+
+            logger.info(f"Full Delete réussi : Planning {planning_id}")
+        except Exception as e:
+            logger.error(f"Échec du Full Delete {planning_id}: {str(e)}")
             raise e

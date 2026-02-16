@@ -17,7 +17,7 @@ def test_create_activite_invalid_dates(client, activite_data, admin_headers):
     # Inversion des dates
     activite_data["date_fin"] = activite_data["date_debut"]
     response = client.post("/activities/", json=activite_data, headers=admin_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert "date_fin doit être postérieure à date_debut" in response.text
 
 
