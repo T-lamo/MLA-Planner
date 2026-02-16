@@ -87,7 +87,7 @@ def test_remove_membre_from_equipe(
 def test_create_equipe_empty_name(client, admin_headers, test_ministere):
     payload = {"nom": "   ", "ministere_id": test_ministere.id}
     response = client.post("/equipes/", json=payload, headers=admin_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 def test_add_member_already_present(client, admin_headers, created_equipe, test_membre):

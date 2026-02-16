@@ -9,7 +9,12 @@ from models import PlanningService, Slot, SlotCreate, SlotRead
 from repositories.slot_repository import SlotRepository
 from services.assignement_service import AssignmentService
 
+# --- IMPORTATION DE LA FONCTION UTILITAIRE ---
+from utils.utils_func import extract_field
+
 from .base_service import BaseService
+
+# ----------------------------------------------
 
 
 class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
@@ -25,13 +30,11 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
         exclude_slot_id: Optional[str] = None,
     ):
         """Valide les règles métier : cohérence, bornes activité et collisions."""
-        # 1. Cohérence temporelle
         if date_fin <= date_debut:
             raise BadRequestException(
                 "La date de fin doit être après la date de début."
             )
 
-        # 2. Vérification des bornes de l'activité liée
         planning = self.db.get(PlanningService, planning_id)
         if not planning or not planning.activite:
             raise BadRequestException("Planning ou activité introuvable.")
@@ -41,11 +44,10 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
             or date_fin > planning.activite.date_fin
         ):
             raise BadRequestException(
-                f"Le créneau doit être compris dans l'activité"
+                f"Le créneau doit être compris dans l'activité "
                 f"({planning.activite.date_debut} - {planning.activite.date_fin})."
             )
 
-        # 3. Vérification de chevauchement (Overlap)
         query = select(Slot).where(
             Slot.planning_id == planning_id,
             Slot.date_debut < date_fin,
@@ -64,22 +66,15 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
         """Met à jour un slot en validant les nouvelles contraintes temporelles."""
         slot = self.get_one(slot_id)
 
-        # Extraction sécurisée des dates
-        new_start = getattr(data, "date_debut", None)
-        new_end = getattr(data, "date_fin", None)
-
-        if isinstance(data, dict):
-            new_start = new_start or data.get("date_debut")
-            new_end = new_end or data.get("date_fin")
-
-        new_start = new_start or slot.date_debut
-        new_end = new_end or slot.date_fin
+        # Utilisation de extract_field pour les dates
+        new_start = extract_field(data, "date_debut") or slot.date_debut
+        new_end = extract_field(data, "date_fin") or slot.date_fin
 
         self._validate_slot_constraints(
             slot.planning_id, new_start, new_end, exclude_slot_id=slot.id
         )
 
-        # Conversion du payload en dictionnaire pour le BaseService
+        # Préparation des données pour le repository
         if hasattr(data, "model_dump"):
             update_data = data.model_dump(exclude={"affectations"}, exclude_unset=True)
         else:
@@ -93,50 +88,64 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
         new_slot = Slot(**slot_data, planning_id=planning_id)
         return self.repo.create(new_slot)
 
+    def _prepare_slot_create_dict(self, s_data: Any) -> dict:
+        """Extrait les données pour la création d'un slot en excluant les relations."""
+        exclude_fields = {"affectations", "id", "planning_id"}
+        if hasattr(s_data, "model_dump"):
+            return s_data.model_dump(exclude=exclude_fields)
+
+        return {k: v for k, v in s_data.items() if k not in exclude_fields}
+
     def sync_planning_slots(self, planning_id: str, slots_data: List[Any]):
         """Gère le cycle de vie complet (Sync) des slots et de leurs affectations."""
         assignment_svc = AssignmentService(self.db)
 
-        # 1. État actuel
+        # 1. Chargement et Delta
         db_slots = self.db.exec(
             select(Slot).where(Slot.planning_id == planning_id)
         ).all()
-        current_map = {s.id: s for s in db_slots}
+        current_map = {str(s.id): s for s in db_slots}
 
-        payload_ids = {
-            getattr(s, "id", None) for s in slots_data if getattr(s, "id", None)
-        }
+        # 2. DELETE : Suppression des slots absents
+        active_payload_ids = []
+        for s_data in slots_data:
+            p_id = extract_field(s_data, "id")
+            if p_id:
+                active_payload_ids.append(str(p_id))
 
-        # 2. DELETE
-        for s_id, _slot_obj in current_map.items():
-            if s_id not in payload_ids:
-                self.delete(s_id)
+        for s_id, slot_obj in current_map.items():
+            if s_id not in active_payload_ids:
+                assignment_svc.delete_by_slot(s_id)
+                self.db.delete(slot_obj)
+
+        self.db.flush()
 
         # 3. UPSERT
         for s_data in slots_data:
-            slot_id = getattr(s_data, "id", None)
+            s_id = extract_field(s_data, "id")
 
-            if isinstance(slot_id, str) and slot_id in current_map:
-                slot_db = self.update_slot_secure(slot_id, s_data)
+            # On traite directement sans créer trop de variables intermédiaires
+            if s_id and str(s_id) in current_map:
+                slot_db = self.update_slot_secure(str(s_id), s_data)
             else:
-                # Extraction des données pour création
-                if hasattr(s_data, "model_dump"):
-                    create_dict = s_data.model_dump(
-                        exclude={"affectations", "id", "planning_id"}
-                    )
-                else:
-                    create_dict = {
-                        k: v
-                        for k, v in s_data.items()
-                        if k not in ["affectations", "id", "planning_id"]
-                    }
-
-                s_create = SlotCreate(**create_dict, planning_id=planning_id)
+                s_create = SlotCreate(
+                    **self._prepare_slot_create_dict(s_data), planning_id=planning_id
+                )
                 slot_db = self.add_slot_to_planning(planning_id, s_create)
 
-            # 4. Cascade vers les affectations (Sécurisé contre AttributeError)
-            aff_data = getattr(s_data, "affectations", None)
-            if aff_data is None and isinstance(s_data, dict):
-                aff_data = s_data.get("affectations", [])
+            assignment_svc.sync_assignments(
+                slot_db.id, extract_field(s_data, "affectations", [])
+            )
 
-            assignment_svc.sync_assignments(slot_db.id, aff_data or [])
+    def delete_by_planning(self, planning_id: str) -> None:
+        """Supprime tous les créneaux et leurs affectations pour un planning donné."""
+        assignment_svc = AssignmentService(self.db)
+        db_slots = self.db.exec(
+            select(Slot).where(Slot.planning_id == planning_id)
+        ).all()
+
+        for slot in db_slots:
+            assignment_svc.delete_by_slot(slot.id)
+            self.db.delete(slot)
+
+        self.db.flush()
