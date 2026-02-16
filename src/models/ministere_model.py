@@ -3,6 +3,11 @@ from typing import List, Optional
 from pydantic import ConfigDict, computed_field, field_validator
 from sqlmodel import Field, SQLModel
 
+from core.exceptions.app_exception import AppException
+
+# Importation du registre et de l'AppException
+from core.message import ErrorRegistry
+
 from .membre_model import MembreRead
 from .pole_model import PoleRead
 
@@ -19,7 +24,8 @@ class MinistereBase(SQLModel):
     @classmethod
     def nom_not_blank(cls, v: str) -> str:
         if not v.strip():
-            raise ValueError("Le nom du ministère ne peut pas être vide")
+            # Utilisation de AppException au lieu de ValueError
+            raise AppException(ErrorRegistry.MINST_NAME_EMPTY)
         return v
 
 
@@ -66,7 +72,8 @@ class MinistereUpdate(SQLModel):
     @classmethod
     def nom_not_blank(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and not v.strip():
-            raise ValueError("Le nom du ministère ne peut pas être vide")
+            # Utilisation de AppException au lieu de ValueError
+            raise AppException(ErrorRegistry.MINST_NAME_EMPTY)
         return v
 
 

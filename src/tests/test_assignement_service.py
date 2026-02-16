@@ -1,6 +1,7 @@
 import pytest
-from fastapi import HTTPException
 
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from services.assignement_service import AssignmentService
 
 # Importez vos fixtures de test et modèles ici
@@ -27,8 +28,7 @@ def test_assign_member_missing_role(session, test_membre, test_slot):
 
     service = AssignmentService(session)
 
-    with pytest.raises(HTTPException) as excinfo:
+    with pytest.raises(AppException) as exc:
         service.assign_member_to_slot(test_slot.id, test_membre.id, "NON_EXISTANT_ROLE")
 
-    assert excinfo.value.status_code == 400
-    assert "ne possède pas le rôle requis" in excinfo.value.detail
+    assert exc.value.code == ErrorRegistry.ASGN_MEMBER_MISSING_ROLE.code
