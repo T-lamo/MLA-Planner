@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from fastapi import status
 
+from core.message import ErrorRegistry
 from models import Activite
 
 
@@ -17,8 +18,14 @@ def test_create_activite_invalid_dates(client, activite_data, admin_headers):
     # Inversion des dates
     activite_data["date_fin"] = activite_data["date_debut"]
     response = client.post("/activities/", json=activite_data, headers=admin_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
-    assert "date_fin doit être postérieure à date_debut" in response.text
+
+    assert (
+        response.json()["error"]["code"] == ErrorRegistry.ACTV_INVALID_CHRONOLOGY.code
+    )
+    assert (
+        response.json()["error"]["status"]
+        == ErrorRegistry.ACTV_INVALID_CHRONOLOGY.http_status
+    )
 
 
 def test_get_activite_not_found(client, admin_headers):

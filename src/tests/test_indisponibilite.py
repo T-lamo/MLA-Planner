@@ -21,6 +21,7 @@ def test_create_indisponibilite_invalid_dates(client, admin_headers, test_membre
         "membre_id": test_membre.id,
     }
     response = client.post("/indisponibilites/", json=payload, headers=admin_headers)
+    assert response.json()["error"]["code"] == "INDISP_002"
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 

@@ -3,6 +3,11 @@ from typing import Optional
 from pydantic import ConfigDict, field_validator
 from sqlmodel import Field, SQLModel
 
+from core.exceptions.app_exception import AppException
+
+# Imports pour la centralisation des erreurs
+from core.message import ErrorRegistry
+
 
 # -------------------------
 # BASE
@@ -19,8 +24,10 @@ class CategorieRoleBase(SQLModel):
     @classmethod
     def validate_code(cls, v: str):
         v = v.strip().upper()
+        # Utilisation de la logique alphanumérique avec underscores
         if not v.isalnum() and "_" not in v:
-            raise ValueError("Le code doit être alphanumérique (underscores autorisés)")
+            # Remplacement de ValueError par AppException avec le registre
+            raise AppException(ErrorRegistry.ROLE_CAT_INVALID_CODE)
         return v
 
 

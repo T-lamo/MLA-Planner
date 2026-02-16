@@ -1,9 +1,9 @@
-# src/services/planning_service.py
 import logging
 
 from sqlmodel import Session
 
-from core.exceptions.exceptions import BadRequestException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from core.workflow_engine import WorkflowEngine, planning_transitions
 from mla_enum.custom_enum import PlanningStatusCode
 from models import (
@@ -18,7 +18,7 @@ from models.planning_model import PlanningFullCreate, PlanningFullUpdate
 from repositories.planning_repository import PlanningRepository
 from services.activite_service import ActiviteService
 from services.slot_service import SlotService
-from utils.utils_func import extract_field  # Importation de l'utilitaire corrigé
+from utils.utils_func import extract_field
 
 from .base_service import BaseService
 
@@ -94,7 +94,6 @@ class PlanningServiceSvc(
             planning_db = self.create(p_create)
 
             # 3. Synchronisation des Slots & Affectations
-            # On utilise le slot_svc injecté
             self.slot_svc.sync_planning_slots(planning_db.id, data.slots)
 
             self.db.flush()
@@ -102,7 +101,9 @@ class PlanningServiceSvc(
             return planning_db
 
         except Exception as e:
-            logger.error(f"Erreur fatale création planning complet : {str(e)}")
+            logger.error(
+                ErrorRegistry.PLANNING_FATAL_CREATION_ERROR.message.format(error=str(e))
+            )
             raise e
 
     def update_full_planning(
@@ -114,8 +115,8 @@ class PlanningServiceSvc(
             PlanningStatusCode.TERMINE.value,
             PlanningStatusCode.ANNULE.value,
         ]:
-            raise BadRequestException(
-                f"Le planning est {planning.statut_code}, modification interdite."
+            raise AppException(
+                ErrorRegistry.PLANNING_IMMUTABLE, status=planning.statut_code
             )
 
         try:
@@ -127,12 +128,10 @@ class PlanningServiceSvc(
                 )
 
             # 2. Mise à jour de l'Activité
-            # Correction Mypy : Validation que activite_id n'est pas None
             if data.activite:
                 if not planning.activite_id:
-                    raise BadRequestException(
-                        "L'activité liée au planning est manquante."
-                    )
+                    raise AppException(ErrorRegistry.PLANNING_ACTIVITY_MISSING)
+
                 self.activite_svc.update(str(planning.activite_id), data.activite)
 
             # 3. Synchronisation Slots
@@ -143,8 +142,15 @@ class PlanningServiceSvc(
             self.db.refresh(planning)
             return planning
 
+        except AppException:
+            # On laisse remonter nos exceptions métier typées
+            raise
         except Exception as e:
-            logger.error(f"Échec update complet Planning {planning_id} : {str(e)}")
+            logger.error(
+                ErrorRegistry.PLANNING_FATAL_UPDATE_ERROR.message.format(
+                    id=planning_id, error=str(e)
+                )
+            )
             raise e
 
     def delete_full_planning(self, planning_id: str) -> None:
@@ -155,8 +161,8 @@ class PlanningServiceSvc(
             PlanningStatusCode.PUBLIE.value,
             PlanningStatusCode.TERMINE.value,
         ]:
-            raise BadRequestException(
-                f"Suppression impossible : le planning est {planning.statut_code}."
+            raise AppException(
+                ErrorRegistry.PLANNING_DELETE_IMPOSSIBLE, status=planning.statut_code
             )
 
         try:
@@ -164,13 +170,22 @@ class PlanningServiceSvc(
             self.db.delete(planning)
             self.db.flush()
 
-            # Correction Mypy : Cast explicite ou vérification
             if not activite_id:
-                logger.warning(f"Planning {planning_id} supprimé sans activité liée.")
+                logger.warning(
+                    ErrorRegistry.PLANNING_DELETED_WITHOUT_ACTIVITY.message.format(
+                        id=planning_id
+                    )
+                )
             else:
                 self.activite_svc.hard_delete(str(activite_id))
 
             logger.info(f"Full Delete réussi : Planning {planning_id}")
+        except AppException:
+            raise
         except Exception as e:
-            logger.error(f"Échec du Full Delete {planning_id}: {str(e)}")
+            logger.error(
+                ErrorRegistry.PLANNING_FATAL_DELETE_ERROR.message.format(
+                    id=planning_id, error=str(e)
+                )
+            )
             raise e

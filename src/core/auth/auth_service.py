@@ -6,13 +6,9 @@ from sqlmodel import Session
 from core.auth.auth_repository import AuthRepository
 from core.auth.security import create_access_token, get_password_hash, verify_password
 
-# Import de tes exceptions centralisées
-from core.exceptions import (
-    BadRequestException,
-    ForbiddenException,
-    NotFoundException,
-    UnauthorizedException,
-)
+# Import de l'exception générique et du registre
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import Utilisateur
 
 
@@ -55,13 +51,13 @@ class AuthService:
     ) -> Dict[str, Any]:
         user = self.repo.get_user_by_username(username)
 
-        # Utilisation de UnauthorizedException
+        # Utilisation du code AUTH_001 pour Unauthorized
         if not user or not verify_password(password, user.password):
-            raise UnauthorizedException(detail="Identifiants invalides")
+            raise AppException(ErrorRegistry.AUTH_INVALID_CREDENTIALS)
 
-        # Utilisation de ForbiddenException
+        # Utilisation du code AUTH_002 pour Forbidden
         if not user.actif:
-            raise ForbiddenException(detail="Compte désactivé")
+            raise AppException(ErrorRegistry.AUTH_ACCOUNT_DISABLED)
 
         token_data: Dict[str, Any] = {
             "sub": user.username,
@@ -83,15 +79,15 @@ class AuthService:
         """
         Change le mot de passe d'un utilisateur après vérification.
         """
-        # On tente de récupérer l'utilisateur
         user = self.repo.get_user_by_id(utilisateur_id)
 
+        # Utilisation du code AUTH_003 pour NotFound
         if not user:
-            raise NotFoundException(detail="Utilisateur introuvable")
+            raise AppException(ErrorRegistry.AUTH_USER_NOT_FOUND)
 
-        # Utilisation de BadRequestException pour le mot de passe incorrect
+        # Utilisation du code AUTH_004 pour BadRequest
         if not verify_password(current_password, user.password):
-            raise BadRequestException(detail="Le mot de passe actuel est incorrect")
+            raise AppException(ErrorRegistry.AUTH_CURRENT_PASSWORD_INCORRECT)
 
         hashed_new_password: str = get_password_hash(new_password)
         self.repo.update_password(user, hashed_new_password)
@@ -103,8 +99,9 @@ class AuthService:
         jti = token_payload.get("jti")
         exp_timestamp = token_payload.get("exp")
 
+        # Utilisation du code AUTH_005 pour BadRequest
         if not jti or not exp_timestamp:
-            raise BadRequestException(detail="Token invalide pour la déconnexion")
+            raise AppException(ErrorRegistry.AUTH_INVALID_LOGOUT_TOKEN)
 
         # Conversion du timestamp JWT en objet datetime
         expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)

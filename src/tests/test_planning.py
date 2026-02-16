@@ -6,8 +6,8 @@ from fastapi import status
 from pydantic import ValidationError
 from sqlmodel import select
 
-from core.exceptions import BadRequestException
-from core.exceptions.exceptions import ConflictException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from mla_enum.custom_enum import PlanningStatusCode
 from models import Activite, PlanningService
 from models.planning_model import PlanningFullCreate
@@ -93,8 +93,10 @@ def test_create_full_planning_rollback_on_role_error(
         ],
     }
 
-    with pytest.raises(BadRequestException):
+    with pytest.raises(AppException) as exc:
         svc.create_full_planning(PlanningFullCreate(**payload))
+    assert exc.value.code == ErrorRegistry.ASGN_MEMBER_MISSING_ROLE.code
+    assert exc.value.http_status == status.HTTP_400_BAD_REQUEST
 
     # VERIFICATION DE L'ATOMICITÉ
     # On vérifie qu'aucune activité n'a été persistée malgré l'étape 1 réussie
@@ -185,8 +187,10 @@ def test_create_full_planning_overlapping_slots_error(
     full_data = validate_and_create_payload(payload)
 
     # MISE À JOUR : On attend un ConflictException (409) au lieu de BadRequest
-    with pytest.raises(ConflictException) as exc:
+    with pytest.raises(AppException) as exc:
         svc.create_full_planning(full_data)
+    assert exc.value.code == ErrorRegistry.SLOT_COLLISION.code
+    assert exc.value.http_status == status.HTTP_409_CONFLICT
 
     # On vérifie que le message contient bien l'explication du conflit
     assert (
@@ -221,8 +225,10 @@ def test_atomic_integrity_on_slot_failure(session, test_campus, test_ministere):
 
     # On s'attend à une erreur
     # (soit ValidationError de Pydantic, soit BadRequest du service)
-    with pytest.raises((BadRequestException, ValidationError)):
+    with pytest.raises(AppException) as exc:
         svc.create_full_planning(PlanningFullCreate(**payload))
+
+    assert exc.value.code == ErrorRegistry.SLOT_OUT_OF_BOUNDS.code
 
     # L'activité ne doit pas exister en base
     session.expire_all()
@@ -273,7 +279,14 @@ def test_api_delete_full_planning_forbidden_if_published(
 
     # 3. THEN : 400 Bad Request
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert "Suppression impossible" in response.json()["detail"]
+    assert (
+        response.json()["error"]["code"]
+        == ErrorRegistry.PLANNING_DELETE_IMPOSSIBLE.code
+    )
+    assert (
+        response.json()["error"]["status"]
+        == ErrorRegistry.PLANNING_DELETE_IMPOSSIBLE.http_status
+    )
 
 
 def test_api_delete_full_planning_not_found(client, admin_headers):
