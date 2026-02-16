@@ -95,8 +95,8 @@ class SlotFullUpdate(BaseModel):
 
 class PlanningFullUpdate(BaseModel):
     activite: Optional[ActiviteUpdate] = None
-    statut_code: Optional[str] = None
-
+    # statut_code: Optional[str] = None
+    planning: Optional[PlanningServiceUpdate] = None
     slots: List[SlotFullUpdate] = []
 
 
