@@ -3,15 +3,11 @@ import logging
 from enum import Enum
 from typing import Callable, Dict, Generic, List, Optional, TypeVar
 
-from core.exceptions import BadRequestException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from mla_enum.custom_enum import AffectationStatusCode, PlanningStatusCode
 
 logger = logging.getLogger(__name__)
-
-
-class WorkflowError(BadRequestException):
-    """Exception levée lors d'une transition de statut invalide."""
-
 
 T = TypeVar("T", bound=Enum)
 
@@ -21,9 +17,11 @@ class WorkflowEngine(Generic[T]):
         self.allowed_transitions = allowed_transitions
 
     def validate_transition(self, current_status: T, target_status: T):
-        # --- CORRECTION ICI ---
-        # On convertit les valeurs pour être sûr de comparer des strings (les .value)
-
+        """
+        Vérifie si la transition entre deux statuts est autorisée.
+        Lève une AppException avec le code WKFL_001 si invalide.
+        """
+        # Conversion des valeurs pour la comparaison
         current_val = (
             current_status.value if hasattr(current_status, "value") else current_status
         )
@@ -31,7 +29,7 @@ class WorkflowEngine(Generic[T]):
             target_status.value if hasattr(target_status, "value") else target_status
         )
 
-        # On convertit aussi les clés du dictionnaire pour la comparaison
+        # Conversion des clés du dictionnaire de règles
         allowed_keys = {
             (k.value if hasattr(k, "value") else k): [
                 (v.value if hasattr(v, "value") else v) for v in transitions
@@ -40,21 +38,28 @@ class WorkflowEngine(Generic[T]):
         }
 
         if target_val not in allowed_keys.get(current_val, []):
-            raise WorkflowError(f"Transition impossible: {current_val} -> {target_val}")
+            # Utilisation du registre centralisé pour l'erreur métier
+            raise AppException(
+                ErrorRegistry.WORKFLOW_INVALID_TRANSITION,
+                current=current_val,
+                target=target_val,
+            )
 
     def execute_transition(
         self,
-        current_status: T,  # Changé de Enum à T
-        target_status: T,  # Changé de Enum à T
+        current_status: T,
+        target_status: T,
         hook: Optional[Callable[[], None]] = None,
     ):
         """Valide la transition et exécute un hook si fourni."""
         self.validate_transition(current_status, target_status)
 
         if hook:
+            # Utilisation du registre pour le formatage des logs
             logger.info(
-                f"Exécution du hook pour transition"
-                f"{current_status.value} -> {target_status.value}"
+                ErrorRegistry.WORKFLOW_HOOK_EXECUTION.message.format(
+                    current=current_status.value, target=target_status.value
+                )
             )
             hook()
 

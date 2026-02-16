@@ -4,13 +4,11 @@ from typing import Any, Generic, TypeVar
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import SQLModel
 
-from core.exceptions import BadRequestException, NotFoundException
+# Remplacement des exceptions standards par AppException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models.base_pagination import PaginatedResponse
 
-# C: Schéma Create (ex: PaysCreate)
-# R: Schéma Read (ex: PaysRead)
-# U: Schéma Update (ex: PaysUpdate)
-# T: Modèle DB (ex: Pays)
 C = TypeVar("C", bound=SQLModel)
 R = TypeVar("R", bound=SQLModel)
 U = TypeVar("U", bound=SQLModel)
@@ -25,18 +23,18 @@ class BaseService(Generic[C, R, U, T]):
     def get_one(self, identifiant: str) -> T:
         obj = self.repo.get_by_id(identifiant)
         if not obj:
-            raise NotFoundException(f"{self.resource_name} introuvable.")
+            # Utilisation du code CORE_001 avec injection du nom de ressource
+            raise AppException(
+                ErrorRegistry.CORE_RESOURCE_NOT_FOUND, resource=self.resource_name
+            )
         return obj
 
     def list_paginated(self, limit: int, offset: int) -> PaginatedResponse[R]:
-        """Retourne une réponse paginée utilisant le type de lecture R."""
         items = self.repo.get_paginated(limit, offset)
         total = self.repo.count()
-
         return PaginatedResponse[R](total=total, limit=limit, offset=offset, data=items)
 
     def delete(self, identifiant: str) -> None:
-        """Logique de Soft Delete générique."""
         obj = self.get_one(identifiant)
 
         update_data: dict[str, Any] = {}
@@ -48,24 +46,18 @@ class BaseService(Generic[C, R, U, T]):
                 update_data[field] = False
         try:
             self.repo.update(obj, update_data)
-            # On délègue la suite (les cascades) à une méthode spécialisée
             self._after_delete_hook(obj)
         except IntegrityError as exc:
-            raise BadRequestException(
-                f"Action impossible sur {self.resource_name}"
+            raise AppException(
+                ErrorRegistry.CORE_ACTION_IMPOSSIBLE, resource=self.resource_name
             ) from exc
 
     def create(self, data: C) -> T:
-        """Crée une instance en utilisant le repo."""
-        # On convertit le schéma Pydantic/SQLModel en modèle DB
-        # model_validate est la méthode SQLModel/Pydantic v2
         db_obj = self.repo.model.model_validate(data)
         return self.repo.create(db_obj)
 
     def update(self, identifiant: str, data: U) -> T:
-        """Met à jour une ressource existante."""
         obj = self.get_one(identifiant)
-        # Convert Pydantic model to dict, excluding unset fields
         update_data = data.model_dump(exclude_unset=True)
         return self.repo.update(obj, update_data)
 
