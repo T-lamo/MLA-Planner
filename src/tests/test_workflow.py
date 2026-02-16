@@ -129,7 +129,8 @@ def test_atomic_rollback_on_hook_failure(
     monkeypatch.setattr(planning_svc, "_on_publish_hook", mock_hook_fail)
 
     payload = PlanningFullUpdate(
-        activite={"type": "Nouveau Type"}, statut_code=PlanningStatusCode.PUBLIE.value
+        activite={"type": "Nouveau Type"},
+        planning={"statut_code": PlanningStatusCode.PUBLIE.value},
     )
 
     with pytest.raises(Exception, match="Hook Crash"):
@@ -144,43 +145,34 @@ def test_atomic_rollback_on_hook_failure(
 def test_cross_workflow_violation(
     session, planning_svc, test_planning, test_slot, test_membre, test_membre_role
 ):
-    """
-    Vérifie le blocage du pointage (PRESENT) sur un planning non publié.
-    C'est ici qu'on teste la règle métier croisée Planning/Affectation.
-    """
-
+    """Vérifie le blocage du pointage (PRESENT) sur un planning non publié."""
     test_planning.statut_code = PlanningStatusCode.BROUILLON.value
     session.add(test_planning)
     session.commit()
 
-    # On prépare les données d'affectation en respectant
-    # le schéma AffectationBase / Read
+    # CORRECTION : Utilisation du bloc 'affectation' imbriqué pour le pointage
     affectation_payload = {
-        "slot_id": str(test_slot.id),
         "membre_id": str(test_membre.id),
         "role_code": test_membre_role.role_code,
+        "planning": {"statut_code": PlanningStatusCode.PUBLIE.value},
         "statut_affectation_code": AffectationStatusCode.PRESENT.value,
-        "presence_confirmee": False,
     }
+
     activite = test_planning.activite
-    # On construit le payload du slot
     slot_payload = {
         "id": str(test_slot.id),
         "nom_creneau": test_slot.nom_creneau,
-        # On utilise les dates de l'activité parente pour garantir l'inclusion
         "date_debut": activite.date_debut,
         "date_fin": activite.date_fin,
         "affectations": [affectation_payload],
     }
-    # On instancie le modèle complet
-    # Si cette ligne lève une ValidationError,
-    # c'est que le dictionnaire ne match pas le schéma
+
+    # CORRECTION : Utilisation du bloc 'planning' imbriqué
     payload = PlanningFullUpdate(
-        statut_code=PlanningStatusCode.BROUILLON.value, slots=[slot_payload]
+        planning={"statut_code": PlanningStatusCode.BROUILLON.value},
+        slots=[slot_payload],
     )
 
-    # Le test doit lever une BadRequestException (Règle métier)
-    # et non une ValidationError (Pydantic)
     with pytest.raises(
         BadRequestException, match="Impossible de pointer sur un planning non publié."
     ) as exc:
@@ -199,8 +191,9 @@ def test_valid_transition_triggers_hook(planning_svc, test_planning, monkeypatch
 
     monkeypatch.setattr(planning_svc, "_on_publish_hook", mock_hook)
 
-    # Correction : Payload typé
-    payload = PlanningFullUpdate(statut_code="PUBLIE")
+    payload = PlanningFullUpdate(
+        planning={"statut_code": PlanningStatusCode.PUBLIE.value}
+    )
     planning_svc.update_full_planning(test_planning.id, payload)
 
     assert hook_called is True

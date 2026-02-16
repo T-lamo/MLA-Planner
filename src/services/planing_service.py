@@ -116,10 +116,12 @@ class PlanningServiceSvc(
 
         try:
             # 2. Mise à jour du Statut
-            if data.statut_code and data.statut_code != planning.statut_code:
-                self.update_planning_status(
-                    planning_id, PlanningStatusCode(data.statut_code)
-                )
+            # Après (Nouvelle structure)
+            if data.planning and data.planning.statut_code:
+                if data.planning.statut_code != planning.statut_code:
+                    self.update_planning_status(
+                        planning_id, PlanningStatusCode(data.planning.statut_code)
+                    )
 
             # 3. Mise à jour de l'Activité
             if data.activite:
