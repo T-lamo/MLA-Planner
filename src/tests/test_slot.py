@@ -2,7 +2,9 @@ from datetime import timedelta
 
 import pytest
 
-from core.exceptions import BadRequestException, ConflictException
+# Import de la nouvelle exception et du registre
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models.slot_model import SlotCreate
 from services.planing_service import PlanningServiceSvc
 
@@ -28,52 +30,51 @@ def test_create_slot_out_of_bounds(session, test_planning):
         date_debut=test_planning.activite.date_debut - timedelta(days=1),
         date_fin=test_planning.activite.date_fin,
     )
-    with pytest.raises(BadRequestException):
+
+    # Remplacement par AppException et vérification du code technique
+    with pytest.raises(AppException) as excinfo:
         service.create_slot(data)
+
+    assert excinfo.value.code == ErrorRegistry.SLOT_OUT_OF_BOUNDS.code
 
 
 def test_create_slot_collision(session, test_planning, test_slot):
     service = PlanningServiceSvc(session)
     activity = test_planning.activite
 
-    # AU LIEU DE test_slot.date_debut/fin
-    #  qui sont peut-être hors limites de l'activité,
-    # on modifie le test_slot existant
-    # en base pour qu'il soit PARFAITEMENT dans l'activité.
+    # On cale le slot en base
     test_slot.date_debut = activity.date_debut + timedelta(minutes=10)
     test_slot.date_fin = activity.date_debut + timedelta(minutes=50)
     session.add(test_slot)
     session.flush()
 
-    # Maintenant on crée la collision sur ce créneau Garanti "In-Bounds"
+    # Tentative de création en collision
     data = SlotCreate(
         planning_id=test_planning.id,
         nom_creneau="Slot en collision",
-        date_debut=test_slot.date_debut,  # Pile sur le même créneau
+        date_debut=test_slot.date_debut,
         date_fin=test_slot.date_fin,
     )
 
-    with pytest.raises(ConflictException) as excinfo:
+    with pytest.raises(AppException) as excinfo:
         service.create_slot(data)
 
-    assert excinfo.value.status_code == 409
-    assert "Collision" in excinfo.value.detail
+    # Vérification du statut HTTP 409 et du code métier
+    assert excinfo.value.http_status == 409
+    assert excinfo.value.code == ErrorRegistry.SLOT_COLLISION.code
+    assert "Collision" in excinfo.value.message
 
 
 def test_create_slot_overlap_start(session, test_planning, test_slot):
-    """Nouveau slot commence pendant un slot
-    existant et finit après (mais dans l'activité)."""
+    """Nouveau slot commence pendant un slot existant."""
     service = PlanningServiceSvc(session)
     activity = test_planning.activite
 
-    # 1. On cale test_slot : [T+0 min à T+60 min]
     test_slot.date_debut = activity.date_debut
     test_slot.date_fin = activity.date_debut + timedelta(minutes=60)
     session.add(test_slot)
     session.flush()
 
-    # 2. Nouveau slot : [T+30 min à T+90 min]
-    # (On vérifie que T+90 min < activity.date_fin qui est généralement T+120 min)
     data = SlotCreate(
         planning_id=test_planning.id,
         nom_creneau="Collision Start",
@@ -81,46 +82,48 @@ def test_create_slot_overlap_start(session, test_planning, test_slot):
         date_fin=activity.date_debut + timedelta(minutes=90),
     )
 
-    with pytest.raises(ConflictException):
+    with pytest.raises(AppException) as excinfo:
         service.create_slot(data)
+
+    assert excinfo.value.code == ErrorRegistry.SLOT_COLLISION.code
 
 
 def test_create_slot_overlap_end(session, test_planning, test_slot):
     """Nouveau slot commence avant et finit pendant un slot existant."""
     service = PlanningServiceSvc(session)
-    # test_slot : 10h00 - 11h00
+
     test_slot.date_debut = test_planning.activite.date_debut + timedelta(hours=1)
     test_slot.date_fin = test_slot.date_debut + timedelta(hours=1)
     session.add(test_slot)
     session.flush()
 
-    # Nouveau slot : 09h30 - 10h30 (Collision à la fin)
     data = SlotCreate(
         planning_id=test_planning.id,
         nom_creneau="Collision End",
         date_debut=test_slot.date_debut - timedelta(minutes=30),
         date_fin=test_slot.date_debut + timedelta(minutes=30),
     )
-    with pytest.raises(ConflictException):
+
+    with pytest.raises(AppException) as excinfo:
         service.create_slot(data)
+
+    assert excinfo.value.code == ErrorRegistry.SLOT_COLLISION.code
 
 
 def test_create_slot_edge_to_edge_success(session, test_planning, test_slot):
-    """Deux slots qui se touchent sans chevauchement : [T+0 à T+30] et [T+30 à T+60]."""
+    """Succès si les slots se touchent sans chevauchement."""
     service = PlanningServiceSvc(session)
     activity = test_planning.activite
 
-    # 1. Premier slot : de 0 à 30 min
     test_slot.date_debut = activity.date_debut
     test_slot.date_fin = activity.date_debut + timedelta(minutes=30)
     session.add(test_slot)
     session.flush()
 
-    # 2. Nouveau slot : de 30 min à 60 min (Succès car pas de chevauchement)
     data = SlotCreate(
         planning_id=test_planning.id,
         nom_creneau="Edge Success",
-        date_debut=test_slot.date_fin,  # Exactement 30 min
+        date_debut=test_slot.date_fin,
         date_fin=activity.date_debut + timedelta(minutes=60),
     )
 

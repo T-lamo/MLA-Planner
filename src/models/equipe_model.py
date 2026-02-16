@@ -3,6 +3,10 @@ from typing import List, Optional
 from pydantic import ConfigDict, field_validator
 from sqlmodel import Field, SQLModel
 
+from core.exceptions.app_exception import AppException
+
+# Importation du registre et de AppException
+from core.message import ErrorRegistry
 from models.equipe_membre import EquipeMembreRead
 
 # -------------------------
@@ -19,7 +23,8 @@ class EquipeBase(SQLModel):
     @classmethod
     def name_must_not_be_empty(cls, v: str) -> str:
         if not v.strip():
-            raise ValueError("Le nom ne peut pas être vide")
+            # Utilisation de AppException au lieu de ValueError
+            raise AppException(ErrorRegistry.TEAM_NAME_EMPTY)
         return v.strip()
 
 
@@ -37,6 +42,13 @@ class EquipeUpdate(SQLModel):
     nom: Optional[str] = Field(default=None, max_length=100)
     active: Optional[bool] = None
     ministere_id: Optional[str] = None
+
+    @field_validator("nom")
+    @classmethod
+    def name_must_not_be_empty(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and not v.strip():
+            raise AppException(ErrorRegistry.TEAM_NAME_EMPTY)
+        return v.strip() if v else None
 
 
 # --- READ ---

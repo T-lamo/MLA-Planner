@@ -4,6 +4,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from conf.db.database import Database
+from core.exceptions.exceptions_handlers import register_exception_handlers
 
 # from core import register_exception_handlers
 from core.settings import settings
@@ -21,7 +22,7 @@ async def lifespan(_app: FastAPI):
 
 # Deactivate docs in production
 app = FastAPI(
-    title="DigiChees API",
+    title="MLA Planning API",
     version="1.0.0",
     lifespan=lifespan,
     docs_url=None if settings.ENV == "prod" else "/docs",
@@ -29,13 +30,8 @@ app = FastAPI(
 )
 
 app.include_router(router)
-# register_exception_handlers(app)
+register_exception_handlers(app)
 
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-
-
-@app.get("/healthcheck")
-async def healthcheck():
-    return {"status": "ok"}

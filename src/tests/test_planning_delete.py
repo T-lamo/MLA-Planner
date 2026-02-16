@@ -2,7 +2,8 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
-from core.exceptions import BadRequestException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from mla_enum.custom_enum import PlanningStatusCode
 from models import Activite, Affectation, PlanningService
 from models.schema_db_model import Slot
@@ -65,5 +66,7 @@ class TestPlanningDeleteRobust:
     def test_delete_workflow_security_lock(self, planning_svc, robust_data_factory):
         """Vérifie le blocage de suppression si le planning est PUBLIE."""
         planning = robust_data_factory(status=PlanningStatusCode.PUBLIE.value)
-        with pytest.raises(BadRequestException, match="Suppression impossible"):
+        with pytest.raises(AppException) as exc:
             planning_svc.delete_full_planning(planning.id)
+
+        assert exc.value.code == ErrorRegistry.PLANNING_DELETE_IMPOSSIBLE.code
