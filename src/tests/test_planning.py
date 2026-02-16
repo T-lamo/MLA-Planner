@@ -2,11 +2,14 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
+from fastapi import status
 from pydantic import ValidationError
+from sqlmodel import select
 
 from core.exceptions import BadRequestException
 from core.exceptions.exceptions import ConflictException
-from models import Activite
+from mla_enum.custom_enum import PlanningStatusCode
+from models import Activite, PlanningService
 from models.planning_model import PlanningFullCreate
 from services.planing_service import PlanningServiceSvc
 
@@ -95,9 +98,8 @@ def test_create_full_planning_rollback_on_role_error(
 
     # VERIFICATION DE L'ATOMICITÉ
     # On vérifie qu'aucune activité n'a été persistée malgré l'étape 1 réussie
-    activities = (
-        session.query(Activite).filter(Activite.type == "Activite Fantome").all()
-    )
+    statement = select(Activite).where(Activite.type == "Activite Fantome")
+    activities = session.exec(statement).all()
     assert (
         len(activities) == 0
     ), "L'activité devrait avoir été supprimée par le rollback"
@@ -225,5 +227,60 @@ def test_atomic_integrity_on_slot_failure(session, test_campus, test_ministere):
     # L'activité ne doit pas exister en base
     session.expire_all()
     # Recherche par le type unique généré
-    db_act = session.query(Activite).filter(Activite.type == unique_type).first()
+    statement = select(Activite).where(Activite.type == unique_type)
+    db_act = session.exec(statement).first()
     assert db_act is None, "L'activité n'aurait pas dû être persistée"
+
+
+def test_api_delete_full_planning_success(
+    client, admin_headers, session, robust_data_factory
+):
+    """
+    Test d'intégration : Vérifie que l'appel API supprime tout correctement.
+    """
+    # 1. GIVEN : Un arbre complet en base (BROUILLON)
+    planning = robust_data_factory(status=PlanningStatusCode.BROUILLON.value)
+    planning_id = str(planning.id)
+    activite_id = str(planning.activite_id)
+
+    # On commit pour que la session de l'API voit les données
+    session.commit()
+
+    # 2. WHEN : Appel DELETE
+    response = client.delete(f"/plannings/{planning_id}/full", headers=admin_headers)
+
+    # 3. THEN : 204 et vérification DB
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # On rafraîchit la session de test pour vérifier la DB réelle
+    session.expire_all()
+    assert session.get(PlanningService, planning_id) is None
+    assert session.get(Activite, activite_id) is None
+
+
+def test_api_delete_full_planning_forbidden_if_published(
+    client, admin_headers, session, robust_data_factory
+):
+    """
+    Vérifie que l'API renvoie 400 si on tente de supprimer un planning PUBLIE.
+    """
+    # 1. GIVEN : Un planning déjà publié
+    planning = robust_data_factory(status=PlanningStatusCode.PUBLIE.value)
+    session.commit()
+
+    # 2. WHEN
+    response = client.delete(f"/plannings/{planning.id}/full", headers=admin_headers)
+
+    # 3. THEN : 400 Bad Request
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "Suppression impossible" in response.json()["detail"]
+
+
+def test_api_delete_full_planning_not_found(client, admin_headers):
+    """
+    Vérifie le retour 404 pour un ID inexistant.
+    """
+    fake_id = "00000000-0000-0000-0000-000000000000"
+    response = client.delete(f"/plannings/{fake_id}/full", headers=admin_headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND

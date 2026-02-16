@@ -23,7 +23,7 @@ def test_validate_code_security(client, admin_headers):
     """Sécurité : Vérifier que le validateur alphanumérique rejette les injections."""
     payload = {"code": "INJECT;DROP", "libelle": "Malicious"}
     response = client.post("/categories-roles/", json=payload, headers=admin_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 def test_get_categorie_role_not_found(client, admin_headers):

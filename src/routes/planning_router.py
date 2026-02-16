@@ -17,7 +17,7 @@ from services.slot_service import SlotService
 
 from .base_route_factory import CRUDRouterFactory
 
-# Router pour Planning
+# Configuration du Router Factory pour Planning
 factory = CRUDRouterFactory(
     service_class=PlanningServiceSvc,
     create_schema=PlanningServiceCreate,
@@ -31,58 +31,106 @@ router = factory.router
 
 
 @router.post(
-    "/{planning_id}/slots", response_model=SlotRead, status_code=status.HTTP_201_CREATED
+    "/{planning_id}/slots",
+    response_model=SlotRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Ajouter un créneau à un planning existant",
+    description=(
+        "Crée un nouveau créneau lié à un planning spécifique. "
+        "Vérifie la cohérence temporelle avec l'activité parente."
+    ),
 )
 def create_slot_for_planning(
-    planning_id: str, data: SlotCreate, db: Session = Depends(Database.get_db_for_route)
+    planning_id: str,
+    data: SlotCreate,
+    db: Session = Depends(Database.get_db_for_route),
 ):
-    """Route experte : Ajoute un créneau à un planning
-    spécifique avec validation de conflit."""
+    """Point d'entrée pour l'ajout unitaire de créneaux."""
     svc = PlanningServiceSvc(db)
-    # This call to get_one() will raise the NotFoundException (404)
-    # defined in your BaseService if the ID doesn't exist.
     svc.get_one(planning_id)
-
     slot_svc = SlotService(db)
     return slot_svc.add_slot_to_planning(planning_id, data)
 
 
-@router.post("/slots", response_model=SlotRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/slots",
+    response_model=SlotRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Création directe de créneau",
+    description="Permet de créer un créneau en spécifiant directement le planning_id.",
+)
 def add_slot(slot_data: SlotCreate, db: Session = Depends(Database.get_db_for_route)):
     service = PlanningServiceSvc(db)
     return service.create_slot(slot_data)
 
 
 @router.post(
-    "/full", response_model=PlanningServiceRead, status_code=status.HTTP_201_CREATED
+    "/full",
+    response_model=PlanningServiceRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Création complète (Activité + Planning + Slots)",
+    description=(
+        "Point d'entrée atomique pour créer tout l'écosystème d'un planning. "
+        "Valide les rôles des membres et l'absence de collisions."
+    ),
 )
 def create_full_planning_endpoint(
-    data: PlanningFullCreate, db: Session = Depends(Database.get_db_for_route)
+    data: PlanningFullCreate,
+    db: Session = Depends(Database.get_db_for_route),
 ):
     svc = PlanningServiceSvc(db)
     return svc.create_full_planning(data)
 
 
-@router.patch("/{planning_id}/full", response_model=PlanningServiceRead)
+@router.patch(
+    "/{planning_id}/full",
+    response_model=PlanningServiceRead,
+    status_code=status.HTTP_200_OK,
+    summary="Mise à jour intégrale et synchronisation",
+    description=(
+        "Met à jour l'activité et le planning. Synchronise les slots : "
+        "ajoute les nouveaux, met à jour les existants, supprime les absents."
+    ),
+)
 def update_full_planning_endpoint(
     planning_id: str,
     data: PlanningFullUpdate,
     db: Session = Depends(Database.get_db_for_route),
 ):
-    """
-    Mise à jour atomique du planning, de l'activité liée,
-    et synchronisation complète des slots et affectations.
-    """
     svc = PlanningServiceSvc(db)
     return svc.update_full_planning(planning_id, data)
 
 
-@router.patch("/{planning_id}/status", response_model=PlanningServiceRead)
+@router.patch(
+    "/{planning_id}/status",
+    response_model=PlanningServiceRead,
+    summary="Changer le statut du workflow",
+    description=(
+        "Fait progresser le planning dans son cycle de vie "
+        "(ex: de BROUILLON à PUBLIE ou ANNULE)."
+    ),
+)
 def change_planning_status(
     planning_id: str,
     new_status: PlanningStatusCode,
     db: Session = Depends(Database.get_db_for_route),
-    # factory.get_service injecte Database.get_db_for_route automatiquement
 ):
     svc = PlanningServiceSvc(db)
     return svc.update_planning_status(planning_id, new_status)
+
+
+@router.delete(
+    "/{planning_id}/full",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Suppression totale (Cascade descendante)",
+    description=(
+        "Supprime le planning, ses slots, ses affectations et l'activité associée. "
+        "Opération irréversible soumise à validation de statut."
+    ),
+)
+def delete_full_planning_endpoint(
+    planning_id: str, db: Session = Depends(Database.get_db_for_route)
+):
+    """Exécute la suppression complète via le service expert."""
+    svc = PlanningServiceSvc(db)
+    svc.delete_full_planning(planning_id)
