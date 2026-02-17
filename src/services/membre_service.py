@@ -1,9 +1,12 @@
+from datetime import datetime, timedelta
 from typing import List
 
 from sqlmodel import Session, select
 
 from core.exceptions import BadRequestException, NotFoundException
+from core.exceptions.app_exception import AppException
 from core.exceptions.exceptions import ConflictException
+from core.message import ErrorRegistry
 from models import Membre, MembreCreate, MembreRead, MembreUpdate, Utilisateur
 from models.membre_role_model import MembreRoleCreate
 from models.schema_db_model import MembreRole, RoleCompetence
@@ -11,6 +14,7 @@ from repositories.membre_repository import MembreRepository
 from repositories.ministere_repository import MinistereRepository
 from repositories.pole_repository import PoleRepository
 from services.base_service import BaseService
+from services.planing_service import PlanningServiceSvc
 
 
 class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre]):
@@ -19,6 +23,7 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
         self.db = db
         self.min_repo = MinistereRepository(db)
         self.pole_repo = PoleRepository(db)
+        self.planning_svc = PlanningServiceSvc(db)
 
     def create(self, data: MembreCreate) -> Membre:
         # Validation UUID existence
@@ -104,3 +109,23 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
 
         self.db.delete(aff)
         self.db.flush()
+
+    def get_personal_agenda(self, membre_id: str, from_date=None, to_date=None):
+        # Logique de contexte (Campus)
+        membre = self.db.get(Membre, membre_id)
+        if not membre:
+            raise AppException(ErrorRegistry.MEMBRE_NOT_FOUND)
+
+        if not membre.campus_id:
+            raise AppException(ErrorRegistry.MEMBRE_CAMPUS_MISSING)
+
+        # Logique de période
+        start = from_date or datetime.now()
+        end = to_date or (start + timedelta(days=90))
+        try:
+            return self.planning_svc.get_member_agenda_full(
+                membre_id=membre_id, campus_id=membre.campus_id, start=start, end=end
+            )
+        except Exception as e:
+            raise e  # AppException(ErrorRegistry.AGENDA_DATA_ERROR)
+        # Appel au service planning

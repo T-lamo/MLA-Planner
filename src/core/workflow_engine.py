@@ -63,6 +63,32 @@ class WorkflowEngine(Generic[T]):
             )
             hook()
 
+    def get_allowed_transitions(self, current_status: T) -> List[T]:
+        """
+        Retourne la liste des statuts vers lesquels le passage est autorisé
+        à partir du statut actuel.
+        """
+        # 1. Normalisation du statut actuel (gère Enum ou str)
+        current_val = (
+            current_status.value if hasattr(current_status, "value") else current_status
+        )
+
+        # 2. Recherche dans le dictionnaire des transitions
+        # On itère pour trouver la clé qui correspond à la valeur actuelle
+        for status_enum, transitions in self.allowed_transitions.items():
+            enum_val = (
+                status_enum.value if hasattr(status_enum, "value") else status_enum
+            )
+
+            if enum_val == current_val:
+                return transitions
+
+        # Si aucune règle n'est définie pour ce statut, on retourne une liste vide
+        logger.warning(
+            f"Aucune règle de transition trouvée pour le statut: {current_val}"
+        )
+        return []
+
 
 # --- Définition des règles métier ---
 

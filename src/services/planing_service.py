@@ -1,12 +1,16 @@
 import logging
+from datetime import datetime
+from typing import Any, cast
 
-from sqlmodel import Session
+from sqlalchemy.orm import selectinload
+from sqlmodel import Session, select
 
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from core.workflow_engine import WorkflowEngine, planning_transitions
 from mla_enum.custom_enum import PlanningStatusCode
 from models import (
+    Affectation,
     PlanningService,
     PlanningServiceCreate,
     PlanningServiceRead,
@@ -14,7 +18,14 @@ from models import (
     Slot,
     SlotCreate,
 )
-from models.planning_model import PlanningFullCreate, PlanningFullUpdate
+from models.membre_model import MemberAgendaResponse
+from models.planning_model import (
+    PlanningFullCreate,
+    PlanningFullRead,
+    PlanningFullUpdate,
+    ViewContext,
+)
+from models.schema_db_model import Activite
 from repositories.planning_repository import PlanningRepository
 from services.activite_service import ActiviteService
 from services.slot_service import SlotService
@@ -189,3 +200,81 @@ class PlanningServiceSvc(
                 )
             )
             raise e
+
+    # Dans la classe PlanningServiceSvc :
+
+    def get_full_planning(self, planning_id: str) -> PlanningFullRead:
+        try:
+            # 1. Fetch optimisé (La requête reste ici car elle définit le périmètre du DTO)
+            query = (
+                select(PlanningService)
+                .where(PlanningService.id == planning_id)
+                .where(
+                    PlanningService.deleted_at == None
+                )  # noqa: E711 # pylint: disable=C0121
+                .options(
+                    selectinload(cast(Any, PlanningService.activite)),
+                    selectinload(cast(Any, PlanningService.slots))
+                    .selectinload(cast(Any, Slot.affectations))
+                    .selectinload(cast(Any, Affectation.membre)),
+                )
+            )
+            planning_db = self.db.exec(query).first()
+
+            if not planning_db:
+                raise AppException(ErrorRegistry.PLAN_NOT_FOUND)
+
+            # 2. Délégation aux services spécialisés
+            total, filled = self.slot_svc.get_slots_metrics(planning_db.slots)
+
+            # 3. Calcul du Workflow (propre au Planning)
+            current_status = PlanningStatusCode(planning_db.statut_code)
+            allowed = self.workflow.get_allowed_transitions(current_status)
+
+            context = ViewContext(
+                allowed_transitions=[s.value for s in allowed],
+                total_slots=total,
+                filled_slots=filled,
+                is_ready_for_publish=(total > 0 and filled == total),
+            )
+
+            # 4. Assemblage final
+            result_dto = PlanningFullRead.model_validate(planning_db)
+            result_dto.view_context = context
+            return result_dto
+
+        except Exception as e:
+            logger.error(f"Erreur get_full_planning ID {planning_id}: {str(e)}")
+            raise
+
+    def get_member_agenda_full(
+        self, membre_id: str, campus_id: str, start: datetime, end: datetime
+    ):
+        # 1. Requête SQL avec jointures (optimisation des performances)
+        query = (
+            select(Affectation)
+            .join(Slot)
+            .join(PlanningService)
+            .join(Activite)
+            .where(Affectation.membre_id == membre_id)
+            .where(Activite.campus_id == campus_id)
+            .where(Slot.date_debut >= start)
+            .where(Slot.date_debut <= end)
+            .options(
+                selectinload(cast(Any, Affectation.slot))
+                .selectinload(cast(Any, Slot.planning))
+                .selectinload(cast(Any, PlanningService.activite))
+                .selectinload(cast(Any, Activite.campus))
+            )
+        )
+        results = self.db.exec(query).all()
+        affectations = list(results)
+
+        # 2. Appel au SlotService (qui lui-même appellera AffectationService)
+        entries = self.slot_svc.map_affectations_to_entries(affectations)
+        stats = self.slot_svc.get_agenda_statistics(affectations)
+
+        # 3. Rassemblement final
+        return MemberAgendaResponse(
+            period_start=start, period_end=end, statistics=stats, entries=entries
+        )

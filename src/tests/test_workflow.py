@@ -6,7 +6,7 @@ from mla_enum import AffectationStatusCode, PlanningStatusCode
 from models import PlanningService
 from models.planning_model import PlanningFullUpdate
 from models.schema_db_model import StatutPlanning
-from services.assignement_service import AssignmentService
+from services.affectation_service import AffectationService
 from services.planing_service import PlanningServiceSvc
 
 # On remplace l'ancienne BadRequestException par AppException dans les tests
@@ -47,7 +47,7 @@ def test_planning_workflow_invalid_transition(session, test_planning):
 
 
 def test_affectation_workflow_conditionnal(session, test_affectation, test_planning):
-    assign_svc = AssignmentService(session)
+    assign_svc = AffectationService(session)
     test_planning.statut_code = PlanningStatusCode.BROUILLON.value
     session.add(test_planning)
     session.flush()
