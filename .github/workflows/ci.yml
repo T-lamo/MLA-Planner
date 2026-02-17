@@ -40,33 +40,35 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # On utilise la cible 'install' du Makefile
-          make install
+          # Installation des dépendances du backend
+          pip install -r backend/requirements.txt
+          # Installation des outils de dev
+          pip install black isort mypy pylint pytest pytest-cov pip-audit psycopg2-binary                
 
       # --- ANALYSE STATIQUE ---
       - name: Linting
         run: |
-          # On utilise la cible 'lint' du Makefile
+          # On utilise quand même le makefile pour le linting
           make lint
 
       - name: Security audit
-        # pip-audit n'est pas dans ton makefile, on le laisse ici
         run: pip install pip-audit && pip-audit --ignore-vuln CVE-2024-23342
 
       # --- TESTS D'INTÉGRATION ---
       - name: Run tests + coverage
         env:
-          # On garde les variables d'env qui surchargent celles du Makefile
+          # Configuration directe de la base de données de test
           DATABASE_URL: "postgresql+psycopg2://user_test:pass_test@localhost:5432/mla_db_test"
           ENV: "testing"
           JWT_SECRET_KEY: "test_secret_key_for_ci_only"
+          # Indispensable pour trouver les modules dans backend/src
+          PYTHONPATH: "./backend/src"
         run: |
-          # On utilise la cible 'test' du Makefile
-          make test
+          # Commande pytest directe et explicite
+          pytest backend/src/tests --cov=backend/src --cov-report=xml -v
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          # Le makefile génère coverage.xml
           files: coverage.xml
