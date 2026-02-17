@@ -24,13 +24,15 @@ format:
 	isort src --profile black
 	black src
 	autoflake --remove-all-unused-imports --remove-unused-variables -i -r src/
+	flake8 src
+
+
 
 lint:
 	isort --check-only --profile black src
 	black --check src
 	mypy src
 	pylint src
-	flake8 src
 
 flake:
 	flake8 src
