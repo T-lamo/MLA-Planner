@@ -1,13 +1,14 @@
 from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from sqlmodel import Session
+
 from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from core.auth.auth_service import AuthService
 from core.auth.models import PasswordChangeRequest, Token
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from models import Utilisateur
-from sqlmodel import Session
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

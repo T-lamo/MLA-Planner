@@ -2,13 +2,14 @@ import logging
 from datetime import datetime
 from typing import Any, List, Optional
 
+from sqlmodel import Session, select
+
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models import PlanningService, Slot, SlotCreate, SlotRead
 from models.membre_model import MemberAgendaEntryRead, MemberAgendaStats
 from repositories.slot_repository import SlotRepository
 from services.affectation_service import AffectationService
-from sqlmodel import Session, select
 from utils.utils_func import extract_field
 
 from .base_service import BaseService

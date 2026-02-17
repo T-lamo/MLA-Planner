@@ -1,11 +1,12 @@
 # src/routes/planning_routes.py
-from conf.db.database import Database
 from fastapi import Depends
+from sqlmodel import Session
+
+from conf.db.database import Database
 from mla_enum.custom_enum import AffectationStatusCode
 from models import AffectationCreate, AffectationRead, AffectationUpdate
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.affectation_service import AffectationService
-from sqlmodel import Session
 
 from .base_route_factory import CRUDRouterFactory
 

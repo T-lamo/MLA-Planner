@@ -1,11 +1,12 @@
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session
+
 from core.exceptions import BadRequestException, NotFoundException
 from models import Pays, PaysCreate
 from models.pays_model import PaysRead, PaysUpdate
 from repositories.organisation_repository import OrganisationRepository
 from repositories.pays_repository import PaysRepository
 from services.base_service import BaseService
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
 
 
 class PaysService(BaseService[PaysCreate, PaysRead, PaysUpdate, Pays]):

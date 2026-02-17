@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
 import pytest
+
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 

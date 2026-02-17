@@ -1,6 +1,7 @@
+from sqlmodel import Session
+
 from models import Slot
 from repositories.base_repository import BaseRepository
-from sqlmodel import Session
 
 
 class SlotRepository(BaseRepository[Slot]):

@@ -1,11 +1,11 @@
 from unittest.mock import MagicMock
 
 import pytest
+from sqlalchemy.orm import Session
 
 # Importations des modèles et services (ajuste selon ta structure)
 from models import Membre
 from services.membre_service import MembreService
-from sqlalchemy.orm import Session
 
 
 # pylint: disable=redefined-outer-name

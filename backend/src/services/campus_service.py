@@ -1,10 +1,11 @@
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session
+
 from core.exceptions import BadRequestException, NotFoundException
 from models import Campus, CampusCreate, CampusRead, CampusUpdate
 from repositories.campus_repository import CampusRepository
 from repositories.pays_repository import PaysRepository
 from services.base_service import BaseService
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
 
 
 class CampusService(BaseService[CampusCreate, CampusRead, CampusUpdate, Campus]):

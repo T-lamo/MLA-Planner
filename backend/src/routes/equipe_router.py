@@ -1,4 +1,5 @@
 from fastapi import Depends, status
+
 from models import EquipeCreate, EquipeRead, EquipeUpdate
 from routes.base_route_factory import CRUDRouterFactory
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS

@@ -1,8 +1,9 @@
 from typing import Optional
 
+from sqlmodel import Session
+
 from models import CategorieRole
 from repositories.base_repository import BaseRepository
-from sqlmodel import Session
 
 
 class CategorieRoleRepository(BaseRepository[CategorieRole]):

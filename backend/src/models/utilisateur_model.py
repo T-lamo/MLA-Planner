@@ -1,8 +1,9 @@
 from typing import List, Optional
 
-from models.role_model import RoleRead
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
+
+from models.role_model import RoleRead
 
 
 class UtilisateurBase(SQLModel):

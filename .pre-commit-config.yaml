@@ -1,32 +1,49 @@
 repos:
 # ----------------- Black -----------------
 - repo: https://github.com/psf/black
-  rev: 23.3.0
+  rev: 26.1.0
   hooks:
     - id: black
+      files: ^backend/src/  # Ne scanne que le code backend
 
 # ----------------- Isort -----------------
 - repo: https://github.com/pycqa/isort
-  rev: 5.12.0
+  rev: 8.0.0
   hooks:
     - id: isort
-      args: ["--profile", "black"]
+      args: ["--profile", "black", "--filter-files"]
+      files: ^backend/src/
 
 # ----------------- MyPy -----------------
 - repo: https://github.com/pre-commit/mirrors-mypy
-  rev: v1.4.1
+  rev: v1.19.1
   hooks:
     - id: mypy
       name: mypy
-      additional_dependencies: ["pydantic[mypy]"]
+      # On pointe sur le dossier src du backend
+      entry: bash -c "export PYTHONPATH=backend/src && mypy backend/src"
+      additional_dependencies: ["pydantic[mypy]", "types-requests", "types-setuptools"]
+      pass_filenames: false
+
 # ----------------- Pylint -----------------
 - repo: local
   hooks:
     - id: pylint
       name: pylint
-      # entry: pylint  <-- On change ça
       entry: bash -c "export PYTHONPATH=backend/src && pylint backend/src"
-      language: python
+      language: system # Utilise ton venv local au lieu de recréer un env isolé
       types: [python]
-      # Ajout de l'argument pour utiliser ton fichier de config racine
       args: ["--rcfile=.pylintrc"]
+
+
+- repo: https://github.com/myint/autoflake
+  rev: v2.3.1
+  hooks:
+    - id: autoflake
+      args: ["--in-place", "--remove-all-unused-imports", "--remove-unused-variables"]
+
+- repo: https://github.com/pycqa/flake8
+  rev: 7.1.1
+  hooks:
+    - id: flake8
+      additional_dependencies: [flake8-docstrings]

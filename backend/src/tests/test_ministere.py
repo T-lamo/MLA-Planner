@@ -2,8 +2,9 @@ from uuid import uuid4
 
 import pytest
 from fastapi import status
-from models import Campus, Ministere
 from sqlmodel import Session
+
+from models import Campus, Ministere
 
 # pylint: disable=redefined-outer-name, unused-argument
 

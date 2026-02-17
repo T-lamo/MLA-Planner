@@ -1,0 +1,11 @@
+
+echo "🧪 [Husky] Lancement des vérifications globales..."
+
+# On force l'arrêt en cas d'erreur
+set -e
+
+# Appel du Makefile à la racine
+make lint-back
+make lint-front
+
+echo "✅ [Husky] Vérifications réussies."

@@ -1,8 +1,9 @@
+from sqlmodel import Session
+
 from core.exceptions import ConflictException, NotFoundException
 from models import Equipe, EquipeCreate, EquipeMembre, EquipeRead, EquipeUpdate, Membre
 from repositories.equipe_repository import EquipeRepository
 from services.base_service import BaseService
-from sqlmodel import Session
 
 
 class EquipeService(BaseService[EquipeCreate, EquipeRead, EquipeUpdate, Equipe]):

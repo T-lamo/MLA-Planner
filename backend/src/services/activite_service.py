@@ -1,9 +1,10 @@
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session
+
 from core.exceptions import BadRequestException, ConflictException
 from models import Activite, ActiviteCreate, ActiviteRead, ActiviteUpdate
 from repositories.activite_repository import ActiviteRepository
 from services.base_service import BaseService
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
 
 
 class ActiviteService(

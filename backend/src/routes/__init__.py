@@ -1,7 +1,8 @@
 #
 
-from core.auth.auth_route import router as auth_router
 from fastapi import APIRouter
+
+from core.auth.auth_route import router as auth_router
 
 from .activite_router import router as activite  # Doit être après planning pour les FK
 from .affectation_router import (

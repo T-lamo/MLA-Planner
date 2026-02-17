@@ -1,7 +1,8 @@
 from typing import Optional
 
-from models import RoleCompetence
 from sqlmodel import Session
+
+from models import RoleCompetence
 
 from .base_repository import BaseRepository
 

@@ -5,6 +5,7 @@ from typing import Optional
 
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
+
 from utils.validator import NotBlankFieldsMixin
 
 

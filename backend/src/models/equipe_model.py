@@ -1,12 +1,13 @@
 from typing import List, Optional
 
+from pydantic import ConfigDict, field_validator
+from sqlmodel import Field, SQLModel
+
 from core.exceptions.app_exception import AppException
 
 # Importation du registre et de AppException
 from core.message import ErrorRegistry
 from models.equipe_membre import EquipeMembreRead
-from pydantic import ConfigDict, field_validator
-from sqlmodel import Field, SQLModel
 
 # -------------------------
 # 2. SCHÉMAS Pydantic (DTOs)

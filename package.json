@@ -1,0 +1,13 @@
+{
+  "name": "mla-monorepo",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "front:lint": "npm --prefix frontend run lint",
+    "back:lint": "make -C backend format-check lint",
+    "back:format": "make -C backend format"
+  },
+  "devDependencies": {
+    "husky": "^9.0.0"
+  }
+}
