@@ -1,11 +1,12 @@
 from typing import List, Optional
 
+from pydantic import ConfigDict, computed_field, field_validator
+from sqlmodel import Field, SQLModel
+
 from core.exceptions.app_exception import AppException
 
 # Importation du registre et de l'AppException
 from core.message import ErrorRegistry
-from pydantic import ConfigDict, computed_field, field_validator
-from sqlmodel import Field, SQLModel
 
 from .membre_model import MembreRead
 from .pole_model import PoleRead

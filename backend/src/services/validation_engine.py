@@ -1,9 +1,10 @@
 # src/services/validation_engine.py
+from sqlmodel import Session
+
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models.slot_model import SlotCreate
 from repositories.planning_repository import PlanningRepository
-from sqlmodel import Session
 
 
 class ValidationEngine:

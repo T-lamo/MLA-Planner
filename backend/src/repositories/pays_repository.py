@@ -1,9 +1,10 @@
 # src/repositories/pays_repository.py
 from typing import Any, List, Optional, cast
 
+from sqlmodel import Session
+
 from models import Pays
 from repositories.base_repository import BaseRepository
-from sqlmodel import Session
 
 
 class PaysRepository(BaseRepository[Pays]):

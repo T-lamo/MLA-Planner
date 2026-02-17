@@ -1,0 +1,13 @@
+[build]
+  base = "frontend"
+  command = "pnpm install && pnpm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  # Important pour Nuxt en mode SPA/Statique sur Netlify
+  from = "/*"
+  to = "/index.html"
+  status = 200

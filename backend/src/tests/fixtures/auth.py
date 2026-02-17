@@ -1,8 +1,9 @@
 import pytest
+from sqlmodel import Session, select
+
 from core.auth.security import create_access_token, get_password_hash
 from mla_enum import RoleName
 from models import AffectationRole, Role, Utilisateur
-from sqlmodel import Session, select
 
 
 # pylint: disable=redefined-outer-name

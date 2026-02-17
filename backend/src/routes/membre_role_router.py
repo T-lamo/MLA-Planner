@@ -1,8 +1,9 @@
-from conf.db.database import Database
 from fastapi import APIRouter, Depends, status
+from sqlmodel import Session
+
+from conf.db.database import Database
 from models import MembreRoleCreate, MembreRoleRead, MembreRoleUpdate
 from services.membre_role_service import MembreRoleService
-from sqlmodel import Session
 
 router = APIRouter(prefix="/membres-roles", tags=["Affectations Membres-Rôles"])
 

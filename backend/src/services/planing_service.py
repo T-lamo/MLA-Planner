@@ -2,6 +2,9 @@ import logging
 from datetime import datetime
 from typing import Any, cast
 
+from sqlalchemy.orm import selectinload
+from sqlmodel import Session, select
+
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from core.workflow_engine import WorkflowEngine, planning_transitions
@@ -26,8 +29,6 @@ from models.schema_db_model import Activite
 from repositories.planning_repository import PlanningRepository
 from services.activite_service import ActiviteService
 from services.slot_service import SlotService
-from sqlalchemy.orm import selectinload
-from sqlmodel import Session, select
 from utils.utils_func import extract_field
 
 from .base_service import BaseService

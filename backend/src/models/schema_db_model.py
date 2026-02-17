@@ -2,11 +2,12 @@ import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from sqlmodel import Field, Relationship, SQLModel
+
 from models.affectation_model import AffectationBase
 from models.equipe_model import EquipeBase
 from models.planning_model import PlanningServiceBase
 from models.slot_model import SlotBase
-from sqlmodel import Field, Relationship, SQLModel
 
 from .activite_model import ActiviteBase
 from .affectation_context_model import AffectationContexteBase
@@ -32,29 +33,34 @@ from .utilisateur_model import UtilisateurBase
 
 class CategorieRole(CategorieRoleBase, table=True):  # type: ignore
     __tablename__ = "t_categorierole"
+    __table_args__ = {"extend_existing": True}
     roles: List["RoleCompetence"] = Relationship(back_populates="categorie")
 
 
 class RoleCompetence(RoleCompetenceBase, table=True):  # type: ignore
     __tablename__ = "t_rolecompetence"
+    __table_args__ = {"extend_existing": True}
     categorie: Optional[CategorieRole] = Relationship(back_populates="roles")
     membres_assoc: List["MembreRole"] = Relationship(back_populates="role")
 
 
 class MembreRole(MembreRoleBase, table=True):  # type: ignore
     __tablename__ = "t_membre_role"
+    __table_args__ = {"extend_existing": True}
     membre: "Membre" = Relationship(back_populates="roles_assoc")
     role: "RoleCompetence" = Relationship(back_populates="membres_assoc")
 
 
 class StatutPlanning(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_statutplanning"
+    __table_args__ = {"extend_existing": True}
     code: str = Field(primary_key=True, max_length=20)
     plannings: List["PlanningService"] = Relationship(back_populates="statut")
 
 
 class TypeResponsabilite(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_typeresponsabilite"
+    __table_args__ = {"extend_existing": True}
     code: str = Field(primary_key=True, max_length=50)
     responsabilites: List["Responsabilite"] = Relationship(
         back_populates="type_responsabilite"
@@ -68,6 +74,7 @@ class TypeResponsabilite(SQLModel, table=True):  # type: ignore
 
 class OrganisationICC(OrganisationICCBase, table=True):  # type: ignore
     __tablename__ = "t_organisationicc"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     date_creation: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -76,6 +83,7 @@ class OrganisationICC(OrganisationICCBase, table=True):  # type: ignore
 
 class Pays(PaysBase, table=True):  # type: ignore
     __tablename__ = "t_pays"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     organisation_id: Optional[str] = Field(
@@ -87,6 +95,7 @@ class Pays(PaysBase, table=True):  # type: ignore
 
 class Campus(CampusBase, table=True):  # type: ignore
     __tablename__ = "t_campus"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     pays_id: str = Field(foreign_key="t_pays.id", ondelete="CASCADE")
@@ -98,6 +107,7 @@ class Campus(CampusBase, table=True):  # type: ignore
 
 class Ministere(MinistereBase, table=True):  # type: ignore
     __tablename__ = "t_ministere"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     campus_id: str = Field(foreign_key="t_campus.id", ondelete="CASCADE")
@@ -109,6 +119,7 @@ class Ministere(MinistereBase, table=True):  # type: ignore
 
 class Pole(PoleBase, table=True):  # type: ignore
     __tablename__ = "t_pole"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     ministere_id: str = Field(foreign_key="t_ministere.id", ondelete="CASCADE")
@@ -123,6 +134,7 @@ class Pole(PoleBase, table=True):  # type: ignore
 
 class Membre(MembreBase, table=True):  # type: ignore
     __tablename__ = "t_membre"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     date_inscription: datetime = Field(default_factory=datetime.now)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
@@ -154,6 +166,7 @@ class Membre(MembreBase, table=True):  # type: ignore
 
 class Activite(ActiviteBase, table=True):  # type: ignore
     __tablename__ = "t_activite"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     campus_id: str = Field(foreign_key="t_campus.id", ondelete="CASCADE")
@@ -167,6 +180,7 @@ class Activite(ActiviteBase, table=True):  # type: ignore
 
 class Slot(SlotBase, table=True):  # type: ignore
     __tablename__ = "t_slot"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     planning: Optional["PlanningService"] = Relationship(back_populates="slots")
     affectations: List["Affectation"] = Relationship(back_populates="slot")
@@ -174,6 +188,7 @@ class Slot(SlotBase, table=True):  # type: ignore
 
 class PlanningService(PlanningServiceBase, table=True):  # type: ignore
     __tablename__ = "t_planningservice"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = None
     activite: Optional["Activite"] = Relationship(back_populates="planning_services")
@@ -186,6 +201,7 @@ class PlanningService(PlanningServiceBase, table=True):  # type: ignore
 
 class StatutAffectation(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_statutaffectation"
+    __table_args__ = {"extend_existing": True}
     code: str = Field(primary_key=True, max_length=20)
     libelle: Optional[str] = None
     affectations: List["Affectation"] = Relationship(back_populates="statut_aff")
@@ -193,6 +209,7 @@ class StatutAffectation(SQLModel, table=True):  # type: ignore
 
 class Affectation(AffectationBase, table=True):  # type: ignore
     __tablename__ = "t_affectation"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
 
     slot: Optional[Slot] = Relationship(back_populates="affectations")
@@ -217,6 +234,7 @@ class Affectation(AffectationBase, table=True):  # type: ignore
 
 class Responsabilite(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_responsabilite"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     date_debut: Optional[str] = None
     date_fin: Optional[str] = None
@@ -242,6 +260,7 @@ class Responsabilite(SQLModel, table=True):  # type: ignore
 
 class Indisponibilite(IndisponibiliteBase, table=True):  # type: ignore
     __tablename__ = "t_indisponibilite"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     membre_id: str = Field(foreign_key="t_membre.id", ondelete="CASCADE")
     membre: Optional["Membre"] = Relationship(back_populates="indisponibilites")
@@ -249,6 +268,7 @@ class Indisponibilite(IndisponibiliteBase, table=True):  # type: ignore
 
 class Utilisateur(UtilisateurBase, table=True):  # type: ignore
     __tablename__ = "t_utilisateur"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     password: str = Field(max_length=255)
     membre_id: Optional[str] = Field(
@@ -260,9 +280,11 @@ class Utilisateur(UtilisateurBase, table=True):  # type: ignore
 
 class TokenBlacklist(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_revoked_tokens"
+    __table_args__ = {"extend_existing": True}
     id: Optional[int] = Field(default=None, primary_key=True)
     jti: str = Field(index=True, unique=True)
     expires_at: datetime = Field(nullable=False)
+
     revoked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -273,6 +295,7 @@ class TokenBlacklist(SQLModel, table=True):  # type: ignore
 
 class EquipeMembre(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_equipe_membre"
+    __table_args__ = {"extend_existing": True}
     equipe_id: str = Field(
         foreign_key="t_equipe.id", primary_key=True, ondelete="CASCADE"
     )
@@ -288,6 +311,7 @@ class EquipeMembre(SQLModel, table=True):  # type: ignore
 # -------------------------
 class Equipe(EquipeBase, table=True):  # type: ignore
     __tablename__ = "t_equipe"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     # Clé étrangère
     ministere_id: str = Field(foreign_key="t_ministere.id", ondelete="CASCADE")
@@ -299,6 +323,7 @@ class Equipe(EquipeBase, table=True):  # type: ignore
 
 class RolePermission(SQLModel, table=True):  # type: ignore
     __tablename__ = "t_role_permission"
+    __table_args__ = {"extend_existing": True}
     role_id: str = Field(foreign_key="t_role.id", primary_key=True, ondelete="CASCADE")
     permission_id: str = Field(
         foreign_key="t_permission.id", primary_key=True, ondelete="CASCADE"
@@ -307,6 +332,7 @@ class RolePermission(SQLModel, table=True):  # type: ignore
 
 class Role(RoleBase, table=True):  # type: ignore
     __tablename__ = "t_role"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     affectations: List["AffectationRole"] = Relationship(back_populates="role")
     permissions: List["Permission"] = Relationship(
@@ -316,6 +342,7 @@ class Role(RoleBase, table=True):  # type: ignore
 
 class Permission(PermissionBase, table=True):  # type: ignore
     __tablename__ = "t_permission"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     code: str = Field(index=True, unique=True, max_length=100)
     roles: List["Role"] = Relationship(
@@ -325,6 +352,7 @@ class Permission(PermissionBase, table=True):  # type: ignore
 
 class AffectationRole(AffectationRoleBase, table=True):  # type: ignore
     __tablename__ = "t_affectation_role"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     utilisateur_id: str = Field(foreign_key="t_utilisateur.id", ondelete="CASCADE")
     role_id: str = Field(foreign_key="t_role.id", ondelete="CASCADE")
@@ -335,6 +363,7 @@ class AffectationRole(AffectationRoleBase, table=True):  # type: ignore
 
 class AffectationContexte(AffectationContexteBase, table=True):  # type: ignore
     __tablename__ = "t_affectation_contexte"
+    __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
 
     affectation_role_id: str = Field(

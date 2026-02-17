@@ -1,9 +1,10 @@
 from typing import Any, Dict, List, Optional, Type, TypeVar
 
-from conf.db.database import Database
 from fastapi import APIRouter, Depends, status
-from models.base_pagination import PaginatedResponse
 from sqlmodel import Session, SQLModel
+
+from conf.db.database import Database
+from models.base_pagination import PaginatedResponse
 
 # Types génériques
 C = TypeVar("C", bound=SQLModel)  # Create

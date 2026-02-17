@@ -1,5 +1,6 @@
-from core.auth.auth_dependencies import RoleChecker
 from fastapi import Depends
+
+from core.auth.auth_dependencies import RoleChecker
 
 # Instance réutilisable pour le checker
 admin_only = Depends(RoleChecker(["ADMIN"]))

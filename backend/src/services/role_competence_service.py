@@ -1,3 +1,5 @@
+from sqlmodel import Session
+
 from core.exceptions import ConflictException, NotFoundException
 from models import (
     CategorieRole,
@@ -7,7 +9,6 @@ from models import (
     RoleCompetenceUpdate,
 )
 from repositories.role_competence_repository import RoleCompetenceRepository
-from sqlmodel import Session
 
 from .base_service import BaseService
 

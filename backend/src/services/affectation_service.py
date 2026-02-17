@@ -1,6 +1,8 @@
 import logging
 from typing import Any, List, Optional
 
+from sqlmodel import Session, select
+
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from core.workflow_engine import WorkflowEngine, affectation_transitions
@@ -8,7 +10,6 @@ from mla_enum.custom_enum import AffectationStatusCode, PlanningStatusCode
 from models import Affectation, PlanningService, Slot
 from repositories.planning_repository import PlanningRepository
 from services.validation_engine import ValidationEngine
-from sqlmodel import Session, select
 
 logger = logging.getLogger(__name__)
 

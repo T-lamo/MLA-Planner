@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from sqlmodel import Session
+
 from core.auth.auth_repository import AuthRepository
 from core.auth.security import create_access_token, get_password_hash, verify_password
 
@@ -8,7 +10,6 @@ from core.auth.security import create_access_token, get_password_hash, verify_pa
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models import Utilisateur
-from sqlmodel import Session
 
 
 class AuthService:

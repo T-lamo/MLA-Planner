@@ -2,6 +2,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import status
+
 from models import EquipeMembre
 
 # pylint: disable=redefined-outer-name

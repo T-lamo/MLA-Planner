@@ -2,6 +2,9 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional, Type, TypeVar
 
+from sqlalchemy.exc import SQLAlchemyError
+from sqlmodel import Session, SQLModel, select
+
 from core.auth.security import get_password_hash
 from models import Slot  # Nouveau
 from models import StatutAffectation  # Nouveau
@@ -29,8 +32,6 @@ from models import (
     TypeResponsabilite,
     Utilisateur,
 )
-from sqlalchemy.exc import SQLAlchemyError
-from sqlmodel import Session, SQLModel, select
 
 from .data import (
     ACTIVITES_DATA,

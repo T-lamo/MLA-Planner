@@ -1,10 +1,11 @@
 # src/repositories/planning_repository.py
 from typing import Optional
 
-from models import Activite, PlanningService
-from models.schema_db_model import Affectation, MembreRole, Slot
 from sqlalchemy.orm import joinedload, selectinload
 from sqlmodel import Session, and_, select
+
+from models import Activite, PlanningService
+from models.schema_db_model import Affectation, MembreRole, Slot
 
 from .base_repository import BaseRepository
 

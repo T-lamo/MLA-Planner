@@ -2,9 +2,10 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from mla_enum.custom_enum import PlanningStatusCode
 from pydantic import BaseModel, computed_field, field_validator
 from sqlmodel import Field, SQLModel
+
+from mla_enum.custom_enum import PlanningStatusCode
 
 from .activite_model import ActiviteCreate, ActiviteRead, ActiviteUpdate
 from .slot_model import SlotCreate, SlotRead

@@ -4,8 +4,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 import jwt
-from core.settings import settings as stng
 from pwdlib import PasswordHash
+
+from core.settings import settings as stng
 
 password_hash = PasswordHash.recommended()
 
