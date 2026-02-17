@@ -24,7 +24,9 @@ repos:
   hooks:
     - id: pylint
       name: pylint
-      entry: pylint
+      # entry: pylint  <-- On change ça
+      entry: bash -c "export PYTHONPATH=backend/src && pylint backend/src"
       language: python
       types: [python]
-      args: ["--disable=R,C"]
+      # Ajout de l'argument pour utiliser ton fichier de config racine
+      args: ["--rcfile=.pylintrc"]
