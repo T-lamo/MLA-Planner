@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 
-from pydantic import ConfigDict, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from sqlmodel import Field, SQLModel
 
 from models.membre_role_model import MembreRoleRead
@@ -70,12 +70,45 @@ class MembreUpdate(SQLModel):
     pole_id: Optional[str] = None
 
 
+class MemberAgendaEntryRead(BaseModel):
+    affectation_id: str
+    statut_affectation_code: str
+    role_code: str
+    # Infos du créneau (venant du Slot)
+    nom_creneau: str
+    date_debut: datetime
+    date_fin: datetime
+    # Infos de l'activité (venant du Planning/Activite)
+    activite_nom: str
+    activite_type: str
+    lieu: Optional[str] = None
+    campus_nom: str
+
+    model_config = {"from_attributes": True}
+
+
+class MemberAgendaStats(BaseModel):
+    total_engagements: int
+    confirmed_rate: float
+    roles_distribution: Dict[str, int]
+
+
+class MemberAgendaResponse(BaseModel):
+    period_start: datetime
+    period_end: datetime
+    statistics: MemberAgendaStats
+    entries: List[MemberAgendaEntryRead]
+
+
 __all__ = [
     "MembreBase",
     "MembreCreate",
     "MembreRead",
     "MembreUpdate",
     "MembrePaginatedResponse",
+    "MemberAgendaEntryRead",
+    "MemberAgendaStats",
+    "MemberAgendaResponse",
 ]
 
 MembreRead.model_rebuild()

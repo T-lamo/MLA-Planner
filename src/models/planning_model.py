@@ -2,12 +2,12 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, computed_field, field_validator
 from sqlmodel import Field, SQLModel
 
 from mla_enum.custom_enum import PlanningStatusCode
 
-from .activite_model import ActiviteCreate, ActiviteUpdate
+from .activite_model import ActiviteCreate, ActiviteRead, ActiviteUpdate
 from .slot_model import SlotCreate, SlotRead
 
 # Import de l'enum défini plus haut
@@ -73,14 +73,14 @@ class PlanningServiceRead(PlanningServiceBase):
     slots: List["SlotRead"] = []
 
 
-class AssignmentSimpleCreate(BaseModel):
+class AffectationSimpleCreate(BaseModel):
     membre_id: str
     role_code: str
 
 
-class SlotWithAssignmentsCreate(SlotCreate):
+class SlotWithAffectationsCreate(SlotCreate):
     # On surcharge pour inclure les affectations dans le payload
-    affectations: List[AssignmentSimpleCreate]
+    affectations: List[AffectationSimpleCreate]
 
 
 class SlotFullNested(
@@ -90,7 +90,7 @@ class SlotFullNested(
     date_debut: datetime
     date_fin: datetime
     # On omet volontairement planning_id ici
-    affectations: List[AssignmentSimpleCreate]
+    affectations: List[AffectationSimpleCreate]
 
 
 class PlanningFullCreate(BaseModel):
@@ -121,15 +121,75 @@ class PlanningFullUpdate(BaseModel):
     slots: List[SlotFullUpdate] = []
 
 
+class MemberSummaryRead(BaseModel):
+    id: str
+    nom: str
+    prenom: str
+    model_config = {"from_attributes": True}
+
+
+class AffectationFullRead(BaseModel):
+    id: str
+    statut_affectation_code: str
+    role_code: str
+    membre: Optional[MemberSummaryRead] = None
+    model_config = {"from_attributes": True}
+
+
+class SlotFullRead(BaseModel):
+    id: str
+    nom_creneau: str
+    date_debut: datetime
+    date_fin: datetime
+    nb_personnes_requis: int
+    affectations: List[AffectationFullRead] = []
+    model_config = {"from_attributes": True}
+
+    @computed_field
+    def filling_rate(self) -> float:
+        if self.nb_personnes_requis <= 0:
+            return 0.0
+        rate = (len(self.affectations) / self.nb_personnes_requis) * 100
+        return round(min(rate, 100.0), 2)
+
+
+class ViewContext(BaseModel):
+    allowed_transitions: List[str]
+    total_slots: int
+    filled_slots: int
+    is_ready_for_publish: bool
+
+
+class PlanningFullRead(PlanningServiceBase):
+    id: str
+    activite: Optional[ActiviteRead] = None
+    slots: List[SlotFullRead] = []
+    view_context: Optional[ViewContext] = None
+    model_config = {"from_attributes": True}
+
+
 # Pour éviter les problèmes de circularité avec SlotRead
 PlanningServiceRead.model_rebuild()
 
 __all__ = [
+    # Base et CRUD standard
     "PlanningServiceBase",
     "PlanningServiceCreate",
     "PlanningServiceRead",
     "PlanningServiceUpdate",
+    # Création (Full/Nested)
     "PlanningFullCreate",
     "SlotFullNested",
-    # Correction orthographe
+    "SlotWithAffectationsCreate",
+    "AffectationSimpleCreate",
+    # Mise à jour (Full/Nested)
+    "PlanningFullUpdate",
+    "SlotFullUpdate",
+    "AffectationFullUpdate",
+    # Lecture (Full/DTOs)
+    "PlanningFullRead",
+    "SlotFullRead",
+    "AffectationFullRead",
+    "MemberSummaryRead",
+    "ViewContext",
 ]

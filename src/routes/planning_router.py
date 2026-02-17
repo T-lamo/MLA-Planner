@@ -10,7 +10,11 @@ from models import (
     SlotCreate,
     SlotRead,
 )
-from models.planning_model import PlanningFullCreate, PlanningFullUpdate
+from models.planning_model import (
+    PlanningFullCreate,
+    PlanningFullRead,
+    PlanningFullUpdate,
+)
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.planing_service import PlanningServiceSvc
 from services.slot_service import SlotService
@@ -134,3 +138,14 @@ def delete_full_planning_endpoint(
     """Exécute la suppression complète via le service expert."""
     svc = PlanningServiceSvc(db)
     svc.delete_full_planning(planning_id)
+
+
+@router.get("/{planning_id}/full", response_model=PlanningFullRead)
+def read_full_planning(
+    planning_id: str, db: Session = Depends(Database.get_db_for_route)
+):
+    svc = PlanningServiceSvc(db)
+    # On récupère d'abord les infos de base pour vérifier la sécurité
+    # planning = svc.get_one(id)
+
+    return svc.get_full_planning(planning_id)
