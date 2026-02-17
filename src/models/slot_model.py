@@ -10,6 +10,7 @@ class SlotBase(SQLModel):
     nom_creneau: str = Field(max_length=100)
     date_debut: datetime
     date_fin: datetime
+    nb_personnes_requis: int = Field(default=2, ge=1)
 
 
 class SlotUpdate(SQLModel):

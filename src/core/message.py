@@ -64,6 +64,12 @@ class ErrorRegistry:
         http_status=status.HTTP_404_NOT_FOUND,
     )
 
+    PLAN_NOT_FOUND = ErrorDetail(
+        code="PLAN_010",
+        message="Le planning demandé est introuvable ou a été supprimé.",
+        http_status=404,
+    )
+
     # --- DOMAINE SLOT ---
     SLOT_COLLISION = ErrorDetail(
         code="SLOT_001",
@@ -98,23 +104,23 @@ class ErrorRegistry:
         http_status=status.HTTP_409_CONFLICT,
     )
 
-    # --- DOMAINE ASSIGNMENT (ASGN) ---
-    ASSIGNMENT_NOT_FOUND = ErrorDetail(
+    # --- DOMAINE Affectation (ASGN) ---
+    Affectation_NOT_FOUND = ErrorDetail(
         code="ASGN_001",
         message="Affectation ou slot introuvable.",
         http_status=status.HTTP_400_BAD_REQUEST,
     )
-    ASSIGNMENT_PLANNING_NOT_FOUND = ErrorDetail(
+    Affectation_PLANNING_NOT_FOUND = ErrorDetail(
         code="ASGN_002",
         message="Planning introuvable pour ce créneau.",
         http_status=status.HTTP_400_BAD_REQUEST,
     )
-    ASSIGNMENT_PLANNING_PARENT_MISSING = ErrorDetail(
+    Affectation_PLANNING_PARENT_MISSING = ErrorDetail(
         code="ASGN_003",
         message="Planning parent introuvable pour cette affectation.",
         http_status=status.HTTP_400_BAD_REQUEST,
     )
-    ASSIGNMENT_DATA_INCOMPLETE = ErrorDetail(
+    Affectation_DATA_INCOMPLETE = ErrorDetail(
         code="ASGN_004",
         message="Données d'affectation incomplètes pour le slot {id}.",
         http_status=status.HTTP_200_OK,
@@ -241,4 +247,24 @@ class ErrorRegistry:
         code="MINST_002",
         message="Ministère {id} introuvable.",
         http_status=status.HTTP_404_NOT_FOUND,
+    )
+
+    # --- DOMAINE MEMBRE ---
+    MEMBRE_NOT_FOUND = ErrorDetail(
+        code="MEMBRE_001",
+        message="Le membre avec l'identifiant spécifié est introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+
+    MEMBRE_CAMPUS_MISSING = ErrorDetail(
+        code="MEMBRE_002",
+        message="Le membre n'est rattaché à aucun campus, impossible de générer l'agenda.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+
+    # --- DOMAINE AGENDA ---
+    AGENDA_DATA_ERROR = ErrorDetail(
+        code="AGENDA_001",
+        message="Erreur lors de la récupération des données de l'agenda.",
+        http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )

@@ -7,7 +7,6 @@ from mla_enum.custom_enum import AffectationStatusCode
 from models import AffectationCreate, AffectationRead, AffectationUpdate
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.affectation_service import AffectationService
-from services.assignement_service import AssignmentService
 
 from .base_route_factory import CRUDRouterFactory
 
@@ -35,13 +34,6 @@ router = factory.router
 # Router spécifique pour Affectation (logique de création surchargée)
 
 
-@router.post("/", response_model=AffectationRead)
-def create_affectation(
-    data: AffectationCreate, db: Session = Depends(Database.get_session)
-):
-    return AffectationService(db).create_affectation(data)
-
-
 @router.patch("/{affectation_id}/status")
 def change_affectation_status(
     affectation_id: str,
@@ -49,5 +41,5 @@ def change_affectation_status(
     db: Session = Depends(Database.get_db_for_route),
 ):
     """Change le statut d'une affectation (PROPOSE -> CONFIRME, etc.)."""
-    service = AssignmentService(db)
+    service = AffectationService(db)
     return service.update_affectation_status(affectation_id, new_status)

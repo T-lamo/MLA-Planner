@@ -1,4 +1,5 @@
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 
 from fastapi import Depends, status
 from sqlmodel import Session
@@ -7,6 +8,8 @@ from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker
 from models import MembreCreate, MembreRead, MembreUpdate, UtilisateurRead
 from models.membre_role_model import MembreRoleCreate, MembreRoleRead
+from models.schema_db_model import Membre
+from routes.dependance import get_current_membre
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.membre_service import MembreService
 
@@ -76,3 +79,17 @@ def remove_membre_role(
 ):
     """Retire une compétence à un membre (Hard Delete sur la table de liaison)."""
     service.remove_role_from_membre(id_membre, role_code)
+
+
+@router.get("/me/agenda")
+def read_my_personal_agenda(
+    from_date: Optional[datetime] = None,
+    to_date: Optional[datetime] = None,
+    # On injecte directement le Membre au lieu de l'Utilisateur
+    current_membre: Membre = Depends(get_current_membre),
+    service: MembreService = Depends(factory.get_service),
+):
+    # On passe directement l'ID du membre au service
+    return service.get_personal_agenda(
+        membre_id=current_membre.id, from_date=from_date, to_date=to_date
+    )
