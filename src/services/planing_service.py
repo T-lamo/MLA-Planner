@@ -205,13 +205,14 @@ class PlanningServiceSvc(
 
     def get_full_planning(self, planning_id: str) -> PlanningFullRead:
         try:
-            # 1. Fetch optimisé (La requête reste ici car elle définit le périmètre du DTO)
+            # 1. Fetch optimisé (La requête reste ici
+            # car elle définit le périmètre du DTO)
             query = (
                 select(PlanningService)
                 .where(PlanningService.id == planning_id)
                 .where(
-                    PlanningService.deleted_at == None
-                )  # noqa: E711 # pylint: disable=C0121
+                    PlanningService.deleted_at == None  # noqa: E711
+                )  # pylint: disable=C0121
                 .options(
                     selectinload(cast(Any, PlanningService.activite)),
                     selectinload(cast(Any, PlanningService.slots))
