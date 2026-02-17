@@ -12,7 +12,8 @@ disable=
     C0116,
     R0903,
     R0913,
-    logging-fstring-interpolation
+    logging-fstring-interpolation,
+    C0121
 
 [BASIC]
 # On autorise les noms de constantes en minuscules pour les chemins (ex: dotenv_path)

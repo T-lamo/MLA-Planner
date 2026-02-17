@@ -258,7 +258,8 @@ class ErrorRegistry:
 
     MEMBRE_CAMPUS_MISSING = ErrorDetail(
         code="MEMBRE_002",
-        message="Le membre n'est rattaché à aucun campus, impossible de générer l'agenda.",
+        message="Le membre n'est rattaché à aucun campus, "
+        "impossible de générer l'agenda.",
         http_status=status.HTTP_400_BAD_REQUEST,
     )
 
