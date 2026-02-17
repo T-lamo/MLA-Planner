@@ -7,8 +7,9 @@ from sqlmodel import Session, select
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models import PlanningService, Slot, SlotCreate, SlotRead
+from models.membre_model import MemberAgendaEntryRead, MemberAgendaStats
 from repositories.slot_repository import SlotRepository
-from services.assignement_service import AssignmentService
+from services.affectation_service import AffectationService
 from utils.utils_func import extract_field
 
 from .base_service import BaseService
@@ -20,6 +21,7 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
     def __init__(self, db: Session):
         super().__init__(SlotRepository(db), "Slot")
         self.db = db
+        self.affectation_svc = AffectationService(self.db)
 
     def _validate_slot_constraints(
         self,
@@ -97,7 +99,6 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
 
     def sync_planning_slots(self, planning_id: str, slots_data: List[Any]):
         """Gère le cycle de vie complet (Sync) des slots et de leurs affectations."""
-        assignment_svc = AssignmentService(self.db)
 
         db_slots = self.db.exec(
             select(Slot).where(Slot.planning_id == planning_id)
@@ -112,7 +113,7 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
 
         for s_id, slot_obj in current_map.items():
             if s_id not in active_payload_ids:
-                assignment_svc.delete_by_slot(s_id)
+                self.affectation_svc.delete_by_slot(s_id)
                 self.db.delete(slot_obj)
 
         self.db.flush()
@@ -128,19 +129,71 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
                 )
                 slot_db = self.add_slot_to_planning(planning_id, s_create)
 
-            assignment_svc.sync_assignments(
+            self.affectation_svc.sync_affectations(
                 slot_db.id, extract_field(s_data, "affectations", [])
             )
 
     def delete_by_planning(self, planning_id: str) -> None:
         """Supprime tous les créneaux et leurs affectations pour un planning donné."""
-        assignment_svc = AssignmentService(self.db)
         db_slots = self.db.exec(
             select(Slot).where(Slot.planning_id == planning_id)
         ).all()
 
         for slot in db_slots:
-            assignment_svc.delete_by_slot(slot.id)
+            self.affectation_svc.delete_by_slot(slot.id)
             self.db.delete(slot)
 
         self.db.flush()
+
+    def get_slots_metrics(self, slots: List[Slot]) -> tuple[int, int]:
+        """
+        Calcule les métriques globales pour une liste de slots.
+
+        Args:
+            slots: Liste des objets Slot à analyser.
+
+        Returns:
+            tuple: (nombre_total_slots, nombre_slots_remplis)
+        """
+        total = len(slots)
+
+        # On utilise l'AffectationService pour vérifier la condition métier "rempli"
+        filled = sum(1 for s in slots if self.affectation_svc.is_slot_filled(s))
+
+        return total, filled
+
+    def get_agenda_statistics(self, affectations: list) -> MemberAgendaStats:
+        # Cascade : Slot appelle Affectation
+        raw_stats = self.affectation_svc.get_stats_from_list(affectations)
+        return MemberAgendaStats(
+            total_engagements=raw_stats["total"],
+            confirmed_rate=raw_stats["rate"],
+            roles_distribution=raw_stats["roles"],
+        )
+
+    def map_affectations_to_entries(
+        self, affectations: list
+    ) -> List[MemberAgendaEntryRead]:
+        entries = []
+        for aff in affectations:
+            # On prépare un dictionnaire compatible avec le DTO
+            # pour utiliser model_validate
+            payload = {
+                "affectation_id": str(aff.id),
+                "statut_affectation_code": aff.statut_affectation_code,
+                "role_code": aff.role_code,
+                "nom_creneau": aff.slot.nom_creneau,
+                "date_debut": aff.slot.date_debut,
+                "date_fin": aff.slot.date_fin,
+                "activite_nom": aff.slot.planning.activite.nom
+                or aff.slot.planning.activite.type,
+                "activite_type": aff.slot.planning.activite.type,
+                "lieu": aff.slot.planning.activite.lieu,
+                "campus_nom": (
+                    aff.slot.planning.activite.campus.nom
+                    if aff.slot.planning.activite.campus
+                    else "N/A"
+                ),
+            }
+            entries.append(MemberAgendaEntryRead.model_validate(payload))
+        return entries

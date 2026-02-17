@@ -56,7 +56,7 @@ class PlanningRepository(BaseRepository[PlanningService]):
         result = self.db.exec(statement).first()
         return result is not None
 
-    def create_assignment(self, affectation: Affectation) -> Affectation:
+    def create_affectation(self, affectation: Affectation) -> Affectation:
         self.db.add(affectation)
         # self.db.flush()
         # self.db.refresh(affectation)

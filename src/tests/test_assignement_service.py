@@ -2,7 +2,7 @@ import pytest
 
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
-from services.assignement_service import AssignmentService
+from services.affectation_service import AffectationService
 
 # Importez vos fixtures de test et modèles ici
 
@@ -11,7 +11,7 @@ def test_assign_member_success(session, test_membre, test_slot, test_membre_role
     # Setup : donner le rôle au membre
     # ... code pour lier test_membre et test_membre_role dans t_membre_role ...
 
-    service = AssignmentService(session)
+    service = AffectationService(session)
     result = service.assign_member_to_slot(
         test_slot.id,
         test_membre.id,
@@ -26,7 +26,7 @@ def test_assign_member_success(session, test_membre, test_slot, test_membre_role
 def test_assign_member_missing_role(session, test_membre, test_slot):
     # Setup : membre n'a PAS le rôle
 
-    service = AssignmentService(session)
+    service = AffectationService(session)
 
     with pytest.raises(AppException) as exc:
         service.assign_member_to_slot(test_slot.id, test_membre.id, "NON_EXISTANT_ROLE")

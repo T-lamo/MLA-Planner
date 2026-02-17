@@ -1,18 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from fastapi import status
 from sqlmodel import select
 
 from models import Activite, PlanningService
-from models.activite_model import ActiviteCreate, ActiviteUpdate
-from models.planning_model import (
-    AssignmentSimpleCreate,
-    PlanningFullCreate,
-    PlanningFullUpdate,
-    PlanningServiceCreate,
-    SlotFullNested,
-    SlotFullUpdate,
-)
+from models.activite_model import ActiviteUpdate
+from models.planning_model import PlanningFullUpdate, SlotFullUpdate
 from models.schema_db_model import MembreRole
 
 
@@ -21,59 +14,24 @@ def test_api_create_full_planning_success(
     client,
     admin_headers,
     session,
-    test_campus,
-    test_ministere,
     test_membre,
     test_role_comp,
+    valid_planning_full_payload,  # Injection de la même fixture
 ):
-    base_date = datetime(2026, 12, 1, 8, 0, 0)
-
-    membre_role = MembreRole(
-        membre_id=test_membre.id, role_code=test_role_comp.code  # DEV_PYTHON
-    )
+    # SETUP
+    membre_role = MembreRole(membre_id=test_membre.id, role_code=test_role_comp.code)
     session.add(membre_role)
     session.commit()
 
-    # GIVEN: Utilisation stricte de PlanningFullCreate et SlotFullNested
-    full_data = PlanningFullCreate(
-        activite=ActiviteCreate(
-            type="Culte",
-            campus_id=str(test_campus.id),
-            ministere_organisateur_id=str(test_ministere.id),
-            date_debut=base_date,
-            date_fin=base_date + timedelta(hours=3),
-            lieu="Main Hall",
-        ),
-        planning=PlanningServiceCreate(
-            statut_code="BROUILLON",
-            activite_id="00000000-0000-0000-0000-000000000000",
-            # Valeur factice, sera ignorée par le service
-            # activite_id est maintenant optionnel dans PlanningServiceCreate
-        ),
-        slots=[
-            SlotFullNested(
-                nom_creneau="Louange",
-                date_debut=base_date + timedelta(minutes=30),
-                date_fin=base_date + timedelta(hours=1),
-                affectations=[
-                    AssignmentSimpleCreate(
-                        membre_id=str(test_membre.id), role_code=test_role_comp.code
-                    )
-                ],
-            )
-        ],
-    )
-
-    # WHEN
+    # WHEN : Envoi du payload à l'API
     response = client.post(
         "/plannings/full",
-        json=full_data.model_dump(mode="json", exclude_none=True),
+        json=valid_planning_full_payload.model_dump(mode="json", exclude_none=True),
         headers=admin_headers,
     )
 
-    if response.status_code == 400:
-        print(f"\nDETAIL ERREUR 400: {response.json()}")
     # THEN
+    assert response.status_code == 201
     assert response.status_code == status.HTTP_201_CREATED
     session.expire_all()
     db_act = session.exec(select(Activite).where(Activite.type == "Culte")).first()
