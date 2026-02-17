@@ -25,7 +25,7 @@ def seed_db():
     with Session(engine) as session:
         print("🌱 Remplissage des données initiales...")
         SeedService(session).run()
-        session.commit()
+        session.flush()
     print("✅ Seeding terminé.")
 
 
