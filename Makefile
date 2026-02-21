@@ -1,9 +1,24 @@
 # Makefile à la racine du monorepo
 
-.PHONY: ci-parallel install-all clean-all \
+.PHONY: ci-parallel dev-all dev-all-ui install-all format-front clean-all \
         dev-front lint-front typecheck-front test-front \
         dev-back install-back format-back lint-back flake-back autoflake-back radon-back precommit-back \
         test-back test-debug-back db-setup-back db-reset-back db-seed-back db-test-setup-back clean-back activate-back
+
+
+# Lance le Backend et le Frontend en parallèle avec pnpm dlx
+dev-all:
+	@pnpm dlx concurrently -n "BACK,FRONT" -c "magenta,blue" \
+		"$(MAKE) dev-back" \
+		"$(MAKE) dev-front"
+
+# Setup complet avec UI-Core
+dev-all-ui:
+	@pnpm dlx concurrently -n "BACK,FRONT,UI" -c "magenta,blue,green" \
+		"$(MAKE) dev-back" \
+		"$(MAKE) dev-front" \
+		"$(MAKE) watch-ui"
+
 
 # --- GLOBAL ---
 install-all:
@@ -30,6 +45,9 @@ clean-all:
 # --- FRONTEND ---
 dev-front:
 	$(MAKE) -C frontend dev
+
+format-front:
+	$(MAKE) -C frontend format
 
 lint-front:
 	$(MAKE) -C frontend lint
