@@ -11,5 +11,11 @@ export default defineNuxtConfig({
       // En local, elle utilisera l'adresse par défaut de ton FastAPI.
       apiBase: '' 
     }
+  },
+  vue: {
+    compilerOptions: {
+      // On dit à Vue de ne pas essayer de compiler les Web Components
+      isCustomElement: (tag) => tag.startsWith('ui-')
+    }
   }
 })
