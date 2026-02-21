@@ -6,5 +6,7 @@ export default withNuxt({
   rules: {
     '@typescript-eslint/no-explicit-any': 'warn',
     'vue/multi-word-component-names': 'off',
+    "vue/attribute-hyphenation": ["error", "never"],
+    "vue/no-deprecated-slot-attribute": "off"
   },
 })

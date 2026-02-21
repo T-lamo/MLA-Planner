@@ -1,0 +1,3 @@
+packages:
+  - 'frontend'      # Nuxt est ici
+  - 'packages/*'    # La lib est ici

@@ -12,9 +12,11 @@ jobs:
     name: Check ${{ matrix.component }} (${{ matrix.task }})
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true # Si un test échoue, on arrête tout immédiatement
+      fail-fast: true 
       matrix:
         include:
+          - component: ui-core
+            task: build
           - component: backend
             task: lint
           - component: backend
@@ -49,8 +51,8 @@ jobs:
           python-version: "3.12"
           cache: 'pip'
 
-      - name: Setup Frontend
-        if: matrix.component == 'frontend'
+      - name: Setup Node (Frontend & UI)
+        if: matrix.component == 'frontend' || matrix.component == 'ui-core'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -62,7 +64,14 @@ jobs:
             pip install pytest pytest-cov psycopg2-binary black isort mypy pylint
           else
             npm install -g pnpm
-            make -C frontend install
+            # Pour le frontend, on a OBLIGATOIREMENT besoin de l'UI buildée
+            if [ "${{ matrix.component }}" = "frontend" ]; then
+              make -C packages/ui-core install
+              make -C packages/ui-core build
+              make -C frontend install
+            else
+              make -C packages/ui-core install
+            fi
           fi
 
       - name: Execute Task
@@ -71,7 +80,9 @@ jobs:
           ENV: testing
           JWT_SECRET_KEY: "test_secret_key_for_ci_only"
         run: |
-          if [ "${{ matrix.component }}" = "backend" ]; then
+          if [ "${{ matrix.component }}" = "ui-core" ]; then
+            make -C packages/ui-core build
+          elif [ "${{ matrix.component }}" = "backend" ]; then
             if [ "${{ matrix.task }}" = "lint" ]; then
               make -C backend lint
             elif [ "${{ matrix.task }}" = "test" ]; then
@@ -80,14 +91,13 @@ jobs:
           elif [ "${{ matrix.component }}" = "frontend" ]; then
             if [ "${{ matrix.task }}" = "lint-typecheck" ]; then 
               make -C frontend lint
-              # On retire le "|| echo" pour que le typecheck soit OBLIGATOIRE
               make -C frontend typecheck 
             elif [ "${{ matrix.task }}" = "test" ]; then 
               make -C frontend test
             fi
           fi
 
-  # --- JOB 2 : BUILD (Ne démarre QUE si TOUT le Job 1 est vert) ---
+  # --- JOB 2 : BUILD ---
   build-frontend:
     needs: quality-assurance
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
@@ -98,9 +108,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Build
+      - name: Build UI & Frontend
         run: |
           npm install -g pnpm
+          # On build l'UI d'abord sinon Nuxt ne trouvera pas les composants
+          make -C packages/ui-core install
+          make -C packages/ui-core build
           cd frontend && pnpm install && pnpm nuxi generate
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -108,7 +121,7 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
-  # --- JOB 3 : DEPLOY BACK (Dépend du Build) ---
+  # --- JOB 3 : DEPLOY BACK ---
   deploy-backend:
     needs: build-frontend
     runs-on: ubuntu-latest
@@ -116,7 +129,7 @@ jobs:
       - name: Trigger Render
         run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
-  # --- JOB 4 : DEPLOY FRONT (Dépend du Back pour garantir la synchro) ---
+  # --- JOB 4 : DEPLOY FRONT ---
   deploy-frontend:
     needs: deploy-backend
     runs-on: ubuntu-latest
