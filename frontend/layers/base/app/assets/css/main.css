@@ -1,0 +1,13 @@
+@import 'tailwindcss';
+
+/* On force le scan de tous les dossiers 'app' de tous les layers */
+/* On remonte depuis : layers/base/app/assets/css/ (5 niveaux) */
+@source '../../../../../layers/*/app/**/*.vue';
+@source '../../../../../app.vue';
+@source '../../../../../app/**/*.vue';
+
+@layer components {
+  .btn-primary {
+    @apply rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700;
+  }
+}
