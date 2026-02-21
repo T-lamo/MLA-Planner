@@ -7,11 +7,12 @@ on:
     branches: [main, develop]
 
 jobs:
+  # --- JOB 1 : LE FILTRE DE QUALITÉ ---
   quality-assurance:
     name: Check ${{ matrix.component }} (${{ matrix.task }})
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false
+      fail-fast: true # Si un test échoue, on arrête tout immédiatement
       matrix:
         include:
           - component: backend
@@ -41,38 +42,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # --- SETUP BACKEND ---
-      - name: Setup Python 3.12
+      - name: Setup Backend
         if: matrix.component == 'backend'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: 'pip'
 
-      - name: Install Backend Dependencies
-        if: matrix.component == 'backend'
-        run: make -C backend install
-
-      # --- SETUP FRONTEND (Correction Force Pnpm) ---
-      - name: Setup Node 22
+      - name: Setup Frontend
         if: matrix.component == 'frontend'
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Force Install PNPM Globally
-        if: matrix.component == 'frontend'
-        run: npm install -g pnpm  # C'est ici qu'on force l'installation système
+      - name: Install Tools
+        run: |
+          if [ "${{ matrix.component }}" = "backend" ]; then
+            make -C backend install
+            pip install pytest pytest-cov psycopg2-binary black isort mypy pylint
+          else
+            npm install -g pnpm
+            make -C frontend install
+          fi
 
-      - name: Install Frontend Dependencies
-        if: matrix.component == 'frontend'
-        run: make -C frontend install
-
-      # --- EXECUTION ---
-      # --- EXECUTION DES TACHES (CORRIGÉ) ---
       - name: Execute Task
         env:
-          # URL compatible avec le service 'db' de GitHub Actions
           DATABASE_URL: "postgresql+psycopg2://user_test:pass_test@localhost:5432/mla_db_test"
           ENV: testing
           JWT_SECRET_KEY: "test_secret_key_for_ci_only"
@@ -81,59 +75,54 @@ jobs:
             if [ "${{ matrix.task }}" = "lint" ]; then
               make -C backend lint
             elif [ "${{ matrix.task }}" = "test" ]; then
-              # EXECUTION CRITIQUE : surcharge de DB_TEST_URL pour le Makefile
-              # On utilise le Makefile qui fait maintenant son "cd src"
               make -C backend test DB_TEST_URL=$DATABASE_URL
             fi
           elif [ "${{ matrix.component }}" = "frontend" ]; then
             if [ "${{ matrix.task }}" = "lint-typecheck" ]; then 
               make -C frontend lint
-              # On ne bloque pas si le script typecheck n'est pas encore en package.json
-              make -C frontend typecheck || echo "Typecheck skipped"
+              # On retire le "|| echo" pour que le typecheck soit OBLIGATOIRE
+              make -C frontend typecheck 
             elif [ "${{ matrix.task }}" = "test" ]; then 
               make -C frontend test
             fi
           fi
 
+  # --- JOB 2 : BUILD (Ne démarre QUE si TOUT le Job 1 est vert) ---
   build-frontend:
     needs: quality-assurance
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node 22
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install pnpm globally
-        run: npm install -g pnpm
-      
-      - name: Generate Static Site
+      - name: Build
         run: |
-          cd frontend
-          pnpm install
-          pnpm nuxi generate
-      
-      - name: Upload Artifact
+          npm install -g pnpm
+          cd frontend && pnpm install && pnpm nuxi generate
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
           path: frontend/dist
-          retention-days: 1
 
+  # --- JOB 3 : DEPLOY BACK (Dépend du Build) ---
   deploy-backend:
     needs: build-frontend
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render Deployment
+      - name: Trigger Render
         run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
+  # --- JOB 4 : DEPLOY FRONT (Dépend du Back pour garantir la synchro) ---
   deploy-frontend:
     needs: deploy-backend
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download Artifact
+      - name: Download
         uses: actions/download-artifact@v4
         with:
           name: frontend-dist
@@ -142,10 +131,8 @@ jobs:
         uses: nwtgck/actions-netlify@v3.0
         with:
           publish-dir: './frontend/dist'
-          production-deploy: true
+          production-deploy: ${{ github.ref == 'refs/heads/main' }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          working-dir: .
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NUXT_PUBLIC_API_URL: ${{ secrets.NUXT_PUBLIC_API_URL }}
