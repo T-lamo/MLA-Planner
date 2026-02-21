@@ -1,7 +1,8 @@
 from typing import Optional
 
-from mla_enum import RoleName
 from sqlmodel import Field, SQLModel
+
+from mla_enum import RoleName
 
 
 class RoleBase(SQLModel):

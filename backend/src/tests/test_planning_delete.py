@@ -1,11 +1,12 @@
 import pytest
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import select
+
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from mla_enum.custom_enum import PlanningStatusCode
 from models import Activite, Affectation, PlanningService
 from models.schema_db_model import Slot
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
 
 
 class TestPlanningDeleteRobust:

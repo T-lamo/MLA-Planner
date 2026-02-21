@@ -1,9 +1,10 @@
 # src/repositories/indisponibilite_repository.py
 from typing import List
 
+from sqlmodel import Session, select
+
 from models import Indisponibilite
 from repositories.base_repository import BaseRepository
-from sqlmodel import Session, select
 
 
 class IndisponibiliteRepository(BaseRepository[Indisponibilite]):

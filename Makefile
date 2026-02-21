@@ -1,96 +1,101 @@
-# Variables
-PYTHON = python3
-BACKEND_DIR = backend
-APP_MODULE = src.main:app
-# URL de la DB de test (utilisée pour les scripts admin et pytest)
-DB_TEST_URL = "postgresql+psycopg2://postgres:postgres@localhost:5432/mla_test_db"
-DB_ADMIN_SCRIPT = $(BACKEND_DIR)/scripts/db_admin.py
+# Makefile à la racine du monorepo
 
-# Crucial pour que "import src" fonctionne toujours depuis la racine
-export PYTHONPATH := $(BACKEND_DIR):$(BACKEND_DIR)/src
+.PHONY: ci-parallel install-all clean-all \
+        dev-front lint-front typecheck-front test-front \
+        dev-back install-back format-back lint-back flake-back autoflake-back radon-back precommit-back \
+        test-back test-debug-back db-setup-back db-reset-back db-seed-back db-test-setup-back clean-back activate-back
 
-.PHONY: test test-debug run install lint format clean precommit db-reset db-seed db-setup db-test-setup activate flake autoflake radon
+# --- GLOBAL ---
+install-all:
+	cd backend && pip install -r requirements.txt
+	cd frontend && pnpm install
 
-# --- DEVELOPPEMENT ---
+ci-parallel:
+	@echo "🚀 Running Front & Back checks in parallel..."
+	$(MAKE) -j 2 run-back-ci run-front-ci
 
-# Lancer l'application en mode développement (Uvicorn)
-run:
-	uvicorn src.main:app --app-dir $(BACKEND_DIR) --reload --host 0.0.0.0 --port 8000
-# Installer les dépendances
-install:
-	pip install -r $(BACKEND_DIR)/requirements.txt
-	pip freeze > $(BACKEND_DIR)/requirements.txt
-	@echo "✅ Dépendances figées dans $(BACKEND_DIR)/requirements.txt"
-# --- QUALITE DE CODE ---
+run-back-ci:
+	$(MAKE) -C backend lint
+	$(MAKE) -C backend test
 
-format:
-	isort $(BACKEND_DIR)/src --profile black
-	black $(BACKEND_DIR)/src
-	autoflake --remove-all-unused-imports --remove-unused-variables -i -r $(BACKEND_DIR)/src
-	flake8 $(BACKEND_DIR)/src
+run-front-ci:
+	$(MAKE) -C frontend lint
+	$(MAKE) -C frontend typecheck
+	$(MAKE) -C frontend test
 
-lint:
-	isort --check-only --profile black $(BACKEND_DIR)/src
-	black --check $(BACKEND_DIR)/src
-	mypy $(BACKEND_DIR)/src
-	pylint --rcfile=.pylintrc $(BACKEND_DIR)/src
+clean-all:
+	$(MAKE) -C backend clean
+	# Ajoutez ici le clean front si nécessaire (ex: rm -rf frontend/.nuxt)
 
-flake:
-	flake8 $(BACKEND_DIR)/src
+# --- FRONTEND ---
+dev-front:
+	$(MAKE) -C frontend dev
 
-autoflake:
-	autoflake --in-place --remove-unused-variables --recursive $(BACKEND_DIR)/src
+lint-front:
+	$(MAKE) -C frontend lint
 
-radon:
-	radon cc $(BACKEND_DIR)/src -a
-	radon mi $(BACKEND_DIR)/src
+typecheck-front:
+	$(MAKE) -C frontend typecheck
 
-precommit:
-	pre-commit run --all-files
+test-front:
+	$(MAKE) -C frontend test
 
-# --- TESTS & CI ---
+# --- BACKEND (Toutes vos commandes d'origine) ---
+dev-back:
+	$(MAKE) -C backend run
 
-# Setup complet de la DB de test (Reset + Seed spécifique test si besoin)
-db-test-setup:
-	@echo "🔧 Configuration de la base de données de TEST..."
-	DATABASE_URL=$(DB_TEST_URL) ENV=testing $(PYTHON) $(DB_ADMIN_SCRIPT) reset
-	@echo "✅ Base de test réinitialisée."
+install-back:
+	$(MAKE) -C backend install
 
-# Lancer les tests : Setup DB auto + Pytest
-# On force ENV=testing pour que conftest.py utilise la bonne logique de protection
-FILE ?= $(BACKEND_DIR)/src/tests
+format-back:
+	$(MAKE) -C backend format
 
-# Lancer les tests : Setup DB auto + Pytest
-# Utilisation de $(FILE) pour permettre le ciblage
-test: 
-	@echo "🚀 Lancement des tests sur : $(FILE)"
-	DATABASE_URL=$(DB_TEST_URL) ENV=test pytest --log-cli-level=INFO $(FILE) --cov=$(BACKEND_DIR)/src --cov-report=term-missing -v
+lint-back:
+	$(MAKE) -C backend lint
+
+flake-back:
+	$(MAKE) -C backend flake
+
+autoflake-back:
+	$(MAKE) -C backend autoflake
+
+radon-back:
+	$(MAKE) -C backend radon
+
+precommit-back:
+	$(MAKE) -C backend precommit
+
+test-back:
+	$(MAKE) -C backend test FILE=$(FILE)
+
+test-debug-back:
+	$(MAKE) -C backend test-debug FILE=$(FILE)
+
+db-setup-back:
+	$(MAKE) -C backend db-setup
+
+db-reset-back:
+	$(MAKE) -C backend db-reset
+
+db-seed-back:
+	$(MAKE) -C backend db-seed
+
+db-test-setup-back:
+	$(MAKE) -C backend db-test-setup
+
+clean-back:
+	$(MAKE) -C backend clean
+
+activate-back:
+	$(MAKE) -C backend activate
 
 
-test-debug:
-	@echo "🐛 Debugging workflow : $(FILE)"
-	DATABASE_URL=$(DB_TEST_URL) ENV=test pytest -s --log-cli-level=DEBUG $(FILE) -v
-# --- BASE DE DONNEES (DEV) ---
+# Nouvelles commandes pour Alembic
+db-migrate-back:
+	$(MAKE) -C backend db-migrate MSG="$(MSG)"
 
-# Supprime et recrée les tables sur la base de DEV
-db-reset:
-	DATABASE_URL=$(DB_TEST_URL) $(PYTHON) $(DB_ADMIN_SCRIPT) reset
+db-upgrade-back:
+	$(MAKE) -C backend db-upgrade
 
-# Remplit la base de DEV (Seed)
-db-seed:
-	$(PYTHON) $(DB_ADMIN_SCRIPT) seed
-
-# La totale pour le DEV
-db-setup: db-reset db-seed
-
-# --- UTILITAIRES ---
-
-clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} +
-	rm -rf .coverage coverage.xml .pytest_cache
-	@echo "✨ Nettoyage terminé."
-
-# Note: 'source' ne fonctionne pas directement dans un Makefile (processus fils)
-# On affiche l'aide pour l'utilisateur
-activate:
-	@echo "Pour activer l'environnement virtuel, lancez : source .venv/bin/activate"
+db-downgrade-back:
+	$(MAKE) -C backend db-downgrade

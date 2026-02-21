@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: mla-backend
+    env: docker
+    # Pointer vers la racine pour que le Dockerfile puisse copier /backend
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    plan: free
+    region: frankfurt
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: mla-db
+          property: connectionString
+      - key: ENV
+        value: production
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      # Doit correspondre à os.getenv("ALLOWED_ORIGINS") dans main.py
+      - key: ALLOWED_ORIGINS
+        value: "https://icctoulouseplanner.netlify.app,http://localhost:3000"
+
+databases:
+  - name: mla-db
+    plan: free
+    region: frankfurt

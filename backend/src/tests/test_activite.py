@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 
-from core.message import ErrorRegistry
 from fastapi import status
+
+from core.message import ErrorRegistry
 from models import Activite
 
 

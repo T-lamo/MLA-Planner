@@ -1,13 +1,14 @@
 # core/auth/auth_dependencies.py
 from enum import Enum
 
-from conf.db.database import Database
-from core.settings import settings as stng
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from models import Utilisateur
 from sqlmodel import Session
+
+from conf.db.database import Database
+from core.settings import settings as stng
+from models import Utilisateur
 
 from .auth_repository import AuthRepository
 

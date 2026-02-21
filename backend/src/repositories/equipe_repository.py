@@ -1,10 +1,11 @@
 from typing import Any, Optional, cast
 
+from sqlalchemy.orm import selectinload
+from sqlmodel import Session, select
+
 from models import Equipe
 from models.schema_db_model import EquipeMembre
 from repositories.base_repository import BaseRepository
-from sqlalchemy.orm import selectinload
-from sqlmodel import Session, select
 
 
 class EquipeRepository(BaseRepository[Equipe]):

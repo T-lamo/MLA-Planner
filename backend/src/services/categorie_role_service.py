@@ -1,3 +1,5 @@
+from sqlmodel import Session
+
 from core.exceptions import ConflictException
 from models import (
     CategorieRole,
@@ -7,7 +9,6 @@ from models import (
 )
 from repositories.category_role_repository import CategorieRoleRepository
 from services.base_service import BaseService
-from sqlmodel import Session
 
 
 class CategorieRoleService(

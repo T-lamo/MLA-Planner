@@ -1,17 +1,96 @@
+# --- GÉNÉRAL ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+*.log
+logs/
+*.bak
+*.swp
+.history
 
-__pycache__/
-.env
+# --- IDE / ÉDITEURS ---
 .vscode/
 .idea/
-.DS_Store
-*.pyc
-*.pyo
-apivenv/
+*.sublime-project
+*.sublime-workspace
+.project
+.pydevproject
+.settings/
+
+# --- PYTHON (Backend) ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- ENVIRONNEMENTS VIRTUELS ---
 .venv/
-env
+venv/
+env/
+apivenv/
+ENV/
 .env.docker
-logs/
-.env.dev
-.env.prod
-.env.test
+
+# --- TOOLS & TESTS PYTHON ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+htmlcov/
+.pylint.d/
+
+# --- BASE DE DONNÉES ---
+*.db
+*.sqlite3
+# Sauf si tu veux garder tes seeds, mais souvent ignoré :
 test.db
+
+# --- NODE / FRONTEND ---
+node_modules/
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- NUXT / VUE / VITE ---
+.nuxt/
+.output/
+dist/
+.nitro/
+.cache/
+.vite/
+.eslintcache
+.stylelintcache
+*.local
+
+# --- ENVIRONNEMENT (Secrets) ---
+.env
+.env.*
+!.env.example  # On garde le fichier d'exemple s'il existe
+
+# --- INFRA / DOCKER ---
+.docker/
+# Si tu utilises Terraform ou autre
+.terraform/

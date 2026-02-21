@@ -1,9 +1,10 @@
 from typing import Optional
 
-from core.exceptions.app_exception import AppException
-from core.message import ErrorRegistry
 from pydantic import ConfigDict, field_validator, model_validator
 from sqlmodel import Field, SQLModel
+
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 
 
 # -------------------------

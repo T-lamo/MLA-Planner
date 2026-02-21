@@ -1,8 +1,9 @@
 # Dans ton fichier models/equipe_model.py (ou équivalent)
 
 
-from models.membre_model import MembreRead  # Importe ton schéma membre existant
 from sqlmodel import SQLModel
+
+from models.membre_model import MembreRead  # Importe ton schéma membre existant
 
 
 class EquipeMembreRead(SQLModel):

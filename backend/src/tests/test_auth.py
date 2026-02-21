@@ -1,15 +1,16 @@
 from datetime import timedelta
 
 import pytest
-from core.auth.security import create_access_token
-from core.settings import settings as stng
 from fastapi import status
 from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 from jose import jwt
+from sqlmodel import Session
+
+from core.auth.security import create_access_token
+from core.settings import settings as stng
 from mla_enum import RoleName
 from models import Utilisateur
-from sqlmodel import Session
 
 # pylint: disable=redefined-outer-name, unused-argument, too-many-arguments
 # pylint: disable=too-many-positional-arguments

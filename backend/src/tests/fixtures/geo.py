@@ -1,8 +1,9 @@
 from uuid import uuid4
 
 import pytest
-from models import Campus, Membre, Ministere, OrganisationICC, Pays, Pole
 from sqlmodel import Session
+
+from models import Campus, Membre, Ministere, OrganisationICC, Pays, Pole
 
 
 # pylint: disable=redefined-outer-name

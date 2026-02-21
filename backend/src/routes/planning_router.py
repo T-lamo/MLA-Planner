@@ -1,5 +1,7 @@
-from conf.db.database import Database
 from fastapi import Depends, status
+from sqlmodel import Session
+
+from conf.db.database import Database
 from mla_enum.custom_enum import PlanningStatusCode
 from models import (
     PlanningServiceCreate,
@@ -16,7 +18,6 @@ from models.planning_model import (
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.planing_service import PlanningServiceSvc
 from services.slot_service import SlotService
-from sqlmodel import Session
 
 from .base_route_factory import CRUDRouterFactory
 

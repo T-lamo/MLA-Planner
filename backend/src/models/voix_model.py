@@ -1,8 +1,9 @@
 from typing import Optional
 
-from mla_enum import VoixEnum
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
+
+from mla_enum import VoixEnum
 
 
 # -------------------------

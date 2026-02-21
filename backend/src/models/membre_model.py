@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from models.membre_role_model import MembreRoleRead
-from models.utilisateur_model import UtilisateurRead
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from sqlmodel import Field, SQLModel
+
+from models.membre_role_model import MembreRoleRead
+from models.utilisateur_model import UtilisateurRead
 
 
 # -------------------------

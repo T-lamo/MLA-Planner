@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from fastapi import status
+
 from models import Membre, Utilisateur
 
 # --- TESTS DE CRÉATION & VALIDATION ---
