@@ -1,10 +1,11 @@
 # src/core/exception_handlers.py
-from core.exceptions.app_exception import AppException
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.datastructures import FormData
 from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
+
+from core.exceptions.app_exception import AppException
 
 
 def register_exception_handlers(app):

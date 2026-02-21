@@ -1,7 +1,8 @@
 from typing import Any, Optional
 
-from models import MembreRole
 from sqlmodel import Session
+
+from models import MembreRole
 
 from .base_repository import BaseRepository
 

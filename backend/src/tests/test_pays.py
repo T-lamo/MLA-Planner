@@ -2,6 +2,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi import status
+
 from models.schema_db_model import Pays
 
 # pylint: disable=redefined-outer-name, unused-argument

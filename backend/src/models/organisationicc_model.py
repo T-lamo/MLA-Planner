@@ -1,9 +1,10 @@
 from datetime import date
 from typing import List, Optional
 
-from models.pays_model import PaysRead
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
+
+from models.pays_model import PaysRead
 
 
 # -------------------------

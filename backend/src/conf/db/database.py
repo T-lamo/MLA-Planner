@@ -1,6 +1,7 @@
-from core.settings import settings
 from sqlalchemy import text  # Import nécessaire
 from sqlmodel import Session, SQLModel, StaticPool, create_engine
+
+from core.settings import settings
 
 
 class Database:

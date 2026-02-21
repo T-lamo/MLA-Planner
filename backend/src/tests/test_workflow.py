@@ -1,4 +1,5 @@
 import pytest
+
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from mla_enum import AffectationStatusCode, PlanningStatusCode

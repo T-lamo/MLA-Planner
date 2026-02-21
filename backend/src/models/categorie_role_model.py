@@ -1,11 +1,12 @@
 from typing import Optional
 
+from pydantic import ConfigDict, field_validator
+from sqlmodel import Field, SQLModel
+
 from core.exceptions.app_exception import AppException
 
 # Imports pour la centralisation des erreurs
 from core.message import ErrorRegistry
-from pydantic import ConfigDict, field_validator
-from sqlmodel import Field, SQLModel
 
 
 # -------------------------

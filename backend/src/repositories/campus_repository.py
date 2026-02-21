@@ -1,8 +1,9 @@
 from typing import Any, List, Optional, cast
 
+from sqlmodel import Session
+
 from models import Campus
 from repositories.base_repository import BaseRepository
-from sqlmodel import Session
 
 
 class CampusRepository(BaseRepository[Campus]):

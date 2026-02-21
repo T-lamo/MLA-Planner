@@ -1,5 +1,6 @@
-from core.auth.auth_dependencies import get_current_active_user
 from fastapi import Depends, HTTPException, status
+
+from core.auth.auth_dependencies import get_current_active_user
 from models.schema_db_model import Membre, Utilisateur
 
 

@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Any, Generic, TypeVar
 
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import SQLModel
+
 # Remplacement des exceptions standards par AppException
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models.base_pagination import PaginatedResponse
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import SQLModel
 
 C = TypeVar("C", bound=SQLModel)
 R = TypeVar("R", bound=SQLModel)

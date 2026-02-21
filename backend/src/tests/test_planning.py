@@ -2,15 +2,16 @@ from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
+from fastapi import status
+from pydantic import ValidationError
+from sqlmodel import select
+
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
-from fastapi import status
 from mla_enum.custom_enum import PlanningStatusCode
 from models import Activite, PlanningService
 from models.planning_model import PlanningFullCreate
-from pydantic import ValidationError
 from services.planing_service import PlanningServiceSvc
-from sqlmodel import select
 
 
 def test_create_full_planning_success(

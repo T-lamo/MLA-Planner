@@ -1,3 +1,5 @@
+from sqlmodel import Session
+
 from core.exceptions import NotFoundException
 from models import (
     Indisponibilite,
@@ -8,7 +10,6 @@ from models import (
 )
 from repositories.base_repository import BaseRepository
 from services.base_service import BaseService
-from sqlmodel import Session
 
 
 class IndisponibiliteRepository(BaseRepository[Indisponibilite]):

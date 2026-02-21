@@ -1,10 +1,11 @@
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session, select
+
 from core.exceptions import BadRequestException, NotFoundException
 from models import Ministere, MinistereCreate, MinistereRead, MinistereUpdate
 from repositories.campus_repository import CampusRepository
 from repositories.ministere_repository import MinistereRepository
 from services.base_service import BaseService
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session, select
 
 
 class MinistereService(

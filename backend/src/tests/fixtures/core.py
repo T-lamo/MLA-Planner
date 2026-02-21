@@ -1,10 +1,11 @@
 import os
 
 import pytest
-from conf.db.database import Database
 from fastapi.testclient import TestClient
-from main import app
 from sqlmodel import Session, SQLModel
+
+from conf.db.database import Database
+from main import app
 
 # On récupère l'engine configuré par notre factory (Postgres en local ou CI)
 engine = Database.get_engine()

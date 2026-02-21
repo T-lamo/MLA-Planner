@@ -3,6 +3,8 @@ from typing import List
 from uuid import uuid4
 
 import pytest
+from sqlmodel import Session
+
 from core.workflow_engine import (
     WorkflowEngine,
     affectation_transitions,
@@ -28,7 +30,6 @@ from models import (
     StatutPlanning,
 )
 from services.planing_service import PlanningServiceSvc
-from sqlmodel import Session
 
 
 # pylint: disable=redefined-outer-name

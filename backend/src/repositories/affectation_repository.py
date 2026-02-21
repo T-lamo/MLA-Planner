@@ -1,8 +1,9 @@
 from datetime import datetime
 
+from sqlmodel import Session, select
+
 from models import Affectation, Slot
 from repositories.base_repository import BaseRepository
-from sqlmodel import Session, select
 
 
 class AffectationRepository(BaseRepository[Affectation]):

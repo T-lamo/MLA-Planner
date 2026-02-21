@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Optional
 
+from pydantic import ConfigDict, field_validator, model_validator
+from sqlmodel import Field, SQLModel
+
 from core.exceptions.app_exception import AppException
 
 # Importation du registre et de AppException
 from core.message import ErrorRegistry
-from pydantic import ConfigDict, field_validator, model_validator
-from sqlmodel import Field, SQLModel
 
 
 class ActiviteBase(SQLModel):

@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from typing import List
 
+from sqlmodel import Session, select
+
 from core.exceptions import BadRequestException, NotFoundException
 from core.exceptions.app_exception import AppException
 from core.exceptions.exceptions import ConflictException
@@ -13,7 +15,6 @@ from repositories.ministere_repository import MinistereRepository
 from repositories.pole_repository import PoleRepository
 from services.base_service import BaseService
 from services.planing_service import PlanningServiceSvc
-from sqlmodel import Session, select
 
 
 class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre]):

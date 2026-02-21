@@ -1,9 +1,10 @@
 # src/repositories/organisation_repository.py
 from typing import Any, List, Optional, cast
 
+from sqlmodel import Session, select
+
 from models import OrganisationICC
 from repositories.base_repository import BaseRepository
-from sqlmodel import Session, select
 
 
 class OrganisationRepository(BaseRepository[OrganisationICC]):

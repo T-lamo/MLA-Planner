@@ -1,5 +1,6 @@
-from models import Pole
 from sqlmodel import Session
+
+from models import Pole
 
 from .base_repository import BaseRepository
 

@@ -1,3 +1,6 @@
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session
+
 from core.exceptions import BadRequestException, NotFoundException
 from models import Pole, PoleCreate, PoleRead, PoleUpdate
 from repositories.ministere_repository import (
@@ -5,8 +8,6 @@ from repositories.ministere_repository import (
 )
 from repositories.pole_repository import PoleRepository
 from services.base_service import BaseService
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
 
 
 class PoleService(BaseService[PoleCreate, PoleRead, PoleUpdate, Pole]):

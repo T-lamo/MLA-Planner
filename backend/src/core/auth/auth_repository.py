@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Optional
 
-from models import TokenBlacklist, Utilisateur
 from sqlmodel import Session, select
+
+from models import TokenBlacklist, Utilisateur
 
 
 class AuthRepository:

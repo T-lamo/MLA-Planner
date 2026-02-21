@@ -1,8 +1,9 @@
 from typing import List, Optional
 
-from models.campus_model import CampusRead
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
+
+from models.campus_model import CampusRead
 
 
 # -------------------------

@@ -1,11 +1,12 @@
 from datetime import datetime
 
 from fastapi import status
+from sqlmodel import select
+
 from models import Activite, PlanningService
 from models.activite_model import ActiviteUpdate
 from models.planning_model import PlanningFullUpdate, SlotFullUpdate
 from models.schema_db_model import MembreRole
-from sqlmodel import select
 
 
 # pylint: disable=too-many-positional-arguments

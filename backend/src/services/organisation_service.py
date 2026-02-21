@@ -1,9 +1,10 @@
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session
+
 from core.exceptions import BadRequestException
 from models import OrganisationICC, OrganisationICCCreate
 from models.organisationicc_model import OrganisationICCRead, OrganisationICCUpdate
 from repositories.organisation_repository import OrganisationRepository
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
 
 from .base_service import BaseService
 
