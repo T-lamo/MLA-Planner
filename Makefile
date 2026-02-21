@@ -90,6 +90,30 @@ activate-back:
 	$(MAKE) -C backend activate
 
 
+
+# --- UI-CORE (Web Components) ---
+# Compiler la lib UI avant le front
+build-ui:
+	$(MAKE) -C packages/ui-core build
+
+# Lancer le watch en arrière-plan pendant le dev Nuxt
+watch-ui:
+	$(MAKE) -C packages/ui-core watch
+
+ui-clean:
+	$(MAKE) -C packages/ui-core clean
+
+# --- FRONTEND (Modifié pour dépendre de l'UI) ---
+# On s'assure que l'UI est compilée avant de build Nuxt
+build-front: build-ui
+	$(MAKE) -C frontend build
+
+# --- CI PIPELINE UPDATE ---
+# Cette commande sera appelée par GitHub Actions
+run-ui-ci:
+	$(MAKE) -C packages/ui-core build
+	
+
 # Nouvelles commandes pour Alembic
 db-migrate-back:
 	$(MAKE) -C backend db-migrate MSG="$(MSG)"
