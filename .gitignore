@@ -63,21 +63,22 @@ htmlcov/
 # --- BASE DE DONNÉES ---
 *.db
 *.sqlite3
-# Sauf si tu veux garder tes seeds, mais souvent ignoré :
 test.db
 
-# --- NODE / FRONTEND ---
+# --- NODE / FRONTEND / UI-CORE ---
 node_modules/
 pnpm-debug.log*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+# Important pour Lit/Vite dans packages/ui-core
+dist/
+out/
 
 # --- NUXT / VUE / VITE ---
 .nuxt/
 .output/
-dist/
 .nitro/
 .cache/
 .vite/
@@ -88,9 +89,12 @@ dist/
 # --- ENVIRONNEMENT (Secrets) ---
 .env
 .env.*
-!.env.example  # On garde le fichier d'exemple s'il existe
+!.env.example
 
 # --- INFRA / DOCKER ---
 .docker/
-# Si tu utilises Terraform ou autre
 .terraform/
+
+# --- MONOREPO SPECIFIC ---
+# On ignore les fichiers de build locaux mais on GARDE les configs
+!pnpm-workspace.yaml
