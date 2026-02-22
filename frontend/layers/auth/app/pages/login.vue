@@ -22,6 +22,9 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/useAuthStore'
 import type { EnhancedApiError } from '~~/layers/base/types/api'
+definePageMeta({
+  layout: 'auth', // Utilise le layout vide
+})
 
 // Interface pour typer l'événement du Web Component
 interface LoginEvent {
