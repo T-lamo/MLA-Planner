@@ -3,12 +3,15 @@ from typing import Annotated, Optional
 from pydantic import BaseModel, constr
 from sqlmodel import Field
 
+from models.utilisateur_model import UtilisateurRead
+
 
 class Token(BaseModel):
     access_token: str
     token_type: str
     expires_at: str  # Ajouté pour le frontend
     refresh_token: Optional[str] = None
+    user: Optional[UtilisateurRead]
 
 
 class TokenData(BaseModel):
