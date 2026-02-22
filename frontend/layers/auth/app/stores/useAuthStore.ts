@@ -1,89 +1,98 @@
 import { defineStore } from 'pinia'
-import { useApiFetch } from '~~/layers/base/app/composables/useApiFetch'
-import type { User } from '~~/layers/base/types'
+import type { AuthUser } from '../repositories/AuthRepository'
 
-interface AuthState {
-  user: User | null
-  token: string | null
-  loading: boolean
-}
+export const useAuthStore = defineStore('auth', () => {
+  const { $api } = useNuxtApp()
+  const route = useRoute()
 
-export const useAuthStore = defineStore('auth', {
-  // State : Données brutes
-  state: (): AuthState => ({
-    user: null,
-    token: null,
-    loading: false,
-  }),
+  // --- ÉTAT (STATE) ---
+  const cookieOptions = { maxAge: 60 * 60 * 24 * 7, path: '/' }
 
-  // Getters : Données dérivées (équivalent des computed)
-  getters: {
-    isAuthenticated: (state) => !!state.token,
-    userRole: (state) => state.user?.role || 'guest',
-  },
+  const token = useCookie<string | null>('auth_token', cookieOptions)
+  const user = useCookie<AuthUser | null>('auth_user', cookieOptions)
+  const expiresAt = useCookie<string | null>('auth_expires_at', cookieOptions)
 
-  // Actions : Logique métier (synchrone ou asynchrone)
-  actions: {
-    /**
-     * Initialisation du store (récupération du token stocké)
-     */
-    async initAuth() {
-      const token = useCookie('auth_token').value
-      if (token) {
-        this.token = token
-        await this.fetchCurrentUser()
+  // --- GETTERS (COMPUTED) ---
+  const isAuthenticated = computed(() => {
+    if (!token.value || !expiresAt.value) return false
+
+    const expirationDate = new Date(expiresAt.value)
+    const now = new Date()
+
+    return now < expirationDate
+  })
+
+  const currentUser = computed(() => user.value)
+
+  // --- ACTIONS ---
+
+  async function login(credentials: Record<'username' | 'password', string>) {
+    const response = await $api.auth.login(credentials)
+
+    token.value = response.token
+    user.value = response.user
+    expiresAt.value = response.expiresAt
+
+    return response
+  }
+
+  async function initAuth() {
+    if (!isAuthenticated.value) {
+      if (token.value) await logout(false)
+      return
+    }
+
+    if (!user.value) {
+      await fetchMe()
+    }
+  }
+
+  /**
+   * Récupération des infos profil depuis le serveur
+   */
+  async function fetchMe(): Promise<void> {
+    if (!token.value) return
+
+    try {
+      const userData = await $api.auth.getMe()
+      user.value = userData
+    } catch (error: unknown) {
+      // ✅ Correction : Utilisation de unknown au lieu de any
+      // On transtype l'erreur pour vérifier le status
+      const fetchError = error as { status?: number }
+
+      if (fetchError.status === 401) {
+        await logout(false)
       }
-    },
+    }
+  }
 
-    /**
-     * Login : Stocke le token et redirige
-     */
-    async login(credentials: Record<string, string>) {
-      this.loading = true
-      try {
-        // useApiFetch est auto-importé du Base Layer
-        const { data, error } = await useApiFetch<{ token: string; user: User }>('/auth/login', {
-          method: 'POST',
-          body: credentials,
-        })
+  /**
+   * Déconnexion complète
+   */
+  async function logout(shouldRedirect = true): Promise<void> {
+    if (token.value) {
+      await $api.auth.logout().catch(() => {})
+    }
 
-        if (error.value) throw new Error('Identifiants invalides')
+    token.value = null
+    user.value = null
+    expiresAt.value = null
 
-        if (data.value) {
-          this.token = data.value.token
-          this.user = data.value.user
+    if (shouldRedirect && route.path !== '/login') {
+      await navigateTo('/login')
+    }
+  }
 
-          // Persistance via cookie (sécurisé pour le SSR)
-          const tokenCookie = useCookie('auth_token', { maxAge: 60 * 60 * 24 * 7 }) // 7 jours
-          tokenCookie.value = data.value.token
-
-          navigateTo('/')
-        }
-      } finally {
-        this.loading = false
-      }
-    },
-
-    /**
-     * Récupération du profil utilisateur (via le token actuel)
-     */
-    async fetchCurrentUser() {
-      const { data } = await useApiFetch<User>('/auth/me')
-      if (data.value) {
-        this.user = data.value
-      } else {
-        this.logout()
-      }
-    },
-
-    /**
-     * Logout : Nettoyage complet
-     */
-    logout() {
-      this.user = null
-      this.token = null
-      useCookie('auth_token').value = null
-      navigateTo('/login')
-    },
-  },
+  return {
+    token,
+    user,
+    expiresAt,
+    isAuthenticated,
+    currentUser,
+    login,
+    logout,
+    fetchMe,
+    initAuth,
+  }
 })

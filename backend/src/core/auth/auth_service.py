@@ -71,6 +71,7 @@ class AuthService:
             "access_token": token,
             "token_type": "bearer",
             "expires_at": expire.isoformat(),
+            "user": user,
         }
 
     def change_password(
