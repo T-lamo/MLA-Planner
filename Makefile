@@ -141,3 +141,8 @@ db-upgrade-back:
 
 db-downgrade-back:
 	$(MAKE) -C backend db-downgrade
+
+
+
+git-change: 
+	git diff --cached -- "*.ts" "*.vue" "*.css" "package.json" > debug_change.patch
