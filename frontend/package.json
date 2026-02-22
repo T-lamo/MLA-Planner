@@ -13,17 +13,29 @@
     "typecheck": "nuxt typecheck"
   },
   "dependencies": {
+    "@pinia/nuxt": "^0.11.3",
     "@shared/ui-core": "workspace:*",
+    "lucide-vue-next": "^0.575.0",
     "nuxt": "^4.3.1",
+    "pinia": "^3.0.4",
     "vue": "^3.5.28",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@nuxt/eslint": "^1.15.1",
+    "@nuxt/kit": "^4.3.1",
     "@nuxt/test-utils": "^4.0.0",
-    "eslint": "^10.0.0",
+    "@tailwindcss/vite": "^4.2.0",
+    "autoprefixer": "^10.4.24",
+    "eslint": "^10.0.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-unused-imports": "^4.4.1",
     "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "postcss": "^8.5.6",
     "prettier": "^3.8.1",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "tailwindcss": "^4.2.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18",
     "vue-tsc": "^3.2.4"
