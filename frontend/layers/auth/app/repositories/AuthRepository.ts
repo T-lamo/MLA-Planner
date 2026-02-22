@@ -27,6 +27,8 @@ export interface AuthUser {
   username: string
   isActive: boolean
   membreId: string
+  name?: string
+  role?: string
 }
 
 export interface AuthResponse {
