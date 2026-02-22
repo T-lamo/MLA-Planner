@@ -98,3 +98,4 @@ out/
 # --- MONOREPO SPECIFIC ---
 # On ignore les fichiers de build locaux mais on GARDE les configs
 !pnpm-workspace.yaml
+debug_change.patch
