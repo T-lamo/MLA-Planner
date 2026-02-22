@@ -1,4 +1,5 @@
 import type { UseFetchOptions } from '#app'
+import type { EnhancedApiError } from '../../types/api'
 
 /**
  * BaseRepository - Classe abstraite pour centraliser la logique des services API
@@ -19,12 +20,18 @@ export abstract class BaseRepository {
     // On propage les deux génériques à useApiFetch pour autoriser le 'transform'
     const { data, error, refresh, pending } = await useApiFetch<ResT, TransformT>(url, options)
 
-    // Gestion centralisée de la remontée d'erreur vers le composant appelant
     if (error.value) {
-      // On throw l'erreur pour qu'elle puisse être catchée par le bloc try/catch du composant
-      throw error.value
-    }
+      /**
+       * CRITÈRE EXPERT : Normalisation de l'erreur
+       * On cast l'erreur Fetch en notre type EnhancedApiError.
+       * L'intercepteur dans useApiFetch a déjà déclenché le Toast,
+       * mais on "throw" pour permettre au composant de gérer sa logique locale (ex: stop loader).
+       */
+      const apiError = error.value as unknown as EnhancedApiError
 
+      // On enrichit l'erreur si besoin avant de la lancer
+      throw apiError
+    }
     return {
       // On garantit que data.value est bien du type TransformT
       data: data.value as TransformT,
