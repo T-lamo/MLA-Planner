@@ -20,7 +20,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
       await authStore.fetchMe()
     } else {
       // Si expiré, on nettoie tout de suite
-      await authStore.logout(false)
+      await authStore.logout(false, to.path)
     }
   }
 
