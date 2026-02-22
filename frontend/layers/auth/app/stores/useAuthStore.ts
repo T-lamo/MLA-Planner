@@ -2,9 +2,6 @@ import { defineStore } from 'pinia'
 import type { AuthUser } from '../repositories/AuthRepository'
 
 export const useAuthStore = defineStore('auth', () => {
-  const { $api } = useNuxtApp()
-  const route = useRoute()
-
   // --- ÉTAT (STATE) ---
   const cookieOptions = { maxAge: 60 * 60 * 24 * 7, path: '/' }
 
@@ -27,6 +24,8 @@ export const useAuthStore = defineStore('auth', () => {
   // --- ACTIONS ---
 
   async function login(credentials: Record<'username' | 'password', string>) {
+    const { $api } = useNuxtApp()
+
     const response = await $api.auth.login(credentials)
 
     token.value = response.token
@@ -51,6 +50,8 @@ export const useAuthStore = defineStore('auth', () => {
    * Récupération des infos profil depuis le serveur
    */
   async function fetchMe(): Promise<void> {
+    const { $api } = useNuxtApp()
+
     if (!token.value) return
 
     try {
@@ -70,7 +71,9 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * Déconnexion complète
    */
-  async function logout(shouldRedirect = true): Promise<void> {
+  async function logout(shouldRedirect = true, currentPath?: string): Promise<void> {
+    const { $api } = useNuxtApp()
+
     if (token.value) {
       await $api.auth.logout().catch(() => {})
     }
@@ -79,7 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     expiresAt.value = null
 
-    if (shouldRedirect && route.path !== '/login') {
+    if (shouldRedirect && currentPath !== '/login') {
       await navigateTo('/login')
     }
   }
