@@ -1,3 +1,3 @@
 <template>
-  <h1>Calendar</h1>
+  <Calendar></Calendar>
 </template>
