@@ -18,32 +18,34 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/useAuthStore'
+import type { EnhancedApiError } from '~~/layers/base/types/api'
 
-const authStore = useAuthStore()
-const router = useRouter()
-const route = useRoute()
-
-const authError = ref('')
-const isLoading = ref(false)
-
-/**
- * Interface pour les données reçues du Web Component
- */
-interface AuthSubmitEvent extends Event {
+// Interface pour typer l'événement du Web Component
+interface LoginEvent {
   detail: {
     identifier?: string
     password?: string
   }
 }
 
-const onLogin = async (event: AuthSubmitEvent) => {
+const authStore = useAuthStore()
+const router = useRouter()
+const route = useRoute()
+
+const { notifyError } = useErrorHandler()
+
+const authError = ref('')
+const isLoading = ref(false)
+
+const onLogin = async (event: LoginEvent) => {
   authError.value = ''
   isLoading.value = true
 
   const { identifier, password } = event.detail
 
-  // Sécurité TS : on vérifie que les données existent
   if (!identifier || !password) {
     isLoading.value = false
     return
@@ -58,27 +60,26 @@ const onLogin = async (event: AuthSubmitEvent) => {
     const redirectPath = (route.query.redirect as string) || '/'
     await router.push(redirectPath)
   } catch (error: unknown) {
-    // eslint-disable-next-line no-console
-    console.error('Erreur Login Page:', error)
+    // On caste en EnhancedApiError pour le traitement
+    const err = error as EnhancedApiError
 
-    // Assertion de type sécurisée pour l'erreur API
-    const fetchError = error as { status?: number }
+    // Notification globale (Toast)
+    notifyError(err)
 
-    if (fetchError.status === 401) {
-      authError.value = 'Identifiants incorrects. Veuillez réessayer.'
-    } else if (fetchError.status === 422) {
-      authError.value = "Format d'identifiant invalide."
-    } else {
-      authError.value = 'Une erreur technique est survenue.'
-    }
+    // Mise à jour du message d'erreur interne pour le composant ui-login
+    const apiErrorMessage = err?.data?.error?.message || err?.data?.message
+    authError.value = apiErrorMessage || 'Une erreur technique est survenue.'
   } finally {
     isLoading.value = false
   }
 }
 </script>
+
 <style scoped>
 ui-login {
-  --ui-primary: #2563eb;
+  --ui-primary: var(--color-primary-600);
+  --ui-primary-hover: var(--color-primary-700);
   --ui-radius: 12px;
+  --ui-accent: var(--color-accent);
 }
 </style>

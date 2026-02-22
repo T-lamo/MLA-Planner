@@ -42,7 +42,7 @@ export class AuthRepository extends BaseRepository {
    * Authentification utilisateur
    */
   async login(credentials: Record<'username' | 'password', string>): Promise<AuthResponse> {
-    const { data } = await this.apiRequest<LoginSchema, AuthResponse>('/auth/toke', {
+    const { data } = await this.apiRequest<LoginSchema, AuthResponse>('/auth/token', {
       method: 'POST',
       body: credentials,
       headers: {
