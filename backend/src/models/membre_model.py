@@ -1,11 +1,16 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from sqlmodel import Field, SQLModel
 
+from models.campus_model import CampusRead
 from models.membre_role_model import MembreRoleRead
-from models.utilisateur_model import UtilisateurRead
+
+if TYPE_CHECKING:
+    from models.ministere_model import MinistereRead
+    from models.pole_model import PoleRead
+    from models.utilisateur_model import UtilisateurRead
 
 
 # -------------------------
@@ -35,18 +40,20 @@ class MembreBase(SQLModel):
 # SCHÉMAS (DTO)
 # -------------------------
 class MembreCreate(MembreBase):
-    campus_id: str  # Obligatoire d'après tes erreurs NotNullViolation
-    ministere_id: Optional[str] = None
-    pole_id: Optional[str] = None
+    campus_ids: List[str] = Field(default=[], description="Liste des UUIDs des campus")
+    ministere_ids: List[str] = Field(
+        default=[], description="Liste des UUIDs des ministères"
+    )
+    pole_ids: List[str] = Field(default=[], description="Liste des UUIDs des pôles")
 
 
 class MembreRead(MembreBase):
     id: str
     date_inscription: datetime
-    campus_id: str
-    ministere_id: Optional[str] = None
-    pole_id: Optional[str] = None
-    utilisateur: Optional[UtilisateurRead] = None
+    campuses: List[CampusRead] = []
+    ministeres: List["MinistereRead"] = []
+    poles: List["PoleRead"] = []
+    utilisateur: Optional["UtilisateurRead"] = None
     roles_assoc: List[MembreRoleRead] = []
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
@@ -65,9 +72,9 @@ class MembreUpdate(SQLModel):
     email: Optional[EmailStr] = Field(default=None, max_length=100)
     telephone: Optional[str] = Field(default=None, max_length=20)
     actif: Optional[bool] = None
-    campus_id: Optional[str] = None
-    ministere_id: Optional[str] = None
-    pole_id: Optional[str] = None
+    campus_ids: Optional[List[str]] = None
+    ministere_ids: Optional[List[str]] = None
+    pole_ids: Optional[List[str]] = None
 
 
 class MemberAgendaEntryRead(BaseModel):
@@ -110,5 +117,3 @@ __all__ = [
     "MemberAgendaStats",
     "MemberAgendaResponse",
 ]
-
-MembreRead.model_rebuild()

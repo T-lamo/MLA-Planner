@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import ConfigDict, computed_field, field_validator
 from sqlmodel import Field, SQLModel
@@ -8,8 +8,10 @@ from core.exceptions.app_exception import AppException
 # Importation du registre et de l'AppException
 from core.message import ErrorRegistry
 
-from .membre_model import MembreRead
 from .pole_model import PoleRead
+
+if TYPE_CHECKING:
+    from models.membre_model import MembreRead
 
 
 # -------------------------
@@ -46,7 +48,7 @@ class MinistereRead(MinistereBase):
     # On rend ces champs optionnels pour éviter les ResponseValidationError
     # si les relations ne sont pas "eager loaded"
     poles: List[PoleRead] = []
-    membres: List[MembreRead] = []
+    ministeres_membres: List["MembreRead"] = Field(default=[], alias="membres")
 
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
@@ -56,7 +58,7 @@ class MinistereRead(MinistereBase):
 
     @computed_field
     def membres_count(self) -> int:
-        return len(self.membres) if self.membres else 0
+        return len(self.ministeres_membres) if self.ministeres_membres else 0
 
 
 # -------------------------

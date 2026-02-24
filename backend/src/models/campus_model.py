@@ -1,7 +1,10 @@
-from typing import Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from pydantic import ConfigDict, field_validator
 from sqlmodel import Field, SQLModel
+
+if TYPE_CHECKING:
+    from membre_model import MembreRead
 
 
 # -------------------------
@@ -49,6 +52,7 @@ class CampusUpdate(SQLModel):
 class CampusRead(CampusBase):
     id: str
     pays_id: str
+    membres: List["MembreRead"] = []
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
     # Note : On inclut généralement PaysRead ici si importé,
