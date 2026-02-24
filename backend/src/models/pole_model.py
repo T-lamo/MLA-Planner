@@ -1,12 +1,14 @@
 # Utilisation d'annotations différées pour éviter les cycles d'import
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
 from utils.validator import NotBlankFieldsMixin
+
+from .membre_model import MembreRead
 
 
 # -------------------------
@@ -44,6 +46,7 @@ class PoleRead(PoleBase):
     id: str
     # ministere_id reste présent pour le front-end
     ministere_id: str
+    poles_membres: List["MembreRead"] = Field(default=[], alias="membres")
     membres_count: int = 0
 
 
@@ -76,5 +79,3 @@ __all__ = [
     "PoleRead",
     "PoleUpdate",
 ]
-
-PoleRead.model_rebuild()

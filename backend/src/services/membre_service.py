@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import List
+from typing import Any, List, Optional, cast
 
 from sqlmodel import Session, select
 
@@ -9,7 +9,8 @@ from core.exceptions.exceptions import ConflictException
 from core.message import ErrorRegistry
 from models import Membre, MembreCreate, MembreRead, MembreUpdate, Utilisateur
 from models.membre_role_model import MembreRoleCreate
-from models.schema_db_model import MembreRole, RoleCompetence
+from models.schema_db_model import Campus, MembreRole, Ministere, Pole, RoleCompetence
+from repositories.campus_repository import CampusRepository
 from repositories.membre_repository import MembreRepository
 from repositories.ministere_repository import MinistereRepository
 from repositories.pole_repository import PoleRepository
@@ -21,18 +22,74 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
     def __init__(self, db: Session):
         super().__init__(repo=MembreRepository(db), resource_name="Membre")
         self.db = db
+        self.campus_repo = CampusRepository(db)
         self.min_repo = MinistereRepository(db)
         self.pole_repo = PoleRepository(db)
         self.planning_svc = PlanningServiceSvc(db)
 
     def create(self, data: MembreCreate) -> Membre:
-        # Validation UUID existence
-        if data.ministere_id and not self.min_repo.get_by_id(data.ministere_id):
-            raise NotFoundException(f"Ministère {data.ministere_id} introuvable.")
-        if data.pole_id and not self.pole_repo.get_by_id(data.pole_id):
-            raise NotFoundException(f"Pôle {data.pole_id} introuvable.")
+        """Crée un membre avec ses multiples rattachés (N:N)."""
 
-        return self.repo.create(Membre(**data.model_dump()))
+        membre_data = data.model_dump(
+            exclude={"campus_ids", "ministere_ids", "pole_ids"}
+        )
+        db_membre = Membre(**membre_data)
+
+        if data.campus_ids:
+            for c_id in data.campus_ids:
+                campus = self.campus_repo.get_by_id(c_id)
+                if not campus:
+                    raise NotFoundException(f"Campus {c_id} introuvable.")
+                # pylint: disable=no-member
+                cast(List[Any], db_membre.campuses).append(campus)
+
+        if data.ministere_ids:
+            for m_id in data.ministere_ids:
+                minis = self.min_repo.get_by_id(m_id)
+                if not minis:
+                    raise NotFoundException(f"Ministère {m_id} introuvable.")
+                # pylint: disable=no-member
+                cast(List[Any], db_membre.ministeres).append(minis)
+
+        if data.pole_ids:
+            for p_id in data.pole_ids:
+                pole = self.pole_repo.get_by_id(p_id)
+                if not pole:
+                    raise NotFoundException(f"Pôle {p_id} introuvable.")
+                # pylint: disable=no-member
+                cast(List[Any], db_membre.poles).append(pole)
+
+        return self.repo.create(db_membre)
+
+    # Correction W0237 (signature matching) et W0622 (builtin override)
+    def update(self, identifiant: str, data: MembreUpdate) -> Membre:
+        """Mise à jour incluant la synchronisation des listes N:N."""
+        db_membre = self.get_one(identifiant)
+
+        # Mise à jour des champs simples
+        update_data = data.model_dump(
+            exclude_unset=True, exclude={"campus_ids", "ministere_ids", "pole_ids"}
+        )
+        for key, value in update_data.items():
+            setattr(db_membre, key, value)
+
+        # Synchronisation
+        if data.campus_ids is not None:
+            campuses = [self.db.get(Campus, cid) for cid in data.campus_ids]
+            db_membre.campuses = [c for c in campuses if c is not None]
+
+        if data.ministere_ids is not None:
+            ministeres = [self.db.get(Ministere, mid) for mid in data.ministere_ids]
+            db_membre.ministeres = [m for m in ministeres if m is not None]
+
+        if data.pole_ids is not None:
+            poles = [self.db.get(Pole, pid) for pid in data.pole_ids]
+            db_membre.poles = [p for p in poles if p is not None]
+
+        self.db.add(db_membre)
+        self.db.flush()
+        self.db.refresh(db_membre)
+        return db_membre
 
     def link_utilisateur(self, user_id: str, membre_id: str) -> Utilisateur:
         membre = self.get_one(membre_id)
@@ -110,22 +167,28 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
         self.db.delete(aff)
         self.db.flush()
 
-    def get_personal_agenda(self, membre_id: str, from_date=None, to_date=None):
-        # Logique de contexte (Campus)
-        membre = self.db.get(Membre, membre_id)
+    def get_personal_agenda(
+        self,
+        membre_id: str,
+        campus_id: Optional[str] = None,
+        from_date=None,
+        to_date=None,
+    ):
+        """Récupère l'agenda pour un membre dans un campus spécifique."""
+        membre = self.repo.get_by_id(membre_id)
         if not membre:
             raise AppException(ErrorRegistry.MEMBRE_NOT_FOUND)
 
-        if not membre.campus_id:
-            raise AppException(ErrorRegistry.MEMBRE_CAMPUS_MISSING)
+        # NOUVELLE LOGIQUE : Si aucun campus_id fourni, on prend le premier rattaché
+        target_campus_id = campus_id
+        if not target_campus_id:
+            if not membre.campuses:
+                raise AppException(ErrorRegistry.MEMBRE_CAMPUS_MISSING)
+            target_campus_id = membre.campuses[0].id
 
-        # Logique de période
         start = from_date or datetime.now()
         end = to_date or (start + timedelta(days=90))
-        try:
-            return self.planning_svc.get_member_agenda_full(
-                membre_id=membre_id, campus_id=membre.campus_id, start=start, end=end
-            )
-        except Exception as e:
-            raise e  # AppException(ErrorRegistry.AGENDA_DATA_ERROR)
-        # Appel au service planning
+
+        return self.planning_svc.get_member_agenda_full(
+            membre_id=membre_id, campus_id=target_campus_id, start=start, end=end
+        )
