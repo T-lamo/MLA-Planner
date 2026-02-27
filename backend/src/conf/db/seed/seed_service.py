@@ -17,6 +17,9 @@ from models import (
     Equipe,
     EquipeMembre,
     Membre,
+    MembreCampusLink,
+    MembreMinistereLink,
+    MembrePoleLink,
     MembreRole,
     Ministere,
     OrganisationICC,
@@ -92,7 +95,7 @@ class SeedService:
 
                 # 4. RH & POLYVALENCE
                 self._seed_membres_et_competences(
-                    user_list, campus_paris.id, min_map, pole_map
+                    user_list, campus_map, min_map, pole_map
                 )
 
                 # 5. OPÉRATIONNEL & PLANNING (Cœur de la modification)
@@ -209,36 +212,81 @@ class SeedService:
                 defaults={"libelle": rc["libelle"], "categorie_code": rc["cat"]},
             )
 
-    def _seed_membres_et_competences(self, users, campus_id: str, min_map, pole_map):
+    def _seed_membres_et_competences(
+        self, users: list, campus_map: dict, min_map: dict, pole_map: dict
+    ) -> None:
+        """Gère la création des membres et délègue la création des liens N:N."""
+        self.logger.info("👥 Peuplement des membres et des tables de liaison N:N...")
+
         for i, user in enumerate(users):
             info: MembreInfo = MEMBRES_INFOS[i % len(MEMBRES_INFOS)]
+
+            # 1. Création du Membre
             membre, _ = self._get_or_create(
                 Membre,
                 email=info["email"],
                 defaults={
                     "nom": info["nom"],
                     "prenom": info["prenom"],
-                    "campus_id": campus_id,
-                    "ministere_id": min_map["Louange et Adoration"].id,
-                    "pole_id": (
-                        pole_map["Chorale"].id
-                        if i % 2 == 0
-                        else pole_map["Musiciens"].id
-                    ),
                     "actif": True,
                 },
             )
+
+            # Liaison avec l'utilisateur technique
             user.membre_id = membre.id
             self.db.add(user)
 
-            # Assignation Polyvalence
-            for idx, role_code in enumerate(info.get("roles", [])):
+            # Dans _seed_membres_et_competences :
+            self._link_member_to_entities(
+                membre.id,
+                info,
+                c_map=campus_map,  # Argument nommé
+                m_map=min_map,  # Argument nommé
+                p_map=pole_map,  # Argument nommé
+            )
+            self._assign_member_roles(membre.id, info.get("roles") or [])
+
+    def _link_member_to_entities(
+        self,
+        m_id: str,
+        info: MembreInfo,
+        *,  # <--- Tout ce qui suit doit être nommé à l'appel
+        c_map: dict,
+        m_map: dict,
+        p_map: dict,
+    ) -> None:
+        """Gère les liaisons Many-to-Many (Campus, Ministères, Pôles)."""
+
+        # Campus
+        for c_name in info.get("campus_names") or ["Campus Paris"]:
+            if c_name in c_map:
                 self._get_or_create(
-                    MembreRole,
-                    membre_id=membre.id,
-                    role_code=role_code,
-                    defaults={"niveau": "DEBUTANT", "is_principal": (idx == 0)},
+                    MembreCampusLink, membre_id=m_id, campus_id=c_map[c_name].id
                 )
+
+        # Ministères
+        for m_name in info.get("ministere_names") or []:
+            if m_name in m_map:
+                self._get_or_create(
+                    MembreMinistereLink, membre_id=m_id, ministere_id=m_map[m_name].id
+                )
+
+        # Pôles
+        for p_name in info.get("pole_names") or []:
+            if p_name in p_map:
+                self._get_or_create(
+                    MembrePoleLink, membre_id=m_id, pole_id=p_map[p_name].id
+                )
+
+    def _assign_member_roles(self, m_id: str, roles: list[str]) -> None:
+        """Assignation des rôles techniques (Polyvalence)."""
+        for idx, role_code in enumerate(roles):
+            self._get_or_create(
+                MembreRole,
+                membre_id=m_id,
+                role_code=role_code,
+                defaults={"niveau": "DEBUTANT", "is_principal": (idx == 0)},
+            )
 
     # --- PLANNING (LOGIQUE SLOTS) ---
 

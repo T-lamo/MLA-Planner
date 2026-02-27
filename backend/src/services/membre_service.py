@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 
 from sqlmodel import Session, select
 
@@ -10,6 +10,7 @@ from core.message import ErrorRegistry
 from models import Membre, MembreCreate, MembreRead, MembreUpdate, Utilisateur
 from models.membre_role_model import MembreRoleCreate
 from models.schema_db_model import MembreRole, RoleCompetence
+from repositories.campus_repository import CampusRepository
 from repositories.membre_repository import MembreRepository
 from repositories.ministere_repository import MinistereRepository
 from repositories.pole_repository import PoleRepository
@@ -21,18 +22,57 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
     def __init__(self, db: Session):
         super().__init__(repo=MembreRepository(db), resource_name="Membre")
         self.db = db
+        self.campus_repo = CampusRepository(db)
         self.min_repo = MinistereRepository(db)
         self.pole_repo = PoleRepository(db)
         self.planning_svc = PlanningServiceSvc(db)
 
     def create(self, data: MembreCreate) -> Membre:
-        # Validation UUID existence
-        if data.ministere_id and not self.min_repo.get_by_id(data.ministere_id):
-            raise NotFoundException(f"Ministère {data.ministere_id} introuvable.")
-        if data.pole_id and not self.pole_repo.get_by_id(data.pole_id):
-            raise NotFoundException(f"Pôle {data.pole_id} introuvable.")
+        if not data.campus_ids:
+            raise BadRequestException(
+                "Un membre doit être rattaché à au moins un campus."
+            )
 
-        return self.repo.create(Membre(**data.model_dump()))
+        # Préparation de l'objet sans les relations N:N
+        membre_data = data.model_dump(
+            exclude={"campus_ids", "ministere_ids", "pole_ids"}
+        )
+        db_membre = Membre(**membre_data)
+
+        # Synchronisation
+        self._sync_relations(
+            db_membre,
+            campus_ids=data.campus_ids,
+            min_ids=data.ministere_ids,
+            pole_ids=data.pole_ids,
+        )
+
+        self.db.add(db_membre)
+        self.db.flush()  # Prépare l'insertion sans fermer la transaction
+        return db_membre
+
+    def update(self, identifiant: str, data: MembreUpdate) -> Membre:
+        db_membre = self.get_one(identifiant)
+        if hasattr(db_membre, "deleted_at") and db_membre.deleted_at:
+            raise BadRequestException("Impossible de modifier un membre supprimé.")
+
+        update_data = data.model_dump(
+            exclude_unset=True, exclude={"campus_ids", "ministere_ids", "pole_ids"}
+        )
+        for key, value in update_data.items():
+            setattr(db_membre, key, value)
+
+        self._sync_relations(
+            db_membre,
+            campus_ids=data.campus_ids,
+            min_ids=data.ministere_ids,
+            pole_ids=data.pole_ids,
+            is_update=True,
+        )
+
+        self.db.add(db_membre)
+        self.db.flush()
+        return db_membre
 
     def link_utilisateur(self, user_id: str, membre_id: str) -> Utilisateur:
         membre = self.get_one(membre_id)
@@ -56,6 +96,70 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
         self.db.flush()
         self.db.refresh(user)
         return user
+
+    def delete(self, identifiant: str) -> None:
+        """
+        Implémentation du Soft Delete.
+        Met à jour 'deleted_at' au lieu de supprimer l'enregistrement.
+        """
+        db_membre = self.get_one(identifiant)
+
+        if db_membre.deleted_at:
+            return  # Déjà supprimé, idempotent
+
+        db_membre.deleted_at = datetime.now()
+
+        # Exécution du hook pour nettoyer les dépendances (ex: lien utilisateur)
+        self._after_delete_hook(db_membre)
+
+        self.db.add(db_membre)
+        self.db.flush()
+
+    def _sync_relations(
+        self,
+        membre: Membre,
+        *,
+        campus_ids: Optional[List[str]] = None,
+        min_ids: Optional[List[str]] = None,
+        pole_ids: Optional[List[str]] = None,
+        is_update: bool = False,
+    ) -> None:
+        """
+        Logique interne de synchronisation des collections SQLModel.
+        En mode update, remplace proprement les collections.
+        """
+        if campus_ids is not None:
+            # Validation métier même en update
+            if is_update and len(campus_ids) == 0:
+                raise BadRequestException(
+                    "Un membre doit conserver au moins un campus."
+                )
+
+            campuses = []
+            for c_id in campus_ids:
+                c = self.campus_repo.get_by_id(c_id)
+                if not c:
+                    raise NotFoundException(f"Campus {c_id} introuvable.")
+                campuses.append(c)
+            membre.campuses = campuses
+
+        if min_ids is not None:
+            ministeres = []
+            for m_id in min_ids:
+                m = self.min_repo.get_by_id(m_id)
+                if not m:
+                    raise NotFoundException(f"Ministère {m_id} introuvable.")
+                ministeres.append(m)
+            membre.ministeres = ministeres
+
+        if pole_ids is not None:
+            poles = []
+            for p_id in pole_ids:
+                p = self.pole_repo.get_by_id(p_id)
+                if not p:
+                    raise NotFoundException(f"Pôle {p_id} introuvable.")
+                poles.append(p)
+            membre.poles = poles
 
     def _after_delete_hook(self, obj: Membre) -> None:
         # On casse le lien avec l'utilisateur (SET NULL)
@@ -110,22 +214,28 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
         self.db.delete(aff)
         self.db.flush()
 
-    def get_personal_agenda(self, membre_id: str, from_date=None, to_date=None):
-        # Logique de contexte (Campus)
-        membre = self.db.get(Membre, membre_id)
+    def get_personal_agenda(
+        self,
+        membre_id: str,
+        campus_id: Optional[str] = None,
+        from_date=None,
+        to_date=None,
+    ):
+        """Récupère l'agenda pour un membre dans un campus spécifique."""
+        membre = self.repo.get_by_id(membre_id)
         if not membre:
             raise AppException(ErrorRegistry.MEMBRE_NOT_FOUND)
 
-        if not membre.campus_id:
-            raise AppException(ErrorRegistry.MEMBRE_CAMPUS_MISSING)
+        # NOUVELLE LOGIQUE : Si aucun campus_id fourni, on prend le premier rattaché
+        target_campus_id = campus_id
+        if not target_campus_id:
+            if not membre.campuses:
+                raise AppException(ErrorRegistry.MEMBRE_CAMPUS_MISSING)
+            target_campus_id = membre.campuses[0].id
 
-        # Logique de période
         start = from_date or datetime.now()
         end = to_date or (start + timedelta(days=90))
-        try:
-            return self.planning_svc.get_member_agenda_full(
-                membre_id=membre_id, campus_id=membre.campus_id, start=start, end=end
-            )
-        except Exception as e:
-            raise e  # AppException(ErrorRegistry.AGENDA_DATA_ERROR)
-        # Appel au service planning
+
+        return self.planning_svc.get_member_agenda_full(
+            membre_id=membre_id, campus_id=target_campus_id, start=start, end=end
+        )

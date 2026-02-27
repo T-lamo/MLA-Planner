@@ -19,6 +19,7 @@ from .organisation_router import router as organisation
 from .pays_router import router as pays
 from .planning_router import router as planning  # Doit être après slot pour les FK
 from .pole_router import router as pole
+from .profil_router import router as profile
 from .role_competence_router import router as role_competence
 from .slot_router import router as slot  # Doit être après membre_role pour les FK
 
@@ -39,5 +40,5 @@ router.include_router(slot)  # Doit être après membre_role pour les FK
 router.include_router(planning)  # Doit être après slot pour les FK
 router.include_router(affectation)  # Doit être après planning pour les FK
 router.include_router(activite)  # Doit être après planning pour les FK
-
+router.include_router(profile)
 __all__ = ["router"]

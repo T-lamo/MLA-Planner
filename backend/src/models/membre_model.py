@@ -4,8 +4,22 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from sqlmodel import Field, SQLModel
 
-from models.membre_role_model import MembreRoleRead
-from models.utilisateur_model import UtilisateurRead
+from .membre_role_model import MembreRoleRead
+from .utilisateur_model import UtilisateurRead
+
+# --- VERSIONS "SIMPLE" POUR LE CONTEXTE MEMBRE ---
+
+
+class UtilisateurSimple(UtilisateurRead):
+    """Vue utilisateur sans membre_id (le parent est déjà le membre)."""
+
+    membre_id: Optional[str] = None  # type: ignore[assignment]
+
+
+class MembreRoleSimple(MembreRoleRead):
+    """Vue rôle sans membre_id."""
+
+    membre_id: Optional[str] = None  # type: ignore[assignment]
 
 
 # -------------------------
@@ -21,7 +35,7 @@ class MembreBase(SQLModel):
     @field_validator("nom", "prenom")
     @classmethod
     def capitalize_names(cls, v: str) -> str:
-        if not v.strip():
+        if not v or not v.strip():
             raise ValueError("Le champ ne peut pas être vide")
         return v.strip().title()
 
@@ -32,31 +46,30 @@ class MembreBase(SQLModel):
 
 
 # -------------------------
-# SCHÉMAS (DTO)
+# READ (Version Allégée - Utilisée partout en imbriqué)
 # -------------------------
-class MembreCreate(MembreBase):
-    campus_id: str  # Obligatoire d'après tes erreurs NotNullViolation
-    ministere_id: Optional[str] = None
-    pole_id: Optional[str] = None
-
-
 class MembreRead(MembreBase):
+    """
+    Version de base pour la lecture.
+    Contient l'utilisateur et les rôles en version 'Simple'.
+    Exclut les listes complexes (campuses, ministeres, poles).
+    """
+
     id: str
     date_inscription: datetime
-    campus_id: str
-    ministere_id: Optional[str] = None
-    pole_id: Optional[str] = None
-    utilisateur: Optional[UtilisateurRead] = None
-    roles_assoc: List[MembreRoleRead] = []
-    model_config = ConfigDict(from_attributes=True)  # type: ignore
+    utilisateur: Optional[UtilisateurSimple] = None
+    roles_assoc: List[MembreRoleSimple] = []
+
+    model_config = {"from_attributes": True}
 
 
-class MembrePaginatedResponse(SQLModel):
-    total: int
-    limit: int
-    offset: int
-    data: List[MembreRead]
-    model_config = ConfigDict(from_attributes=True)  # type: ignore
+# -------------------------
+# CREATE / UPDATE (Identiques mais avec validations)
+# -------------------------
+class MembreCreate(MembreBase):
+    campus_ids: List[str] = Field(default=[], description="Liste des UUIDs")
+    ministere_ids: List[str] = Field(default=[], description="Liste des UUIDs")
+    pole_ids: List[str] = Field(default=[], description="Liste des UUIDs")
 
 
 class MembreUpdate(SQLModel):
@@ -65,26 +78,37 @@ class MembreUpdate(SQLModel):
     email: Optional[EmailStr] = Field(default=None, max_length=100)
     telephone: Optional[str] = Field(default=None, max_length=20)
     actif: Optional[bool] = None
-    campus_id: Optional[str] = None
-    ministere_id: Optional[str] = None
-    pole_id: Optional[str] = None
+    campus_ids: Optional[List[str]] = None
+    ministere_ids: Optional[List[str]] = None
+    pole_ids: Optional[List[str]] = None
+
+
+# -------------------------
+# RÉPONSES PAGINÉES
+# -------------------------
+class MembrePaginatedResponse(SQLModel):
+    total: int
+    limit: int
+    offset: int
+    data: List[MembreRead]
+    model_config = {"from_attributes": True}
+
+
+# --- SCHÉMAS D'AGENDA (Inchangés mais conservés pour export) ---
 
 
 class MemberAgendaEntryRead(BaseModel):
     affectation_id: str
     statut_affectation_code: str
     role_code: str
-    # Infos du créneau (venant du Slot)
     nom_creneau: str
     date_debut: datetime
     date_fin: datetime
-    # Infos de l'activité (venant du Planning/Activite)
     activite_nom: str
     activite_type: str
     lieu: Optional[str] = None
     campus_nom: str
-
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MemberAgendaStats(BaseModel):
@@ -109,6 +133,6 @@ __all__ = [
     "MemberAgendaEntryRead",
     "MemberAgendaStats",
     "MemberAgendaResponse",
+    "UtilisateurSimple",
+    "MembreRoleSimple",
 ]
-
-MembreRead.model_rebuild()

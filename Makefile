@@ -144,5 +144,22 @@ db-downgrade-back:
 
 
 
-git-change: 
+git-change-front: 
 	git diff --cached -- "*.ts" "*.vue" "*.css" "package.json" > debug_change.patch
+
+git-change-back: 
+	git diff --cached -- "*.py" > debug_change.patch
+
+
+
+PYTHON = python3
+SCRIPT = merge_models.py
+SRC_DIR = ./app/models
+OUT_FILE = ./app/models_all.py
+EXCLUDE = __init__.py base_model.py
+debug-merge:
+	@echo "Commande prévue :"
+	@echo "$(PYTHON) $(SCRIPT) --dir $(SRC_DIR) --out $(OUT_FILE) --exclude $(EXCLUDE)"
+
+run-merge:
+	$(PYTHON) $(SCRIPT) --dir $(SRC_DIR) --out $(OUT_FILE) --exclude $(EXCLUDE)
