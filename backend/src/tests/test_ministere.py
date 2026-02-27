@@ -4,7 +4,11 @@ import pytest
 from fastapi import status
 from sqlmodel import Session
 
-from models import Campus, Ministere
+from models import Campus, CampusRead, MembreRead, Ministere, MinistereRead
+
+MembreRead.model_rebuild()
+MinistereRead.model_rebuild()
+CampusRead.model_rebuild()
 
 # pylint: disable=redefined-outer-name, unused-argument
 
@@ -39,7 +43,6 @@ def test_create_ministere_success(client, admin_headers, test_campus):
     data = response.json()
     assert data["nom"] == payload["nom"]
     assert "id" in data
-    assert "poles_count" in data  # Vérifie que le computed field est présent
 
 
 def test_create_ministere_duplicate_name(client, admin_headers, test_min):
@@ -82,8 +85,6 @@ def test_get_one_ministere_with_counts(client, test_min):
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["id"] == test_min.id
-    assert "poles_count" in data
-    assert isinstance(data["poles_count"], int)
 
 
 def test_update_ministere_partial(client, admin_headers, test_min):

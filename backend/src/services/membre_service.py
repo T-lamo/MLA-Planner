@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, List, Optional, cast
+from typing import List, Optional
 
 from sqlmodel import Session, select
 
@@ -9,7 +9,7 @@ from core.exceptions.exceptions import ConflictException
 from core.message import ErrorRegistry
 from models import Membre, MembreCreate, MembreRead, MembreUpdate, Utilisateur
 from models.membre_role_model import MembreRoleCreate
-from models.schema_db_model import Campus, MembreRole, Ministere, Pole, RoleCompetence
+from models.schema_db_model import MembreRole, RoleCompetence
 from repositories.campus_repository import CampusRepository
 from repositories.membre_repository import MembreRepository
 from repositories.ministere_repository import MinistereRepository
@@ -28,67 +28,50 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
         self.planning_svc = PlanningServiceSvc(db)
 
     def create(self, data: MembreCreate) -> Membre:
-        """Crée un membre avec ses multiples rattachés (N:N)."""
+        if not data.campus_ids:
+            raise BadRequestException(
+                "Un membre doit être rattaché à au moins un campus."
+            )
 
+        # Préparation de l'objet sans les relations N:N
         membre_data = data.model_dump(
             exclude={"campus_ids", "ministere_ids", "pole_ids"}
         )
         db_membre = Membre(**membre_data)
 
-        if data.campus_ids:
-            for c_id in data.campus_ids:
-                campus = self.campus_repo.get_by_id(c_id)
-                if not campus:
-                    raise NotFoundException(f"Campus {c_id} introuvable.")
-                # pylint: disable=no-member
-                cast(List[Any], db_membre.campuses).append(campus)
+        # Synchronisation
+        self._sync_relations(
+            db_membre,
+            campus_ids=data.campus_ids,
+            min_ids=data.ministere_ids,
+            pole_ids=data.pole_ids,
+        )
 
-        if data.ministere_ids:
-            for m_id in data.ministere_ids:
-                minis = self.min_repo.get_by_id(m_id)
-                if not minis:
-                    raise NotFoundException(f"Ministère {m_id} introuvable.")
-                # pylint: disable=no-member
-                cast(List[Any], db_membre.ministeres).append(minis)
+        self.db.add(db_membre)
+        self.db.flush()  # Prépare l'insertion sans fermer la transaction
+        return db_membre
 
-        if data.pole_ids:
-            for p_id in data.pole_ids:
-                pole = self.pole_repo.get_by_id(p_id)
-                if not pole:
-                    raise NotFoundException(f"Pôle {p_id} introuvable.")
-                # pylint: disable=no-member
-                cast(List[Any], db_membre.poles).append(pole)
-
-        return self.repo.create(db_membre)
-
-    # Correction W0237 (signature matching) et W0622 (builtin override)
     def update(self, identifiant: str, data: MembreUpdate) -> Membre:
-        """Mise à jour incluant la synchronisation des listes N:N."""
         db_membre = self.get_one(identifiant)
+        if hasattr(db_membre, "deleted_at") and db_membre.deleted_at:
+            raise BadRequestException("Impossible de modifier un membre supprimé.")
 
-        # Mise à jour des champs simples
         update_data = data.model_dump(
             exclude_unset=True, exclude={"campus_ids", "ministere_ids", "pole_ids"}
         )
         for key, value in update_data.items():
             setattr(db_membre, key, value)
 
-        # Synchronisation
-        if data.campus_ids is not None:
-            campuses = [self.db.get(Campus, cid) for cid in data.campus_ids]
-            db_membre.campuses = [c for c in campuses if c is not None]
-
-        if data.ministere_ids is not None:
-            ministeres = [self.db.get(Ministere, mid) for mid in data.ministere_ids]
-            db_membre.ministeres = [m for m in ministeres if m is not None]
-
-        if data.pole_ids is not None:
-            poles = [self.db.get(Pole, pid) for pid in data.pole_ids]
-            db_membre.poles = [p for p in poles if p is not None]
+        self._sync_relations(
+            db_membre,
+            campus_ids=data.campus_ids,
+            min_ids=data.ministere_ids,
+            pole_ids=data.pole_ids,
+            is_update=True,
+        )
 
         self.db.add(db_membre)
         self.db.flush()
-        self.db.refresh(db_membre)
         return db_membre
 
     def link_utilisateur(self, user_id: str, membre_id: str) -> Utilisateur:
@@ -113,6 +96,70 @@ class MembreService(BaseService[MembreCreate, MembreRead, MembreUpdate, Membre])
         self.db.flush()
         self.db.refresh(user)
         return user
+
+    def delete(self, identifiant: str) -> None:
+        """
+        Implémentation du Soft Delete.
+        Met à jour 'deleted_at' au lieu de supprimer l'enregistrement.
+        """
+        db_membre = self.get_one(identifiant)
+
+        if db_membre.deleted_at:
+            return  # Déjà supprimé, idempotent
+
+        db_membre.deleted_at = datetime.now()
+
+        # Exécution du hook pour nettoyer les dépendances (ex: lien utilisateur)
+        self._after_delete_hook(db_membre)
+
+        self.db.add(db_membre)
+        self.db.flush()
+
+    def _sync_relations(
+        self,
+        membre: Membre,
+        *,
+        campus_ids: Optional[List[str]] = None,
+        min_ids: Optional[List[str]] = None,
+        pole_ids: Optional[List[str]] = None,
+        is_update: bool = False,
+    ) -> None:
+        """
+        Logique interne de synchronisation des collections SQLModel.
+        En mode update, remplace proprement les collections.
+        """
+        if campus_ids is not None:
+            # Validation métier même en update
+            if is_update and len(campus_ids) == 0:
+                raise BadRequestException(
+                    "Un membre doit conserver au moins un campus."
+                )
+
+            campuses = []
+            for c_id in campus_ids:
+                c = self.campus_repo.get_by_id(c_id)
+                if not c:
+                    raise NotFoundException(f"Campus {c_id} introuvable.")
+                campuses.append(c)
+            membre.campuses = campuses
+
+        if min_ids is not None:
+            ministeres = []
+            for m_id in min_ids:
+                m = self.min_repo.get_by_id(m_id)
+                if not m:
+                    raise NotFoundException(f"Ministère {m_id} introuvable.")
+                ministeres.append(m)
+            membre.ministeres = ministeres
+
+        if pole_ids is not None:
+            poles = []
+            for p_id in pole_ids:
+                p = self.pole_repo.get_by_id(p_id)
+                if not p:
+                    raise NotFoundException(f"Pôle {p_id} introuvable.")
+                poles.append(p)
+            membre.poles = poles
 
     def _after_delete_hook(self, obj: Membre) -> None:
         # On casse le lien avec l'utilisateur (SET NULL)

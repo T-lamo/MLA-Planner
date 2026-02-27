@@ -52,9 +52,11 @@ class CampusUpdate(SQLModel):
 class CampusRead(CampusBase):
     id: str
     pays_id: str
-    membres: List["MembreRead"] = []
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
+
+class CampusReadWithMembres(CampusRead):
+    membres: List["MembreRead"] = []
     # Note : On inclut généralement PaysRead ici si importé,
     # sinon on reste sur les types simples pour éviter les cycles.
 

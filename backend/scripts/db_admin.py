@@ -37,6 +37,7 @@ def seed_db():
             print(f"❌ Erreur lors du seeding : {e}")
             sys.exit(1)
 
+
 if __name__ == "__main__":
     args = sys.argv
     if "reset" in args:

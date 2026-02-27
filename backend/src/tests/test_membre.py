@@ -2,19 +2,80 @@ from uuid import uuid4
 
 from fastapi import status
 
-from models import Membre, Utilisateur
+from models import (
+    CampusRead,
+    Membre,
+    MembrePaginatedResponse,
+    MembreRead,
+    MinistereRead,
+    Utilisateur,
+)
+
+MinistereRead.model_rebuild()
+CampusRead.model_rebuild()
+MembreRead.model_rebuild()
+MembrePaginatedResponse.model_rebuild()
 
 # --- TESTS DE CRÉATION & VALIDATION ---
+
+
+def test_create_membre_success_nn(client, admin_headers, test_campus, test_pole):
+    """Vérifie la création d'un membre avec plusieurs pôles et campus."""
+    payload = {
+        "nom": "Dorceus",
+        "prenom": "Amos",
+        "email": "amos.new@icc.com",
+        "campus_ids": [str(test_campus.id)],
+        "pole_ids": [str(test_pole.id)],
+        "actif": True,
+        "ministere_ids": [],
+    }
+    response = client.post("/membres/", json=payload, headers=admin_headers)
+    assert response.status_code == 201
 
 
 def test_create_membre_invalid_uuid_format(client, admin_headers):
     payload = {
         "nom": "Doe",
         "prenom": "John",
-        "pole_id": "pas-un-uuid",  # Déclenche désormais 422 grâce au type UUID
+        "campus_ids": ["pas-un-uuid"],  # Le service valide avant Pydantic
     }
     response = client.post("/membres/", json=payload, headers=admin_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    # Changement : 400 car intercepté par la validation manuelle du service
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_create_membre_empty_campus_fail(client, admin_headers):
+    """Vérifie la règle métier : au moins un campus obligatoire."""
+    payload = {
+        "nom": "Doe",
+        "prenom": "John",
+        "email": "empty@test.com",
+        "campus_ids": [],
+    }
+    response = client.post("/membres/", json=payload, headers=admin_headers)
+    assert response.status_code == 400
+    assert "au moins un campus" in response.json()["detail"]
+
+
+def test_delete_membre_soft_delete(client, admin_headers, test_membre, session):
+    """Vérifie le fonctionnement du Soft Delete."""
+    res = client.delete(f"/membres/{test_membre.id}", headers=admin_headers)
+    assert res.status_code == 204
+
+    # Vérification en base
+    session.refresh(test_membre)
+    assert test_membre.deleted_at is not None
+
+
+# def test_create_membre_invalid_uuid_format(client, admin_headers):
+#     payload = {
+#         "nom": "Doe",
+#         "prenom": "John",
+#         "pole_id": "pas-un-uuid",  # Déclenche désormais 422 grâce au type UUID
+#     }
+#     response = client.post("/membres/", json=payload, headers=admin_headers)
+#     assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 def test_create_membre_404_on_non_existent_pole(client, admin_headers, test_campus):
@@ -22,8 +83,8 @@ def test_create_membre_404_on_non_existent_pole(client, admin_headers, test_camp
     payload = {
         "nom": "Test",
         "prenom": "User",
-        "pole_id": str(uuid4()),  # UUID valide mais inconnu
-        "campus_id": test_campus.id,
+        "pole_ids": [str(uuid4())],  # UUID valide mais inconnu
+        "campus_ids": [test_campus.id],
         "email": f"test{uuid4()}@icc.com",
     }
     response = client.post("/membres/", json=payload, headers=admin_headers)

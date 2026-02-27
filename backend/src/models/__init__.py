@@ -20,7 +20,6 @@ from .equipe_model import __all__ as equipe
 from .indisponibilite_model import *  # noqa: F401,F403
 from .indisponibilite_model import __all__ as indisponibilite
 from .membre_model import *  # noqa: F401,F403
-from .membre_model import MembreRead
 from .membre_model import __all__ as membres
 from .membre_role_model import *  # noqa: F401,F403
 from .membre_role_model import __all__ as membre_role
@@ -35,8 +34,9 @@ from .permission_model import __all__ as permission_model
 from .planning_model import *  # noqa: F401,F403
 from .planning_model import __all__ as planning_model
 from .pole_model import *  # noqa: F401,F403
-from .pole_model import PoleRead
 from .pole_model import __all__ as pole_model
+from .profil_model import *  # noqa: F401,F403
+from .profil_model import __all__ as profile
 from .role_competence_model import *  # noqa: F401,F403
 from .role_competence_model import __all__ as role_competence
 from .role_model import *  # noqa: F401,F403
@@ -78,7 +78,5 @@ __all__: List[str] = (
     + list(slot_model)
     + list(planning_model)
     + list(affectation)
+    + list(profile)
 )
-
-PoleRead.model_rebuild()
-MembreRead.model_rebuild()
