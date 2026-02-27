@@ -3,6 +3,12 @@ from uuid import uuid4
 from fastapi import status
 from fastapi.encoders import jsonable_encoder  # Import crucial
 
+from models.campus_model import CampusRead
+from models.membre_model import MembreRead
+
+CampusRead.model_rebuild()
+MembreRead.model_rebuild()
+
 # pylint: disable=redefined-outer-name, unused-argument
 
 # --- TESTS DE CRÉATION (POST) ---

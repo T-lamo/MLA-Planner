@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, TypedDict
+from typing import List, Optional, TypedDict
 
 from mla_enum import RoleName
 
@@ -10,6 +10,9 @@ class MembreInfo(TypedDict):
     prenom: str
     email: str
     roles: List[str]
+    campus_names: Optional[List[str]]
+    ministere_names: Optional[List[str]]
+    pole_names: Optional[List[str]]
 
 
 # --- RBAC ---
@@ -43,7 +46,13 @@ SEED_CAMPUS = [
         "ville": "Paris",
         "timezone": "Europe/Paris",
         "pays_nom": "France",
-    }
+    },
+    {
+        "nom": "Campus Toulouse",  # Nouveau Campus
+        "ville": "Toulouse",
+        "timezone": "Europe/Paris",
+        "pays_nom": "France",
+    },
 ]
 
 # --- NOUVEAU SCHÉMA MÉTIER ---
@@ -97,24 +106,36 @@ MEMBRES_INFOS: List[MembreInfo] = [
         "prenom": "Amos",
         "email": "amos@exemple.com",
         "roles": ["TENOR", "PIANO"],
+        "campus_names": ["Campus Paris", "Campus Toulouse"],
+        "ministere_names": ["Louange et Adoration"],
+        "pole_names": ["Chorale", "Musiciens"],  # Amos est dans 2 pôles
     },
     {
         "nom": "Dupont",
         "prenom": "Jean",
         "email": "jean.dupont@exemple.com",
         "roles": ["SON"],
+        "campus_names": ["Campus Paris"],
+        "ministere_names": ["Louange et Adoration"],
+        "pole_names": ["Chorale"],
     },
     {
         "nom": "Sow",
         "prenom": "Awa",
         "email": "awa.sow@exemple.com",
         "roles": ["SOPRANO"],
+        "campus_names": [],
+        "ministere_names": [],
+        "pole_names": [],
     },
     {
         "nom": "Lambert",
         "prenom": "Marie",
         "email": "marie.l@exemple.com",
         "roles": ["ALTO", "PIANO"],
+        "campus_names": [],
+        "ministere_names": [],
+        "pole_names": [],
     },
 ]
 

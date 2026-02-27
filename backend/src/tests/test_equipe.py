@@ -3,7 +3,12 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 
-from models import EquipeMembre
+from models import CampusRead, EquipeMembre, EquipeRead, MembreRead, MinistereRead
+
+MembreRead.model_rebuild()
+EquipeRead.model_rebuild()
+MinistereRead.model_rebuild()
+CampusRead.model_rebuild()
 
 # pylint: disable=redefined-outer-name
 

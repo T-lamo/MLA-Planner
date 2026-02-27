@@ -1,12 +1,14 @@
 # Utilisation d'annotations différées pour éviter les cycles d'import
 from __future__ import annotations
 
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
 from utils.validator import NotBlankFieldsMixin
+
+from .membre_model import MembreRead
 
 
 # -------------------------
@@ -38,19 +40,36 @@ class PoleCreate(PoleBase):
 
 
 # -------------------------
-# READ
+# READ (Version Allégée - Pour inclusion dans Profil/Ministère)
 # -------------------------
 class PoleRead(PoleBase):
+    """
+    Schéma de lecture simple sans relations profondes.
+    Utilisé pour alléger le JSON global.
+    """
+
     id: str
-    # ministere_id reste présent pour le front-end
     ministere_id: str
+    # On retire la liste des membres ici pour éviter la récursion
     membres_count: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+# -------------------------
+# READ WITH RELATIONS (Version Riche - Pour endpoint dédié)
+# -------------------------
+class PoleReadWithMembres(PoleRead):
+    """
+    Utilisé uniquement quand on veut spécifiquement les membres d'un pôle.
+    """
+
+    poles_membres: List["MembreRead"] = Field(default=[], alias="membres")
 
 
 # -------------------------
 # UPDATE
 # -------------------------
-# On hérite de SQLModel directement mais on peut réutiliser la validation de Base
 class PoleUpdate(NotBlankFieldsMixin, SQLModel):
     __not_blank_fields__ = ("nom",)
 
@@ -59,7 +78,6 @@ class PoleUpdate(NotBlankFieldsMixin, SQLModel):
     active: Optional[bool] = None
     ministere_id: Optional[str] = None
 
-    # On réutilise le validateur de la classe de base
     @field_validator("nom")
     @classmethod
     def nom_not_blank(cls, v: str) -> str:
@@ -74,7 +92,6 @@ __all__ = [
     "PoleBase",
     "PoleCreate",
     "PoleRead",
+    "PoleReadWithMembres",
     "PoleUpdate",
 ]
-
-PoleRead.model_rebuild()

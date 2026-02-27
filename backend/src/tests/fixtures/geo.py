@@ -84,14 +84,17 @@ def test_pole(session: Session, test_ministere: Ministere) -> Pole:
 
 @pytest.fixture
 def test_membre(session: Session, test_campus: Campus) -> Membre:
-    """Fixture pour créer un membre valide."""
+    """Fixture pour créer un membre valide avec sa relation Many-to-Many."""
     membre = Membre(
         nom="Soro",
         prenom="Jean",
         email=f"jean.{uuid4()}@test.com",
         actif=True,
-        campus_id=test_campus.id,
+        # campus_id supprimé ici
     )
+    # On ajoute le campus à la collection N:N
+    membre.campuses = [test_campus]
+
     session.add(membre)
     session.flush()
     session.refresh(membre)
