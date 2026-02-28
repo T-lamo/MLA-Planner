@@ -1,13 +1,18 @@
+import logging
 from datetime import datetime
 from typing import Any, Generic, TypeVar
 
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import SQLModel
+from sqlmodel import Session, SQLModel
+
+from core.exceptions import BadRequestException
 
 # Remplacement des exceptions standards par AppException
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models.base_pagination import PaginatedResponse
+
+logger = logging.getLogger(__name__)
 
 C = TypeVar("C", bound=SQLModel)
 R = TypeVar("R", bound=SQLModel)
@@ -19,6 +24,7 @@ class BaseService(Generic[C, R, U, T]):
     def __init__(self, repo: Any, resource_name: str = "Resource"):
         self.repo = repo
         self.resource_name = resource_name
+        self.db: Session = repo.db
 
     def get_one(self, identifiant: str) -> T:
         obj = self.repo.get_by_id(identifiant)
@@ -66,3 +72,14 @@ class BaseService(Generic[C, R, U, T]):
         Hook destiné à être surchargé dans les services enfants
         pour gérer les cascades spécifiques.
         """
+
+    def _execute_with_flush(self, operation_callable, error_msg: str):
+        """Exécute une opération de repo, flush et gère les erreurs d'intégrité."""
+        try:
+            result = operation_callable()
+            self.db.flush()
+            return result
+        except IntegrityError as exc:
+            self.db.rollback()
+            logger.error(f"Erreur d'intégrité sur {self.resource_name}: {exc}")
+            raise BadRequestException(error_msg) from exc

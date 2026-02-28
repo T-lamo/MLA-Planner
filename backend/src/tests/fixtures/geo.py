@@ -52,18 +52,33 @@ def test_campus(session: Session, test_pays: Pays) -> Campus:
 
 @pytest.fixture
 def test_ministere(session: Session, test_campus: Campus) -> Ministere:
-    """Fixture pour créer un ministère lié à un campus."""
-
+    """Fixture pour créer un ministère lié à un campus via relation N:N."""
     ministere = Ministere(
         nom=f"Ministere {uuid4()}",
         date_creation="2024-01-01",
-        campus_id=test_campus.id,
         actif=True,
     )
+    # Relation Many-to-Many
+    ministere.campuses = [test_campus]
+
     session.add(ministere)
     session.flush()
     session.refresh(ministere)
     return ministere
+
+
+@pytest.fixture
+def test_min(session: Session, test_campus: Campus) -> Ministere:
+    """Version courte pour les tests de ministère."""
+    minis = Ministere(
+        nom=f"Ministere Initial {uuid4()}",
+        date_creation="2024-01-01",
+    )
+    minis.campuses = [test_campus]
+    session.add(minis)
+    session.flush()
+    session.refresh(minis)
+    return minis
 
 
 @pytest.fixture
