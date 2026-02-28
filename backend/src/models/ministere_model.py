@@ -32,7 +32,7 @@ class MinistereBase(SQLModel):
 # CREATE
 # -------------------------
 class MinistereCreate(MinistereBase):
-    campus_id: str
+    campus_ids: List[str] = []
 
 
 # -------------------------
@@ -45,10 +45,7 @@ class MinistereRead(MinistereBase):
     """
 
     id: str
-    campus_id: str
-
     # On inclut les pôles car ils sont "petits" (PoleRead ne contient plus de membres)
-
     model_config = {"from_attributes": True}
 
 
@@ -79,7 +76,7 @@ class MinistereUpdate(SQLModel):
     nom: Optional[str] = None
     date_creation: Optional[str] = None
     actif: Optional[bool] = None
-    campus_id: Optional[str] = None
+    campus_ids: Optional[List[str]] = None
 
     @field_validator("nom")
     @classmethod
