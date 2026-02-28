@@ -129,6 +129,15 @@ class Pays(PaysBase, table=True):  # type: ignore
     campus: List["Campus"] = Relationship(back_populates="pays")
 
 
+# 1. Table de liaison
+class CampusMinistereLink(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_campus_ministere_link"
+    __table_args__ = {"extend_existing": True}
+
+    campus_id: str = Field(foreign_key="t_campus.id", primary_key=True)
+    ministere_id: str = Field(foreign_key="t_ministere.id", primary_key=True)
+
+
 class Campus(CampusBase, table=True):  # type: ignore
     __tablename__ = "t_campus"
     __table_args__ = {"extend_existing": True}
@@ -136,7 +145,9 @@ class Campus(CampusBase, table=True):  # type: ignore
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     pays_id: str = Field(foreign_key="t_pays.id", ondelete="CASCADE")
     pays: Optional["Pays"] = Relationship(back_populates="campus")
-    ministeres: List["Ministere"] = Relationship(back_populates="campus")
+    ministeres: List["Ministere"] = Relationship(
+        back_populates="campuses", link_model=CampusMinistereLink
+    )
     activites: List["Activite"] = Relationship(back_populates="campus")
     membres: List["Membre"] = Relationship(
         back_populates="campuses", link_model=MembreCampusLink
@@ -148,8 +159,9 @@ class Ministere(MinistereBase, table=True):  # type: ignore
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
-    campus_id: str = Field(foreign_key="t_campus.id", ondelete="CASCADE")
-    campus: Optional["Campus"] = Relationship(back_populates="ministeres")
+    campuses: List["Campus"] = Relationship(
+        back_populates="ministeres", link_model=CampusMinistereLink
+    )
     poles: List["Pole"] = Relationship(back_populates="ministere")
     membres: List["Membre"] = Relationship(
         back_populates="ministeres", link_model=MembreMinistereLink
@@ -409,6 +421,7 @@ class AffectationContexte(AffectationContexteBase, table=True):  # type: ignore
 
 
 __all__ = [
+    "CampusMinistereLink",
     "MembreCampusLink",
     "MembreMinistereLink",
     "MembrePoleLink",
