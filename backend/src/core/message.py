@@ -224,6 +224,11 @@ class ErrorRegistry:
         message="Le code doit être alphanumérique (underscores autorisés).",
         http_status=status.HTTP_422_UNPROCESSABLE_CONTENT,
     )
+    ROLE_NOT_FOUND = ErrorDetail(
+        code="ROLE_002",
+        message="Les rôles suivants sont introuvables : {missing}.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
 
     # --- DOMAINE ÉQUIPE (TEAM) ---
     TEAM_NAME_EMPTY = ErrorDetail(
@@ -267,5 +272,46 @@ class ErrorRegistry:
     AGENDA_DATA_ERROR = ErrorDetail(
         code="AGENDA_001",
         message="Erreur lors de la récupération des données de l'agenda.",
+        http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
+    # --- DOMAINE PROFIL (PROF) ---
+
+    PROFIL_DATA_ERROR = ErrorDetail(
+        code="AGENDA_001",
+        message="Erreur lors de la récupération des données de l'agenda.",
+        http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
+    PROFIL_NOT_FOUND = ErrorDetail(
+        code="PROF_001",
+        message="Le profil {id} est introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    PROFIL_USER_LINK_MISSING = ErrorDetail(
+        code="PROF_002",
+        message="L'utilisateur associé au profil est introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    PROFIL_ALREADY_EXISTS = ErrorDetail(
+        code="PROF_003",
+        message="Un profil avec cet email existe déjà.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+
+    # --- DOMAINE CORE / GÉNÉRIQUE (CORE) ---
+    CORE_RESOURCE_NOT_FOUND = ErrorDetail(
+        code="CORE_001",
+        message="{resource} introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    CORE_ACTION_IMPOSSIBLE = ErrorDetail(
+        code="CORE_002",
+        message="Action impossible sur {resource}.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    CORE_DATABASE_ERROR = ErrorDetail(
+        code="CORE_003",
+        message="Une erreur inattendue est survenue au niveau de la base de données.",
         http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )

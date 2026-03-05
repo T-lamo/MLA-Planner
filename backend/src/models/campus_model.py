@@ -3,8 +3,8 @@ from typing import List, Optional
 from pydantic import ConfigDict, field_validator
 from sqlmodel import Field, SQLModel
 
-from .membre_model import MembreRead
-from .ministere_model import MinistereRead
+from .membre_model import MembreSimple
+from .ministere_model import MinistereSimple
 
 
 # -------------------------
@@ -56,8 +56,8 @@ class CampusRead(CampusBase):
 
 
 class CampusReadWithDetails(CampusRead):
-    membres: List["MembreRead"] = []
-    ministeres: List["MinistereRead"] = []
+    membres: List["MembreSimple"] = []
+    ministeres: List["MinistereSimple"] = []
     # Note : On inclut généralement PaysRead ici si importé,
     # sinon on reste sur les types simples pour éviter les cycles.
 
