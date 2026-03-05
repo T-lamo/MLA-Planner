@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, cast
 
 from sqlmodel import Session, col, select
 
@@ -9,6 +9,7 @@ from models.schema_db_model import Ministere  # Import du modèle pour la liaiso
 from repositories.campus_repository import CampusRepository
 from repositories.pays_repository import PaysRepository
 from services.base_service import BaseService
+from services.ministere_service import MinistereService
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ class CampusService(BaseService[CampusCreate, CampusRead, CampusUpdate, Campus])
         super().__init__(repo=CampusRepository(db), resource_name="Campus")
         self.db = db
         self.pays_repo = PaysRepository(db)
+        self.ministere_svc = MinistereService(self.db)
 
     def create(self, data: CampusCreate) -> Campus:
         """Crée un campus après validation de l'existence du pays."""
@@ -108,3 +110,25 @@ class CampusService(BaseService[CampusCreate, CampusRead, CampusUpdate, Campus])
             )
 
         return campus_db
+
+    def get_detailed_ministeres_by_campus(self, campus_id: str) -> List[Ministere]:
+        """
+        Orchestre la récupération enrichie des ministères d'un campus.
+        """
+        # 1. Récupération du campus
+        # campus_db est typé 'Campus' par get_details
+        campus_db = self.get_details(campus_id)
+
+        # 3. Extraction sécurisée et typée des IDs
+        # On s'assure que ministeres est itérable et on cast pour Mypy
+        ministeres_list = cast(List[Ministere], campus_db.ministeres or [])
+
+        # 4. Enrichissement avec compréhension de liste typée
+        # On filtre les IDs potentiellement nuls pour la sécurité
+        detailed_ministeres: List[Ministere] = [
+            self.ministere_svc.get_detailed(str(m.id))
+            for m in ministeres_list
+            if m.id is not None
+        ]
+
+        return detailed_ministeres

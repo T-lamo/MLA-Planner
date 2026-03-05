@@ -92,3 +92,19 @@ class MinistereService(
 
         # Mise à jour de la relation Many-to-Many
         ministere.campuses = list(found_campuses)
+
+    # À ajouter dans MinistereService
+    def get_detailed(self, identifiant: str) -> Ministere:
+        """
+        Récupère un ministère avec toutes ses relations enrichies.
+        Lève une NotFoundException si l'ID n'existe pas.
+        """
+        # Le repository utilise déjà self.relations par défaut via get_by_id
+        db_obj = self.repo.get_by_id(identifiant)
+
+        if not db_obj:
+            raise NotFoundException(
+                f"{self.resource_name} avec l'ID {identifiant} introuvable."
+            )
+
+        return db_obj

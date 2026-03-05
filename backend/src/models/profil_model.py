@@ -1,16 +1,19 @@
-from typing import List, Optional
+from typing import Dict, List, Optional, Sequence
+
+from pydantic import computed_field
 
 # Importation des modèles de base et de lecture optimisés
 from .campus_model import CampusRead
 from .membre_model import (
     MembreCreate,
     MembreRead,
-    MembreRoleSimple,
+    MembreRoleRich,
     MembreUpdate,
     UtilisateurSimple,
 )
 from .ministere_model import MinistereRead
 from .pole_model import PoleRead
+from .role_competence_model import RoleCompetenceRead
 from .utilisateur_model import UtilisateurCreate, UtilisateurUpdate
 
 
@@ -27,11 +30,30 @@ class ProfilReadFull(MembreRead):
     """
 
     utilisateur: Optional[UtilisateurSimple] = None
-    roles_assoc: List[MembreRoleSimple] = []
+    roles_assoc: Sequence[MembreRoleRich] = []
     # Relations N:N (Surcharge pour utiliser les versions allégées)
     campuses: List[CampusRead] = []
     ministeres: List[MinistereRead] = []
     poles: List[PoleRead] = []
+
+    @computed_field
+    def competences_par_categorie(self) -> Dict[str, List[RoleCompetenceRead]]:
+        """
+        Transforme la relation plate roles_assoc en dictionnaire groupé par catégorie.
+        """
+        grouped: Dict[str, List[RoleCompetenceRead]] = {}
+        for assoc in self.roles_assoc:
+            # On accède au rôle via l'association MembreRole
+            if hasattr(assoc, "role") and assoc.role:
+                role_data = assoc.role
+                cat_name = (
+                    role_data.categorie.libelle if role_data.categorie else "Autres"
+                )
+
+                if cat_name not in grouped:
+                    grouped[cat_name] = []
+                grouped[cat_name].append(RoleCompetenceRead.model_validate(role_data))
+        return grouped
 
     model_config = {"from_attributes": True}
 
@@ -46,6 +68,7 @@ class ProfilCreateFull(MembreCreate):
     """
 
     utilisateur: UtilisateurCreate
+    role_codes: List[str] = []
 
 
 # ---------------------------------------------------------
@@ -58,6 +81,7 @@ class ProfilUpdateFull(MembreUpdate):
     """
 
     utilisateur: Optional[UtilisateurUpdate] = None
+    role_codes: List[str] = []
 
 
 __all__ = [

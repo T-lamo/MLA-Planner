@@ -2,6 +2,7 @@ from typing import Any, List, cast
 
 from fastapi import Body, Depends, status
 
+from models import DataListResponse, MinistereReadWithRelations
 from models.campus_model import (
     CampusCreate,
     CampusRead,
@@ -19,8 +20,8 @@ campus_factory = CRUDRouterFactory(
     create_schema=CampusCreate,
     read_schema=CampusRead,
     update_schema=CampusUpdate,
-    path="/campus",
-    tag="Campus",
+    path="/campuses",
+    tag="Campuses",
     dependencies=STANDARD_ADMIN_ONLY_DEPS,
 )
 
@@ -83,3 +84,24 @@ def get_campus_full_details(
     """
     svc = cast(CampusService, service)
     return svc.get_details(campus_id)
+
+
+@router.get(
+    "/{campus_id}/ministeres/detailed",
+    response_model=DataListResponse[
+        MinistereReadWithRelations
+    ],  # Ou un schéma spécifique enrichi
+    dependencies=STANDARD_ADMIN_ONLY_DEPS.get("read", []),
+    summary="Récupérer la liste détaillée des ministères d'un campus",
+)
+def get_campus_ministeres_detailed(
+    campus_id: str,
+    service: CampusService = Depends(campus_factory.get_service),
+) -> Any:
+    """
+    Récupère chaque ministère lié au campus en appliquant
+    toute la logique d'enrichissement du MinistereService.
+    """
+    svc = cast(CampusService, service)
+    response = svc.get_detailed_ministeres_by_campus(campus_id)
+    return {"data": response}

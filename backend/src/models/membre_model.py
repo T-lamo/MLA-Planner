@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Sequence
 
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 from sqlmodel import Field, SQLModel
 
+from .categorie_role_model import RoleWithCategoryRead
 from .membre_role_model import MembreRoleRead
 from .utilisateur_model import UtilisateurRead
 
@@ -20,6 +21,15 @@ class MembreRoleSimple(MembreRoleRead):
     """Vue rôle sans membre_id."""
 
     membre_id: Optional[str] = None  # type: ignore[assignment]
+
+
+class MembreRoleRich(MembreRoleSimple):
+    """
+    Version de l'association qui accepte et valide l'objet 'role'
+    injecté par selectinload.
+    """
+
+    role: Optional[RoleWithCategoryRead] = None
 
 
 # -------------------------
@@ -46,6 +56,21 @@ class MembreBase(SQLModel):
 
 
 # -------------------------
+# NEW: MEMBRE SIMPLE
+# -------------------------
+class MembreSimple(MembreBase):
+    """
+    Version ultra-légère du membre.
+    Utilisée pour les listes de membres dans le détail des Ministères ou Pôles.
+    Exclut l'utilisateur et les rôles pour la performance.
+    """
+
+    id: str
+    date_inscription: datetime
+    model_config = {"from_attributes": True}
+
+
+# -------------------------
 # READ (Version Allégée - Utilisée partout en imbriqué)
 # -------------------------
 class MembreRead(MembreBase):
@@ -58,7 +83,7 @@ class MembreRead(MembreBase):
     id: str
     date_inscription: datetime
     utilisateur: Optional[UtilisateurSimple] = None
-    roles_assoc: List[MembreRoleSimple] = []
+    roles_assoc: Sequence[MembreRoleSimple] = []
 
     model_config = {"from_attributes": True}
 
@@ -135,4 +160,6 @@ __all__ = [
     "MemberAgendaResponse",
     "UtilisateurSimple",
     "MembreRoleSimple",
+    "MembreSimple",
+    "MembreRoleRich",
 ]
