@@ -13,6 +13,7 @@ from models import (
     Affectation,
     AffectationRole,
     Campus,
+    CampusMinistereLink,
     CategorieRole,
     Equipe,
     EquipeMembre,
@@ -86,7 +87,7 @@ class SeedService:
                 self._seed_categories_et_roles()
                 self._seed_referentiels_fixes()
 
-                min_map = self._seed_ministeres(campus_paris.id)
+                min_map = self._seed_ministeres(default_campus_id=campus_paris.id)
                 pole_map = self._seed_poles(min_map)
 
                 # Correction Activite : nécessite un ministère organisateur
@@ -174,19 +175,35 @@ class SeedService:
             for d in SEED_CAMPUS
         }
 
-    def _seed_ministeres(self, campus_id):
-        return {
-            m["nom"]: self._get_or_create(
+    def _seed_ministeres(self, default_campus_id: str) -> dict[str, Ministere]:
+        """
+        Peuple les ministères et crée les liens Many-to-Many avec les campus.
+        """
+        min_map: dict[str, Ministere] = {}
+
+        for m in MINISTERES_DATA:
+            m_nom = str(m["nom"])  # Conversion explicite pour garantir le type str
+
+            # 1. Création ou récupération du Ministère
+            ministere, _ = self._get_or_create(
                 Ministere,
-                nom=m["nom"],
+                nom=m_nom,
                 defaults={
-                    "campus_id": campus_id,
                     "date_creation": m["date_creation"],
                     "actif": m.get("actif", True),
                 },
-            )[0]
-            for m in MINISTERES_DATA
-        }
+            )
+
+            # 2. Liaison Many-to-Many
+            self._get_or_create(
+                CampusMinistereLink,
+                campus_id=default_campus_id,
+                ministere_id=ministere.id,
+            )
+
+            min_map[m_nom] = ministere
+
+        return min_map
 
     def _seed_poles(self, min_map):
         p_map = {}
@@ -389,12 +406,26 @@ class SeedService:
             users.append(u)
         return users
 
-    def _seed_equipes(self, mm):
-        return {
-            eq_nom: self._get_or_create(Equipe, nom=eq_nom, ministere_id=mm[mn].id)[0]
-            for mn, eqs in EQUIPES_DATA.items()
-            for eq_nom in eqs
-        }
+    def _seed_equipes(self, mm: dict[str, Ministere]) -> dict[str, Equipe]:
+        eq_map: dict[str, Equipe] = {}
+
+        # mn: Ministere Name, eqs: List of Equipe Names
+        for mn, eqs in EQUIPES_DATA.items():
+            # On s'assure que mn est traité comme une str pour l'indexation
+            ministere = mm.get(str(mn))
+
+            if not ministere:
+                self.logger.warning(
+                    f"⚠️ Ministère '{mn}' non trouvé pour la création d'équipes."
+                )
+                continue
+
+            for eq_nom in eqs:
+                equipe, _ = self._get_or_create(
+                    Equipe, nom=eq_nom, ministere_id=ministere.id
+                )
+                eq_map[eq_nom] = equipe
+        return eq_map
 
     def _seed_equipe_membres(self, eq_map, user_list):
         for data in EQUIPE_MEMBRES_DATA:

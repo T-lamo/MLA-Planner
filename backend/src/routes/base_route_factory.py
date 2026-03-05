@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlmodel import Session, SQLModel
 
 from conf.db.database import Database
+from models import DataListResponse
 from models.base_pagination import PaginatedResponse
 
 # Types génériques
@@ -59,9 +60,14 @@ class CRUDRouterFactory:
         ):
             return service.list_paginated(limit=limit, offset=offset)
 
-        @self.router.get("/all", response_model=List[schema_r])  # type: ignore
+        @self.router.get(
+            "/all",
+            response_model=DataListResponse[schema_r],
+            dependencies=self.deps.get("read", []),
+        )  # type: ignore
         def list_all(service=Depends(get_service)):
-            return service.repo.list_all()
+            response = service.repo.list_all()
+            return {"data": response}
 
         @self.router.get("/{item_id}", response_model=schema_r)  # type: ignore
         def get_one(item_id: str, service=Depends(get_service)):

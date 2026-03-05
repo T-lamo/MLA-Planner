@@ -1,3 +1,5 @@
+from typing import Dict, List
+
 from sqlmodel import Session
 
 from core.exceptions import ConflictException, NotFoundException
@@ -46,3 +48,20 @@ class RoleCompetenceService(
                 raise NotFoundException("Nouvelle catégorie introuvable.")
 
         return self.repo.update(obj, update_data)
+
+    def list_grouped_by_category(self) -> List[Dict]:
+        roles = self.repo.get_all_with_categories()
+
+        # Groupement manuel pour garder l'ordre du tri SQL
+        grouped_dict = {}
+        for r in roles:
+            cat = r.categorie
+            if cat.code not in grouped_dict:
+                grouped_dict[cat.code] = {
+                    "categorie_code": cat.code,
+                    "categorie_libelle": cat.libelle,
+                    "roles": [],
+                }
+            grouped_dict[cat.code]["roles"].append(RoleCompetenceRead.model_validate(r))
+
+        return list(grouped_dict.values())

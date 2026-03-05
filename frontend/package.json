@@ -22,6 +22,7 @@
     "@fullcalendar/vue3": "^6.1.20",
     "@pinia/nuxt": "^0.11.3",
     "@shared/ui-core": "workspace:*",
+    "@vueuse/core": "^14.2.1",
     "locales-all": "link:@fullcalendar/core/locales-all",
     "lucide-vue-next": "^0.575.0",
     "pinia": "^3.0.4",

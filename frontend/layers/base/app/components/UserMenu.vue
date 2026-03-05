@@ -29,7 +29,45 @@
       />
     </button>
 
-    <Transition name="fade-slide">
+    <div
+      v-if="isDropdownOpen"
+      class="absolute bottom-full left-0 z-50 mb-2 w-full min-w-[200px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
+    >
+      <div class="px-3 py-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+        Paramètres
+      </div>
+      <button class="menu-item" @click="navigate('/profile')">
+        <User class="size-4" />
+        <span>Mon Profil</span>
+      </button>
+      <button class="menu-item" @click="navigate('/settings')">
+        <Settings class="size-4" />
+        <span>Préférences</span>
+      </button>
+
+      <div class="my-1 border-t border-slate-100" />
+      <div
+        class="px-3 py-2 text-[10px] font-bold tracking-widest text-(--color-primary-600) uppercase"
+      >
+        Administration
+      </div>
+      <button
+        class="menu-item bg-slate-50 font-bold text-(--color-primary-600) hover:bg-(--color-primary-600) hover:text-white"
+        @click="navigate('/admin/profiles')"
+      >
+        <ShieldCheck class="size-4" />
+        <span>Gestion des Profils</span>
+      </button>
+
+      <div class="my-1 border-t border-slate-100" />
+
+      <button class="menu-item text-red-600 hover:bg-red-50" @click="handleLogout">
+        <LogOut class="size-4" />
+        <span>Déconnexion</span>
+      </button>
+    </div>
+
+    <!-- <Transition name="fade-slide">
       <div
         v-if="isDropdownOpen"
         class="absolute bottom-full left-0 z-50 mb-2 w-full min-w-[200px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
@@ -55,7 +93,7 @@
           <span>Déconnexion</span>
         </button>
       </div>
-    </Transition>
+    </Transition> -->
 
     <div
       v-if="isDropdownOpen"
@@ -67,7 +105,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ChevronUp, User, LogOut, Settings } from 'lucide-vue-next'
+import { ShieldCheck, ChevronUp, User, LogOut, Settings } from 'lucide-vue-next'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 
 // Propriété transmise par le Layout (default.vue)

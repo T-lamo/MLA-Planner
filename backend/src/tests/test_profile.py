@@ -4,7 +4,7 @@ import pytest
 from pydantic import ValidationError
 from sqlmodel import Session
 
-from core.exceptions import BadRequestException, NotFoundException
+from core.exceptions.app_exception import AppException
 from models import (
     ProfilCreateFull,
     ProfilUpdateFull,
@@ -103,9 +103,11 @@ class TestProfileService:
             utilisateur=user_in,
         )
 
-        with pytest.raises(BadRequestException) as exc:
+        with pytest.raises(AppException) as exc:
             service.create(profil_in)
-        assert "au moins un campus" in str(exc.value)
+        # ProfileService.create() rewrappe toutes les exceptions en
+        # CORE_ACTION_IMPOSSIBLE
+        assert exc.value.code == "CORE_002"
 
     def test_delete_profil_soft_delete(self, session: Session, seed_data):
         """Vérifie le soft delete et la rupture du lien utilisateur."""
@@ -177,7 +179,147 @@ class TestProfileService:
         service = ProfileService(session)
         invalid_id = str(uuid4())
 
-        with pytest.raises(NotFoundException) as exc:
+        with pytest.raises(AppException) as exc:
             service.get_one(invalid_id)
+        # _get_db_obj lève AppException(ErrorRegistry.PROFIL_NOT_FOUND) → code PROF_001
+        assert exc.value.code == "PROF_001"
 
-        assert f"Profil {invalid_id} introuvable" in str(exc.value)
+    def test_create_profil_with_valid_role_codes(
+        self, session: Session, seed_data, test_role_comp
+    ):
+        """Vérifie que les rôles sont correctement associés à la création."""
+        service = ProfileService(session)
+
+        # Arrange
+        profil_in = ProfilCreateFull(
+            nom="ROLE",
+            prenom="Test",
+            email=f"role_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"]],
+            role_codes=[test_role_comp.code],
+            utilisateur=UtilisateurCreate(
+                username=f"role_user_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"role_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+
+        # Act
+        result = service.create(profil_in)
+
+        # Assert
+        assert result.id is not None
+        assert len(result.roles_assoc) == 1
+        assert result.roles_assoc[0].role_code == test_role_comp.code
+
+    def test_create_profil_with_invalid_role_codes(self, session: Session, seed_data):
+        """Vérifie que ROLE_NOT_FOUND est rewrappé en
+        CORE_ACTION_IMPOSSIBLE à la création."""
+        service = ProfileService(session)
+
+        # Arrange
+        profil_in = ProfilCreateFull(
+            nom="INVALID",
+            prenom="Role",
+            email=f"invalid_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"]],
+            role_codes=["CODE_QUI_NEXISTE_PAS"],
+            utilisateur=UtilisateurCreate(
+                username=f"invalid_u_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"invalid_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+
+        # Act & Assert : ProfileService.create() rewrappe en CORE_ACTION_IMPOSSIBLE
+        with pytest.raises(AppException) as exc:
+            service.create(profil_in)
+        assert exc.value.code == "CORE_002"
+
+    def test_sync_roles_differential(self, session: Session, seed_data, test_role_comp):
+        """Vérifie l'ajout puis la suppression différentielle des rôles via update."""
+        service = ProfileService(session)
+
+        # Arrange : création sans rôle
+        profil_in = ProfilCreateFull(
+            nom="SYNC",
+            prenom="Roles",
+            email=f"sync_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"]],
+            utilisateur=UtilisateurCreate(
+                username=f"sync_u_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"sync_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+        created = service.create(profil_in)
+        assert len(created.roles_assoc) == 0
+
+        # Act : ajout d'un rôle
+        updated = service.update(
+            created.id, ProfilUpdateFull(role_codes=[test_role_comp.code])
+        )
+        assert len(updated.roles_assoc) == 1
+        assert updated.roles_assoc[0].role_code == test_role_comp.code
+
+        # Act : suppression du rôle
+        cleared = service.update(created.id, ProfilUpdateFull(role_codes=[]))
+        assert len(cleared.roles_assoc) == 0
+
+    def test_list_paginated_with_campus_filter(self, session: Session, seed_data):
+        """Vérifie que list_paginated filtre correctement par campus_id."""
+        service = ProfileService(session)
+
+        # Arrange : créer un profil dans le campus de seed_data
+        profil_in = ProfilCreateFull(
+            nom="PAGINATED",
+            prenom="Filter",
+            email=f"pag_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"]],
+            utilisateur=UtilisateurCreate(
+                username=f"pag_u_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"pag_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+        service.create(profil_in)
+
+        # Act
+        result = service.list_paginated(
+            limit=10, offset=0, campus_id=seed_data["campus_id"]
+        )
+
+        # Assert
+        assert result.total >= 1
+        assert all(
+            any(c.id == seed_data["campus_id"] for c in p.campuses) for p in result.data
+        )
+
+    def test_list_all_with_and_without_campus_filter(self, session: Session, seed_data):
+        """Vérifie list_all sans filtre et avec filtre campus_id."""
+        service = ProfileService(session)
+
+        # Arrange
+        profil_in = ProfilCreateFull(
+            nom="LISTALL",
+            prenom="Test",
+            email=f"la_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"]],
+            utilisateur=UtilisateurCreate(
+                username=f"la_u_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"la_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+        service.create(profil_in)
+
+        # Act : sans filtre
+        all_profiles = service.list_all()
+        assert len(all_profiles) >= 1
+
+        # Act : avec filtre campus_id
+        filtered = service.list_all(campus_id=seed_data["campus_id"])
+        assert len(filtered) >= 1
+        assert all(
+            any(c.id == seed_data["campus_id"] for c in p.campuses) for p in filtered
+        )
