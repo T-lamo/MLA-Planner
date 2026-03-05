@@ -1,82 +1,77 @@
-import type { UseFetchOptions } from '#app'
 import { defu } from 'defu'
+import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack'
 import type { ApiErrorResponse, EnhancedApiError } from '../../types/api'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 
-export const useApiFetch = <ResT, TransformT = ResT>(
-  url: string | (() => string),
-  options: UseFetchOptions<ResT, TransformT> = {},
-) => {
+interface RequestInterceptorCtx {
+  options: { headers?: Record<string, string> }
+}
+
+interface ResponseErrorInterceptorCtx {
+  response: { status: number; statusText: string; _data: unknown }
+  request: { toString(): string }
+}
+
+/**
+ * Logique commune de configuration (Headers, Intercepteurs)
+ */
+function getApiConfig() {
   const config = useRuntimeConfig()
   const authStore = useAuthStore()
   const route = useRoute()
   const { notifyError } = useErrorHandler()
 
-  /**
-   * Construction des headers dynamiques.
-   * On récupère le token du store à chaque exécution.
-   */
-  const authHeaders: Record<string, string> = {}
-  if (authStore.token) {
-    authHeaders.Authorization = `Bearer ${authStore.token}`
-  }
-
-  /**
-   * Construction des paramètres par défaut
-   */
-
-  const defaults: UseFetchOptions<ResT, TransformT> = {
+  return {
     baseURL: config.public.apiBase || 'http://localhost:8000',
-
-    // Injection initiale des headers
-    headers: authHeaders,
-
-    /**
-     * Intercepteur de requête : rafraîchit le token juste avant l'envoi
-     */
-    onRequest({ options }) {
+    onRequest({ options }: RequestInterceptorCtx) {
       if (authStore.token) {
-        const headers = options.headers as unknown as Record<string, string>
-        headers['Authorization'] = `Bearer ${authStore.token}`
+        options.headers = {
+          ...options.headers,
+          Authorization: `Bearer ${authStore.token}`,
+        }
       }
     },
-
-    /**
-     * Intercepteur d'erreur global
-     */
-    onResponseError({ response, request }) {
+    onResponseError({ response, request }: ResponseErrorInterceptorCtx) {
       const isLoginRequest = request.toString().includes('/auth/token')
 
-      // 1. Gestion de la Session (401 Unauthorized)
       if (response.status === 401 && !isLoginRequest) {
         authStore.logout()
         if (route.path !== '/login') {
-          navigateTo({
-            path: '/login',
-            query: { redirect: route.fullPath },
-          })
+          navigateTo({ path: '/login', query: { redirect: route.fullPath } })
         }
         return
       }
 
-      /**
-       * 2. Synchronisation avec MLA Notify
-       * EXPERT : On construit l'objet EnhancedApiError attendu par notifyError.
-       * Fetch stocke le corps de la réponse d'erreur dans response._data.
-       */
       const errorPayload: EnhancedApiError = {
         name: 'ApiError',
         message: response.statusText,
         statusCode: response.status,
-        data: response._data as ApiErrorResponse, // C'est ici que se trouve ton {"error": {...}}
+        data: response._data as ApiErrorResponse,
       }
-
       notifyError(errorPayload)
     },
   }
+}
 
-  // Fusion des options utilisateur avec les défauts
+/**
+ * Utilitaire pour les appels IMPÉRATIFS (Actions, Repositories, Watchers)
+ * Résout l'erreur "Component is already mounted"
+ */
+export const $api = <T>(url: string, options: NitroFetchOptions<NitroFetchRequest> = {}) => {
+  const defaults = getApiConfig()
   const params = defu(options, defaults)
+  return $fetch<T>(url, params as Parameters<typeof $fetch>[1])
+}
 
-  return useFetch(url, params)
+/**
+ * Utilitaire pour le SETUP des composants (Rendu initial SSR/Client)
+ */
+export const useApi = <ResT, TransformT = ResT>(
+  url: string | (() => string),
+  options: Record<string, unknown> = {},
+) => {
+  const defaults = getApiConfig()
+  const params = defu(options, defaults)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return useFetch<ResT, TransformT>(url, params as any)
 }

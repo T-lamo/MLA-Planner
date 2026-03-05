@@ -7,7 +7,7 @@ from core.exceptions.app_exception import AppException
 
 # Importation du registre et de l'AppException
 from core.message import ErrorRegistry
-from models.membre_model import MembreRead
+from models.membre_model import MembreSimple
 
 from .pole_model import PoleRead
 
@@ -29,10 +29,25 @@ class MinistereBase(SQLModel):
 
 
 # -------------------------
+# NEW: MINISTERE SIMPLE
+# -------------------------
+class MinistereSimple(SQLModel):
+    """
+    Version ultra-légère utilisée pour les références rapides
+    (ex: sélecteurs, listes simples de profils).
+    """
+
+    id: str
+    nom: str
+    actif: bool = True
+    model_config = {"from_attributes": True}
+
+
+# -------------------------
 # CREATE
 # -------------------------
 class MinistereCreate(MinistereBase):
-    campus_id: str
+    campus_ids: List[str] = []
 
 
 # -------------------------
@@ -45,10 +60,7 @@ class MinistereRead(MinistereBase):
     """
 
     id: str
-    campus_id: str
-
     # On inclut les pôles car ils sont "petits" (PoleRead ne contient plus de membres)
-
     model_config = {"from_attributes": True}
 
 
@@ -60,7 +72,7 @@ class MinistereReadWithRelations(MinistereRead):
     Version complète incluant la liste des membres rattachés.
     """
 
-    ministeres_membres: List["MembreRead"] = Field(default=[], alias="membres")
+    ministeres_membres: List["MembreSimple"] = Field(default=[], alias="membres")
     poles: List[PoleRead] = []
 
     @computed_field
@@ -79,7 +91,7 @@ class MinistereUpdate(SQLModel):
     nom: Optional[str] = None
     date_creation: Optional[str] = None
     actif: Optional[bool] = None
-    campus_id: Optional[str] = None
+    campus_ids: Optional[List[str]] = None
 
     @field_validator("nom")
     @classmethod
@@ -95,4 +107,5 @@ __all__ = [
     "MinistereRead",
     "MinistereReadWithRelations",
     "MinistereUpdate",
+    "MinistereSimple",
 ]

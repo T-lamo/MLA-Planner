@@ -8,6 +8,8 @@ from core.exceptions.app_exception import AppException
 # Imports pour la centralisation des erreurs
 from core.message import ErrorRegistry
 
+from .role_competence_model import RoleCompetenceRead
+
 
 # -------------------------
 # BASE
@@ -52,9 +54,16 @@ class CategorieRoleRead(CategorieRoleBase):
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
 
+class RoleWithCategoryRead(RoleCompetenceRead):
+    """Extension de RoleCompetenceRead pour inclure la catégorie chargée."""
+
+    categorie: Optional[CategorieRoleRead] = None
+
+
 __all__ = [
     "CategorieRoleBase",
     "CategorieRoleCreate",
     "CategorieRoleUpdate",
     "CategorieRoleRead",
+    "RoleWithCategoryRead",
 ]

@@ -1,6 +1,6 @@
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 from sqlmodel import Field, SQLModel
 
 
@@ -44,9 +44,23 @@ class RoleCompetenceRead(RoleCompetenceBase):
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
 
+class RolesByCategory(BaseModel):
+    categorie_code: str
+    categorie_libelle: str
+    roles: List[RoleCompetenceRead]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RolesByCategoryResponse(BaseModel):
+    data: List[RolesByCategory]
+
+
 __all__ = [
     "RoleCompetenceBase",
     "RoleCompetenceCreate",
     "RoleCompetenceUpdate",
     "RoleCompetenceRead",
+    "RolesByCategoryResponse",
+    "RolesByCategory",
 ]

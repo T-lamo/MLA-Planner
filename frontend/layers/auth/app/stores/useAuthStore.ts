@@ -69,6 +69,15 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
+   * Nettoyage local des credentials (Sans appel API)
+   */
+  function clearLocalAuth() {
+    token.value = null
+    user.value = null
+    expiresAt.value = null
+  }
+
+  /**
    * Déconnexion complète
    */
   async function logout(shouldRedirect = true, currentPath?: string): Promise<void> {
@@ -78,9 +87,7 @@ export const useAuthStore = defineStore('auth', () => {
       await $api.auth.logout().catch(() => {})
     }
 
-    token.value = null
-    user.value = null
-    expiresAt.value = null
+    clearLocalAuth()
 
     if (shouldRedirect && currentPath !== '/login') {
       await navigateTo('/login')
@@ -97,5 +104,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     fetchMe,
     initAuth,
+    clearLocalAuth,
   }
 })
