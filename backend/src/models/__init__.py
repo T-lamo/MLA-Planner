@@ -25,6 +25,8 @@ from .membre_role_model import *  # noqa: F401,F403
 from .membre_role_model import __all__ as membre_role
 from .ministere_model import *  # noqa: F401,F403
 from .ministere_model import __all__ as ministere
+from .model_base import *  # noqa: F401,F403
+from .model_base import __all__ as response
 from .organisationicc_model import *  # noqa: F401,F403
 from .organisationicc_model import __all__ as organisation
 from .pays_model import *  # noqa: F401,F403
@@ -79,4 +81,5 @@ __all__: List[str] = (
     + list(planning_model)
     + list(affectation)
     + list(profile)
+    + list(response)
 )
