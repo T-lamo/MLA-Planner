@@ -34,7 +34,7 @@ class MembreRepository(BaseRepository[Membre]):
         et on ajoute campus_id.
         """
         # Utilisation de col() pour rassurer mypy sur l'attribut SQL
-        statement = select(Membre).where(col(Membre.deleted_at).is_(None))
+        statement = select(Membre).where(col(Membre.deleted_at) == (None))
 
         if campus_id:
             # On cast Membre.campuses en Any pour mypy lors du join
