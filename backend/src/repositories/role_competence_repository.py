@@ -1,8 +1,9 @@
-from typing import Optional
+from typing import Any, List, Optional, cast
 
-from sqlmodel import Session
+from sqlalchemy.orm import selectinload
+from sqlmodel import Session, select
 
-from models import RoleCompetence
+from models import CategorieRole, RoleCompetence
 
 from .base_repository import BaseRepository
 
@@ -19,3 +20,13 @@ class RoleCompetenceRepository(BaseRepository[RoleCompetence]):
             RoleCompetence.code == identifiant.upper().strip()
         )
         return self.db.exec(statement).unique().first()
+
+    def get_all_with_categories(self) -> List[RoleCompetence]:
+        """Récupère tous les rôles avec leurs catégories, triés."""
+        statement = (
+            select(RoleCompetence)
+            .join(cast(Any, RoleCompetence.categorie))
+            .options(selectinload(cast(Any, RoleCompetence.categorie)))
+            .order_by(CategorieRole.libelle, RoleCompetence.libelle)
+        )
+        return list(self.db.exec(statement).all())

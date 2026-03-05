@@ -1,8 +1,6 @@
-from typing import List, Optional
-
 from fastapi import Depends, Query
 
-from models import ProfilCreateFull, ProfilReadFull, ProfilUpdateFull
+from models import DataListResponse, ProfilCreateFull, ProfilReadFull, ProfilUpdateFull
 from models.base_pagination import PaginatedResponse
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.profile_service import ProfileService
@@ -31,7 +29,7 @@ router.routes = [
 
 # 2. Surcharge de la route Paginated pour inclure le filtre campus_id
 @router.get(
-    "/",
+    "/campus/{campus_id}/",
     response_model=PaginatedResponse[ProfilReadFull],
     dependencies=STANDARD_ADMIN_ONLY_DEPS.get("read", []),
 )
@@ -49,13 +47,15 @@ def list_paginated(
 
 # 3. Surcharge de la route All pour inclure le filtre campus_id
 @router.get(
-    "/all",
-    response_model=List[ProfilReadFull],
+    "/campus/{campus_id}/all",
+    response_model=DataListResponse[ProfilReadFull],
     dependencies=STANDARD_ADMIN_ONLY_DEPS.get("read", []),
 )
-def list_all_profiles(
-    campus_id: Optional[str] = Query(None, description="Filtrer par l'ID du campus"),
+def list_all(
+    campus_id: str | None = None,
     service: ProfileService = Depends(router_factory.get_service),
 ):
     """Récupère tous les profils avec filtrage optionnel par campus."""
-    return service.list_all(campus_id=campus_id)
+    print("campus id", campus_id)
+    profiles = service.list_all(campus_id=campus_id)
+    return {"data": profiles}

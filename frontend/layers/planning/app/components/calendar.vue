@@ -6,7 +6,9 @@
       <div class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2">
         <span class="text-xs font-medium text-slate-400">Campus Actif</span>
         <div class="h-4 w-px bg-slate-200"></div>
-        <span class="text-xs font-bold text-(--color-primary-700)">{{ ui.selectedCampus }}</span>
+        <span class="text-xs font-bold text-(--color-primary-700)">{{
+          ui.currentCampus?.nom
+        }}</span>
       </div>
     </div>
 
@@ -80,7 +82,7 @@ const rawEvents = ref<PlanningEvent[]>([
  */
 const filteredEvents = computed<PlanningEvent[]>(() => {
   return rawEvents.value
-    .filter((event) => event.extendedProps.campus === ui.selectedCampus)
+    .filter((event) => event.extendedProps.campus === ui.currentCampus?.nom)
     .map((event) => ({
       ...event,
       extendedProps: {
