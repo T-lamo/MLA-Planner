@@ -30,6 +30,8 @@ const emit = defineEmits(['close', 'submit'])
 const { mapProfileToForm, toggleMinistere, togglePole } = useProfileFormLogic()
 
 // --- ÉTAT DU FORMULAIRE ---
+const EMPTY_UTILISATEUR = { username: '', password: '', actif: true, roles_ids: [] }
+
 const form = ref<ProfilCreateFull>({
   nom: '',
   prenom: '',
@@ -40,7 +42,7 @@ const form = ref<ProfilCreateFull>({
   ministere_ids: [],
   pole_ids: [],
   role_codes: [],
-  utilisateur: undefined,
+  utilisateur: { ...EMPTY_UTILISATEUR },
 })
 
 // --- GESTION DES SECTIONS PLIABLES ---
@@ -83,7 +85,7 @@ const resetForm = () => {
     ministere_ids: [],
     pole_ids: [],
     role_codes: [],
-    utilisateur: undefined,
+    utilisateur: { ...EMPTY_UTILISATEUR },
   }
   activeSections.value = new Set(['basic'])
 }

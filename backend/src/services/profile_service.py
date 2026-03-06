@@ -4,6 +4,7 @@ from typing import Any, List, Optional, cast
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
+from core.auth.security import get_password_hash
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models import (
@@ -75,6 +76,9 @@ class ProfileService(
             user_payload = data.utilisateur.model_dump(exclude={"roles_ids"})
             user_payload["membre_id"] = db_membre.id
 
+            if user_payload.get("password"):
+                user_payload["password"] = get_password_hash(user_payload["password"])
+
             db_user = Utilisateur(**user_payload)
             self.db.add(db_user)
 
@@ -109,6 +113,8 @@ class ProfileService(
 
                 user_update = data.utilisateur.model_dump(exclude_unset=True)
                 for key, value in user_update.items():
+                    if key == "password" and value:
+                        value = get_password_hash(value)
                     setattr(db_membre.utilisateur, key, value)
                 self.db.add(db_membre.utilisateur)
 

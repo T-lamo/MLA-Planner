@@ -57,7 +57,7 @@ const onLogin = async (event: LoginEvent) => {
   try {
     await authStore.login({
       username: identifier,
-      password: password,
+      password,
     })
 
     const redirectPath = (route.query.redirect as string) || '/'

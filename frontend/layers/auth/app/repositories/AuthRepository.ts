@@ -72,8 +72,8 @@ export class AuthRepository extends BaseRepository {
    * Récupération du profil actuel
    */
   async getMe(): Promise<AuthUser> {
-    // Note : /auth/me renvoie généralement l'objet "user" directement
-    const { data } = await this.apiRequest<LoginSchema['user'], AuthUser>('/auth/me', {
+    // Note : /auth/users/me renvoie généralement l'objet "user" directement
+    const { data } = await this.apiRequest<LoginSchema['user'], AuthUser>('/auth/users/me', {
       method: 'GET',
       transform: (user): AuthUser => ({
         id: user.id,
