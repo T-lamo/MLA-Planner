@@ -5,9 +5,6 @@ from typing import Any, Generic, TypeVar
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel
 
-from core.exceptions import BadRequestException
-
-# Remplacement des exceptions standards par AppException
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models.base_pagination import PaginatedResponse
@@ -73,7 +70,7 @@ class BaseService(Generic[C, R, U, T]):
         pour gérer les cascades spécifiques.
         """
 
-    def _execute_with_flush(self, operation_callable, error_msg: str):
+    def _execute_with_flush(self, operation_callable):
         """Exécute une opération de repo, flush et gère les erreurs d'intégrité."""
         try:
             result = operation_callable()
@@ -82,4 +79,4 @@ class BaseService(Generic[C, R, U, T]):
         except IntegrityError as exc:
             self.db.rollback()
             logger.error(f"Erreur d'intégrité sur {self.resource_name}: {exc}")
-            raise BadRequestException(error_msg) from exc
+            raise AppException(ErrorRegistry.CORE_INTEGRITY_ERROR) from exc

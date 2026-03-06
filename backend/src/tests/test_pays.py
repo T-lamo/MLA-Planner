@@ -40,7 +40,7 @@ def test_create_pays_invalid_org(client, admin_headers):
     response = client.post("/pays/", json=payload, headers=admin_headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert "introuvable" in response.json()["detail"]
+    assert "introuvable" in response.json()["error"]["message"]
 
 
 def test_list_pays_contains_org_data(client, test_org, session):

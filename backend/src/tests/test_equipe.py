@@ -107,7 +107,7 @@ def test_add_member_already_present(client, admin_headers, created_equipe, test_
         f"/equipes/{equipe_id}/membres/{membre_id}", headers=admin_headers
     )
     assert response.status_code == status.HTTP_409_CONFLICT
-    assert "déjà dans cette équipe" in response.json()["detail"]
+    assert "déjà dans cette équipe" in response.json()["error"]["message"]
 
 
 def test_add_member_to_non_existent_equipe(client, admin_headers, test_membre):

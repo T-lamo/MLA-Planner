@@ -315,3 +315,146 @@ class ErrorRegistry:
         message="Une erreur inattendue est survenue au niveau de la base de données.",
         http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
+    CORE_INTEGRITY_ERROR = ErrorDetail(
+        code="CORE_004",
+        message="Erreur d'intégrité lors de l'opération.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    CORE_DUPLICATE = ErrorDetail(
+        code="CORE_005",
+        message="{resource} avec ce code ou ce nom existe déjà.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+
+    # --- DOMAINE CAMPUS (CAMP) ---
+    CAMP_NOT_FOUND = ErrorDetail(
+        code="CAMP_001",
+        message="Campus {id} introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    CAMP_LINK_ERROR = ErrorDetail(
+        code="CAMP_002",
+        message="Impossible de mettre à jour les liaisons ministères.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+
+    # --- DOMAINE PAYS (PAYS) ---
+    PAYS_NOT_FOUND = ErrorDetail(
+        code="PAYS_001",
+        message="Pays introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    PAYS_DUPLICATE = ErrorDetail(
+        code="PAYS_002",
+        message="Le pays ou son code existe déjà.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+
+    # --- DOMAINE ORGANISATION (ORG) ---
+    ORG_NOT_FOUND = ErrorDetail(
+        code="ORG_001",
+        message="Organisation introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    ORG_DUPLICATE = ErrorDetail(
+        code="ORG_002",
+        message="L'organisation '{nom}' existe déjà.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+
+    # --- DOMAINE MINISTÈRE (MINST) compléments ---
+    MINST_DUPLICATE = ErrorDetail(
+        code="MINST_003",
+        message="Le ministère '{nom}' existe déjà dans l'organisation.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    MINST_CAMPUS_REQUIRED = ErrorDetail(
+        code="MINST_004",
+        message="Un ministère doit être lié à au moins un campus.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+
+    # --- DOMAINE PÔLE (POLE) ---
+    POLE_NOT_FOUND = ErrorDetail(
+        code="POLE_001",
+        message="Pôle introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    POLE_DUPLICATE = ErrorDetail(
+        code="POLE_002",
+        message="Un pôle avec ce nom existe déjà.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+
+    # --- DOMAINE MEMBRE compléments ---
+    MEMBRE_CAMPUS_REQUIRED = ErrorDetail(
+        code="MEMBRE_003",
+        message="Un membre doit être rattaché à au moins un campus.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    MEMBRE_DELETED = ErrorDetail(
+        code="MEMBRE_004",
+        message="Impossible de modifier un membre supprimé.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    MEMBRE_ALREADY_LINKED = ErrorDetail(
+        code="MEMBRE_005",
+        message="Ce membre est déjà lié à un compte utilisateur.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    USER_ALREADY_LINKED = ErrorDetail(
+        code="MEMBRE_006",
+        message="Cet utilisateur est déjà lié à un membre.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    MEMBRE_ROLE_DUPLICATE = ErrorDetail(
+        code="MEMBRE_007",
+        message="Ce membre possède déjà ce rôle.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    MEMBRE_ROLE_NOT_FOUND = ErrorDetail(
+        code="MEMBRE_008",
+        message="Affectation membre/rôle introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+
+    # --- DOMAINE RÔLES ET CATÉGORIES compléments ---
+    ROLE_CAT_NOT_FOUND = ErrorDetail(
+        code="ROLE_003",
+        message="Catégorie de rôle introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    ROLE_CAT_DUPLICATE = ErrorDetail(
+        code="ROLE_004",
+        message="Le code '{code}' est déjà utilisé.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    ROLE_COMP_DUPLICATE = ErrorDetail(
+        code="ROLE_005",
+        message="Le rôle avec le code '{code}' existe déjà.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+
+    # --- DOMAINE ÉQUIPE compléments ---
+    TEAM_MEMBER_DUPLICATE = ErrorDetail(
+        code="TEAM_003",
+        message="Ce membre est déjà dans cette équipe.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    TEAM_MEMBER_NOT_FOUND = ErrorDetail(
+        code="TEAM_004",
+        message="Le membre ne fait pas partie de cette équipe.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+
+    # --- DOMAINE ACTIVITÉ compléments ---
+    ACTV_INVALID_REF = ErrorDetail(
+        code="ACTV_004",
+        message="Données de référence (Campus/Ministère) invalides.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    ACTV_UPDATE_CONFLICT = ErrorDetail(
+        code="ACTV_005",
+        message="Erreur de contrainte lors de la mise à jour.",
+        http_status=status.HTTP_409_CONFLICT,
+    )

@@ -29,8 +29,8 @@ def test_create_organisation_duplicate_name(client, admin_headers, session):
     # Deuxième appel (doublon)
     response = client.post("/organisations/", json=payload, headers=admin_headers)
 
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert "existe déjà" in response.json()["detail"]
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "existe déjà" in response.json()["error"]["message"]
 
 
 def test_get_organisations_pagination(client):
