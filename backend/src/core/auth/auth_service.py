@@ -92,6 +92,7 @@ class AuthService:
 
         hashed_new_password: str = get_password_hash(new_password)
         self.repo.update_password(user, hashed_new_password)
+        self.db.commit()
 
     def logout(self, token_payload: dict) -> None:
         """
@@ -109,3 +110,4 @@ class AuthService:
 
         # Appel au repository pour la persistance
         self.repo.add_to_blacklist(jti=jti, expires_at=expires_at)
+        self.db.commit()

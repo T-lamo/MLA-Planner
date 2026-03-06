@@ -3,7 +3,12 @@ import type { AuthUser } from '../repositories/AuthRepository'
 
 export const useAuthStore = defineStore('auth', () => {
   // --- ÉTAT (STATE) ---
-  const cookieOptions = { maxAge: 60 * 60 * 24 * 7, path: '/' }
+  const cookieOptions = {
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+    sameSite: 'strict' as const,
+    secure: true,
+  }
 
   const token = useCookie<string | null>('auth_token', cookieOptions)
   const user = useCookie<AuthUser | null>('auth_user', cookieOptions)

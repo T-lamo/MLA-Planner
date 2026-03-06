@@ -19,11 +19,15 @@ router_factory = CRUDRouterFactory(
 )
 router = router_factory.router
 
-# Nettoyage des routes existantes avec check de type pour mypy
+# Nettoyage des routes GET / et GET /all, remplacées par des variantes campus.
+# Le filtre cible UNIQUEMENT les GET pour ne pas supprimer POST / (create).
 router.routes = [
     route
     for route in router.routes
-    if getattr(route, "path", None) not in (f"{router.prefix}/", f"{router.prefix}/all")
+    if not (
+        getattr(route, "path", None) in (f"{router.prefix}/", f"{router.prefix}/all")
+        and "GET" in getattr(route, "methods", set())
+    )
 ]
 
 
