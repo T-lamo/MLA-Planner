@@ -1,7 +1,8 @@
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
 
-from core.exceptions import BadRequestException, ConflictException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import Activite, ActiviteCreate, ActiviteRead, ActiviteUpdate
 from repositories.activite_repository import ActiviteRepository
 from services.base_service import BaseService
@@ -19,10 +20,7 @@ class ActiviteService(
             activite_obj = Activite.model_validate(data)
             return self.repo.create(activite_obj)
         except IntegrityError as e:
-            # Gestion des violations de clés étrangères (campus_id, etc.)
-            raise BadRequestException(
-                "Données de référence (Campus/Ministère) invalides."
-            ) from e
+            raise AppException(ErrorRegistry.ACTV_INVALID_REF) from e
 
     def update(self, identifiant: str, data: ActiviteUpdate) -> Activite:
         db_obj = self.get_one(identifiant)
@@ -30,9 +28,7 @@ class ActiviteService(
         try:
             return self.repo.update(db_obj, update_data)
         except IntegrityError as e:
-            raise ConflictException(
-                "Erreur de contrainte lors de la mise à jour."
-            ) from e
+            raise AppException(ErrorRegistry.ACTV_UPDATE_CONFLICT) from e
 
     def hard_delete(self, activite_id: str) -> None:
         """Supprime physiquement l'activité de la base de données."""

@@ -236,6 +236,7 @@ class Activite(ActiviteBase, table=True):  # type: ignore
 class Slot(SlotBase, table=True):  # type: ignore
     __tablename__ = "t_slot"
     __table_args__ = {"extend_existing": True}
+    __mapper_args__ = {"confirm_deleted_rows": False}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     planning: Optional["PlanningService"] = Relationship(back_populates="slots")
     affectations: List["Affectation"] = Relationship(back_populates="slot")

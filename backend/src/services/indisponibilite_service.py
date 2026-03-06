@@ -1,6 +1,7 @@
 from sqlmodel import Session
 
-from core.exceptions import NotFoundException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import (
     Indisponibilite,
     IndisponibiliteCreate,
@@ -36,7 +37,7 @@ class IndisponibiliteService(
         # (évite 500 sur FK violation)
         membre = self.db.get(Membre, data.membre_id)
         if not membre:
-            raise NotFoundException(f"Membre {data.membre_id} introuvable.")
+            raise AppException(ErrorRegistry.MEMBRE_NOT_FOUND)
 
         return self.repo.create(Indisponibilite(**data.model_dump()))
 

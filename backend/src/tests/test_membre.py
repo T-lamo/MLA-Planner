@@ -55,7 +55,7 @@ def test_create_membre_empty_campus_fail(client, admin_headers):
     }
     response = client.post("/membres/", json=payload, headers=admin_headers)
     assert response.status_code == 400
-    assert "au moins un campus" in response.json()["detail"]
+    assert "au moins un campus" in response.json()["error"]["message"]
 
 
 def test_delete_membre_soft_delete(client, admin_headers, test_membre, session):
@@ -89,7 +89,7 @@ def test_create_membre_404_on_non_existent_pole(client, admin_headers, test_camp
     }
     response = client.post("/membres/", json=payload, headers=admin_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert "Pôle" in response.json()["detail"]
+    assert "Pôle" in response.json()["error"]["message"]
 
 
 # --- TESTS DE LIAISON UTILISATEUR (CAS CRITIQUES) ---
@@ -133,8 +133,8 @@ def test_link_membre_full_lifecycle(
         f"/membres/utilisateurs/{user2.id}/link-membre?membre_id={m1.id}",
         headers=admin_headers,
     )
-    assert res.status_code == status.HTTP_400_BAD_REQUEST
-    assert "déjà lié à un compte" in res.json()["detail"]
+    assert res.status_code == status.HTTP_409_CONFLICT
+    assert "déjà lié à un compte" in res.json()["error"]["message"]
 
     # ACTION 3 : Tenter de lier m2 à test_user ->
     #  FAIL (L'utilisateur est déjà lié à un membre)
@@ -142,8 +142,8 @@ def test_link_membre_full_lifecycle(
         f"/membres/utilisateurs/{test_user.id}/link-membre?membre_id={m2.id}",
         headers=admin_headers,
     )
-    assert res.status_code == status.HTTP_400_BAD_REQUEST
-    assert "déjà lié à un membre" in res.json()["detail"]
+    assert res.status_code == status.HTTP_409_CONFLICT
+    assert "déjà lié à un membre" in res.json()["error"]["message"]
 
 
 # --- TESTS DE SUPPRESSION & CASCADE ---
