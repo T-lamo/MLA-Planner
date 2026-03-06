@@ -2,7 +2,7 @@
 import { defineStore } from 'pinia'
 import { ref, reactive, watch } from 'vue'
 import { useUIStore } from './useUiStore'
-import type { ProfilReadFull, ProfilCreateFull } from '../../types/profiles'
+import type { ProfilReadFull, ProfilCreateFull, ProfilUpdateFull } from '../../types/profiles'
 import { ProfileRepository } from '../repositories/ProfileRepository'
 import { useMinistereStore } from './useMinistereStore'
 
@@ -59,6 +59,20 @@ export const useProfileStore = defineStore('profile', () => {
     }
   }
 
+  async function updateProfile(id: string, payload: ProfilUpdateFull) {
+    loading.value = true
+    try {
+      const data = await repository.update(id, payload)
+      if (data) {
+        notify.success('Mise à jour réussie', `Le profil ${data.nom} a été modifié.`)
+        const index = profiles.value.findIndex((p) => p.id === id)
+        if (index !== -1) profiles.value[index] = data
+      }
+    } finally {
+      loading.value = false
+    }
+  }
+
   /**
    * Orchestre la suppression (Optimiste avec Try/Catch)
    */
@@ -102,6 +116,7 @@ export const useProfileStore = defineStore('profile', () => {
     pagination,
     fetchProfiles,
     createProfile,
+    updateProfile,
     deleteProfile,
   }
 })

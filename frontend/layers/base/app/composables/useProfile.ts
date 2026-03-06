@@ -1,6 +1,6 @@
 import { useProfileStore } from '../stores/useProfileStore'
 import { useUIStore } from '../stores/useUiStore'
-import type { ProfilCreateFull } from '../../types/profiles'
+import type { ProfilCreateFull, ProfilUpdateFull } from '../../types/profiles'
 
 // composables/useProfiles.ts
 export const useProfiles = () => {
@@ -22,8 +22,11 @@ export const useProfiles = () => {
     await profileStore.createProfile(data)
   }
 
+  const handleUpdate = async (id: string, data: ProfilUpdateFull) => {
+    await profileStore.updateProfile(id, data)
+  }
+
   const handleDelete = async (id: string) => {
-    // Possibilité d'ajouter une confirmation ici via un autre store UI
     await profileStore.deleteProfile(id)
   }
 
@@ -35,6 +38,7 @@ export const useProfiles = () => {
     campuses: computed(() => uiStore.campuses),
     refresh: profileStore.fetchProfiles,
     create: handleCreate,
+    update: handleUpdate,
     remove: handleDelete,
   }
 }

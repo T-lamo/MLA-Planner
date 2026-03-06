@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { User, MapPin, Building2, ShieldCheck, Info } from 'lucide-vue-next'
+import { User, MapPin, Building2, ShieldCheck, Info, Award } from 'lucide-vue-next'
 import { useProfileFormLogic } from '../../composables/useProfileFormLogic'
 import FormSection from '../FormSection.vue'
 
@@ -9,6 +9,7 @@ import ProfileBasicInfo from './ProfileBasicInfo.vue'
 import ProfileCampusSelector from './ProfileCampusSelector.vue'
 import ProfileMinistereManager from './ProfileMinistereManager.vue'
 import ProfileSecurityAccess from './ProfileSecurityAccess.vue'
+import ProfileRolesEditor from './ProfileRolesEditor.vue'
 
 import type { ProfilCreateFull, ProfilReadFull } from '~~/layers/base/types/profiles'
 import type { CampusRead } from '~~/layers/base/types/campus'
@@ -38,6 +39,7 @@ const form = ref<ProfilCreateFull>({
   campus_ids: [],
   ministere_ids: [],
   pole_ids: [],
+  role_codes: [],
   utilisateur: undefined,
 })
 
@@ -80,6 +82,7 @@ const resetForm = () => {
     campus_ids: [],
     ministere_ids: [],
     pole_ids: [],
+    role_codes: [],
     utilisateur: undefined,
   }
   activeSections.value = new Set(['basic'])
@@ -155,6 +158,16 @@ const handleSubmit = () => {
           @toggle-ministere="onToggleMin"
           @toggle-pole="onTogglePole"
         />
+      </FormSection>
+
+      <FormSection
+        title="Rôles & Compétences"
+        :icon="Award"
+        :isOpen="activeSections.has('roles')"
+        :badge="form.role_codes && form.role_codes.length > 0 ? form.role_codes.length : undefined"
+        @toggle="toggleSection('roles')"
+      >
+        <ProfileRolesEditor v-model="form.role_codes!" />
       </FormSection>
 
       <FormSection

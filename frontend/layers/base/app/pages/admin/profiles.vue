@@ -12,7 +12,7 @@ import type {
   ProfilUpdateFull,
 } from '~~/layers/base/types/profiles'
 
-const { profiles, isFetching, totalProfiles, activeCampusId, campuses, create, remove } =
+const { profiles, isFetching, totalProfiles, activeCampusId, campuses, create, update, remove } =
   useProfiles()
 
 const { ministeresByCampus, fetchDetailedMinisteres } = useCampuses()
@@ -58,7 +58,7 @@ const handleFormSubmit = async (formData: ProfilCreateFull | ProfilUpdateFull) =
   isSubmitting.value = true
   try {
     if (editingProfile.value) {
-      // Logique d'update : await update(editingProfile.value.id, formData)
+      await update(editingProfile.value.id, formData)
     } else {
       await create(formData as ProfilCreateFull)
     }
@@ -105,8 +105,6 @@ const handleDelete = async (id: string) => {
         @delete="handleDelete"
       />
     </TransitionGroup>
-    <pre>{{ JSON.stringify(ministeresByCampus, null, 2) }}</pre>
-
     <ProfileFormDrawer
       :isOpen="isDrawerOpen"
       :editingProfile="editingProfile"
