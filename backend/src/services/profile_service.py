@@ -4,6 +4,7 @@ from typing import Any, List, Optional, cast
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
+from core.auth.security import get_password_hash
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models import (
@@ -19,6 +20,7 @@ from models import (
     Utilisateur,
 )
 from models.base_pagination import PaginatedResponse
+from models.schema_db_model import AffectationRole
 from services.membre_service import MembreService
 
 from .base_service import BaseService
@@ -34,6 +36,31 @@ class ProfileService(
         self.membre_svc = MembreService(db)
         # Fix W0231: Appel du constructeur parent avec le repo adéquat
         super().__init__(repo=self.membre_svc.repo, resource_name="Profile")
+
+    def _resolve_campus_principal(
+        self,
+        campus_ids: List[str],
+        campus_principal_id: Optional[str],
+        strict: bool = True,
+    ) -> Optional[str]:
+        """Validate/auto-assign campus_principal_id against campus_ids.
+
+        strict=True  → raise if campus_principal_id not in campus_ids
+        (explicit user input).
+        strict=False → auto-clear if campus_principal_id
+        not in campus_ids (inherited value).
+        Auto-assigns if campus_ids has exactly one element
+          and no principal set.
+        """
+        if campus_principal_id:
+            if campus_principal_id in campus_ids:
+                return campus_principal_id
+            if strict:
+                raise AppException(ErrorRegistry.PROFIL_CAMPUS_PRINCIPAL_INVALID)
+            # Not strict: campus was removed, fall through to auto-assign logic
+        if len(campus_ids) == 1:
+            return campus_ids[0]
+        return None
 
     def _sync_roles(self, membre: Membre, role_codes: List[str]):
         """
@@ -64,9 +91,29 @@ class ProfileService(
             new_assoc = MembreRole(membre_id=membre.id, role_code=code)
             self.db.add(new_assoc)
 
+    def _sync_utilisateur_roles(
+        self, utilisateur: Utilisateur, roles_ids: List[str]
+    ) -> None:
+        """Synchronise les AffectationRole (rôles applicatifs) d'un utilisateur."""
+        # Supprimer les affectations existantes
+        existing = self.db.exec(
+            select(AffectationRole).where(
+                AffectationRole.utilisateur_id == utilisateur.id
+            )
+        ).all()
+        for aff in existing:
+            self.db.delete(aff)
+        # Créer les nouvelles affectations
+        for role_id in roles_ids:
+            self.db.add(AffectationRole(utilisateur_id=utilisateur.id, role_id=role_id))
+
     def create(self, data: ProfilCreateFull) -> ProfilReadFull:
         try:
-            membre_in = MembreCreate(**data.model_dump(exclude={"utilisateur"}))
+            membre_data = data.model_dump(exclude={"utilisateur"})
+            membre_data["campus_principal_id"] = self._resolve_campus_principal(
+                data.campus_ids, data.campus_principal_id
+            )
+            membre_in = MembreCreate(**membre_data)
             db_membre = self.membre_svc.create(membre_in)
 
             if data.role_codes:
@@ -75,10 +122,17 @@ class ProfileService(
             user_payload = data.utilisateur.model_dump(exclude={"roles_ids"})
             user_payload["membre_id"] = db_membre.id
 
+            if user_payload.get("password"):
+                user_payload["password"] = get_password_hash(user_payload["password"])
+
             db_user = Utilisateur(**user_payload)
             self.db.add(db_user)
+            self.db.flush()  # pour obtenir db_user.id
 
-            self.db.flush()
+            roles_ids = data.utilisateur.roles_ids or []
+            if roles_ids:
+                self._sync_utilisateur_roles(db_user, roles_ids)
+
             self.db.commit()
             logger.info(f"Profil créé avec succès : {db_membre.email}")
 
@@ -92,9 +146,22 @@ class ProfileService(
 
     def update(self, identifiant: str, data: ProfilUpdateFull) -> ProfilReadFull:
         try:
-            membre_payload = MembreUpdate(
-                **data.model_dump(exclude_unset=True, exclude={"utilisateur"})
-            )
+            raw = data.model_dump(exclude_unset=True, exclude={"utilisateur"})
+
+            # Re-validate campus_principal_id if campuses or principal changed
+            if "campus_ids" in raw or "campus_principal_id" in raw:
+                current = self._get_db_obj(identifiant)
+                effective_ids = raw.get("campus_ids", [c.id for c in current.campuses])
+                desired_principal = raw.get(
+                    "campus_principal_id", current.campus_principal_id
+                )
+                # strict only when caller explicitly set campus_principal_id
+                strict = "campus_principal_id" in raw
+                raw["campus_principal_id"] = self._resolve_campus_principal(
+                    effective_ids, desired_principal, strict=strict
+                )
+
+            membre_payload = MembreUpdate(**raw)
             self.membre_svc.update(identifiant, membre_payload)
             db_membre = self._get_db_obj(identifiant)
 
@@ -104,13 +171,20 @@ class ProfileService(
 
             if data.utilisateur:
                 if not db_membre.utilisateur:
-                    # Utilisation de la nouvelle clé spécifique PROFIL
                     raise AppException(ErrorRegistry.PROFIL_USER_LINK_MISSING)
 
-                user_update = data.utilisateur.model_dump(exclude_unset=True)
+                user_update = data.utilisateur.model_dump(
+                    exclude_unset=True, exclude={"roles_ids"}
+                )
                 for key, value in user_update.items():
+                    if key == "password" and value:
+                        value = get_password_hash(value)
                     setattr(db_membre.utilisateur, key, value)
                 self.db.add(db_membre.utilisateur)
+
+                roles_ids = data.utilisateur.roles_ids
+                if roles_ids is not None:
+                    self._sync_utilisateur_roles(db_membre.utilisateur, roles_ids)
 
             self.db.commit()
             return self.get_one(identifiant)

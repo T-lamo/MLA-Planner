@@ -3,7 +3,12 @@ import type { AuthUser } from '../repositories/AuthRepository'
 
 export const useAuthStore = defineStore('auth', () => {
   // --- ÉTAT (STATE) ---
-  const cookieOptions = { maxAge: 60 * 60 * 24 * 7, path: '/' }
+  const cookieOptions = {
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+    sameSite: 'strict' as const,
+    secure: true,
+  }
 
   const token = useCookie<string | null>('auth_token', cookieOptions)
   const user = useCookie<AuthUser | null>('auth_user', cookieOptions)
@@ -20,6 +25,10 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   const currentUser = computed(() => user.value)
+
+  const isSuperAdmin = computed(() => user.value?.roles?.includes('Super Admin') ?? false)
+  const isAdmin = computed(() => user.value?.roles?.includes('Admin') ?? false)
+  const hasAdminAccess = computed(() => isSuperAdmin.value || isAdmin.value)
 
   // --- ACTIONS ---
 
@@ -99,6 +108,9 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     expiresAt,
     isAuthenticated,
+    isSuperAdmin,
+    isAdmin,
+    hasAdminAccess,
     currentUser,
     login,
     logout,

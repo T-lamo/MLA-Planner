@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class RoleName(str, Enum):
+    SUPER_ADMIN = "Super Admin"
     ADMIN = "Admin"
     RESPONSABLE_MLA = "Responsable MLA"
     MEMBRE_MLA = "Membre MLA"

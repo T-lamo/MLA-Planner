@@ -21,6 +21,7 @@ from .planning_router import router as planning  # Doit être après slot pour l
 from .pole_router import router as pole
 from .profil_router import router as profile
 from .role_competence_router import router as role_competence
+from .role_router import router as role
 from .slot_router import router as slot  # Doit être après membre_role pour les FK
 
 router = APIRouter()
@@ -33,6 +34,7 @@ router.include_router(member)
 router.include_router(pole)
 router.include_router(category_role)
 router.include_router(role_competence)
+router.include_router(role)
 router.include_router(membre_role)
 router.include_router(indisponibilite)
 router.include_router(equipe)  # Doit être après membre et ministre pour les FK

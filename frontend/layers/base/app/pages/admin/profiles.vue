@@ -12,7 +12,7 @@ import type {
   ProfilUpdateFull,
 } from '~~/layers/base/types/profiles'
 
-const { profiles, isFetching, totalProfiles, activeCampusId, campuses, create, remove } =
+const { profiles, isFetching, totalProfiles, activeCampusId, campuses, create, update, remove } =
   useProfiles()
 
 const { ministeresByCampus, fetchDetailedMinisteres } = useCampuses()
@@ -54,13 +54,46 @@ const handleOpenEdit = (profile: ProfilReadFull) => {
   isDrawerOpen.value = true
 }
 
-const handleFormSubmit = async (formData: ProfilCreateFull | ProfilUpdateFull) => {
+const handleFormSubmit = async (formData: ProfilCreateFull) => {
   isSubmitting.value = true
   try {
     if (editingProfile.value) {
-      // Logique d'update : await update(editingProfile.value.id, formData)
+      // Build an explicit ProfilUpdateFull — never send roles_ids in utilisateur:
+      // UtilisateurUpdate validator rejects an empty roles_ids array with 422.
+      const updatePayload: ProfilUpdateFull = {
+        nom: formData.nom,
+        prenom: formData.prenom,
+        email: formData.email,
+        telephone: formData.telephone,
+        actif: formData.actif,
+        campus_ids: formData.campus_ids,
+        campus_principal_id: formData.campus_principal_id ?? null,
+        ministere_ids: formData.ministere_ids,
+        pole_ids: formData.pole_ids,
+        role_codes: formData.role_codes,
+      }
+      if (formData.utilisateur) {
+        updatePayload.utilisateur = {
+          username: formData.utilisateur.username,
+          actif: formData.utilisateur.actif,
+        }
+        if (formData.utilisateur.password) {
+          updatePayload.utilisateur.password = formData.utilisateur.password
+        }
+        if (formData.utilisateur.roles_ids?.length) {
+          updatePayload.utilisateur.roles_ids = formData.utilisateur.roles_ids
+        }
+      }
+      await update(editingProfile.value.id, updatePayload)
     } else {
-      await create(formData as ProfilCreateFull)
+      // Normalize empty password to undefined — backend min_length=6 rejects "".
+      const createPayload: ProfilCreateFull = {
+        ...formData,
+        utilisateur: formData.utilisateur
+          ? { ...formData.utilisateur, password: formData.utilisateur.password || undefined }
+          : formData.utilisateur,
+      }
+      await create(createPayload)
     }
     isDrawerOpen.value = false
   } catch {
@@ -105,8 +138,6 @@ const handleDelete = async (id: string) => {
         @delete="handleDelete"
       />
     </TransitionGroup>
-    <pre>{{ JSON.stringify(ministeresByCampus, null, 2) }}</pre>
-
     <ProfileFormDrawer
       :isOpen="isDrawerOpen"
       :editingProfile="editingProfile"

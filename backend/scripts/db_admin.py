@@ -5,6 +5,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
 from conf.db.database import Database
+from conf.db.seed.seed_referential import SeedReferentials
 from conf.db.seed.seed_service import SeedService
 from sqlmodel import Session, SQLModel
 
@@ -25,17 +26,30 @@ def recreate_db():
 
 def seed_db():
     engine = Database.get_engine()
-    # On utilise Session(engine) pour s'assurer d'être sur la bonne connexion
+    print(f"🌱 [SEED] Remplissage de la base : {engine.url.database}...")
+
+    # SeedService gère son propre begin/commit via `with self.db.begin()`
     with Session(engine) as session:
         try:
-            print(f"🌱 [SEED] Remplissage de la base : {engine.url.database}...")
             SeedService(session).run()
-            session.commit() # Important : commit explicite
-            print("✅ Seeding terminé avec succès.")
+            print("✅ SeedService terminé.")
         except Exception as e:
             session.rollback()
-            print(f"❌ Erreur lors du seeding : {e}")
+            print(f"❌ Erreur SeedService : {e}")
             sys.exit(1)
+
+    # SeedReferentials (référentiels de base + membres de démo)
+    with Session(engine) as session:
+        try:
+            SeedReferentials(session).run()
+            session.commit()
+            print("✅ SeedReferentials terminé.")
+        except Exception as e:
+            session.rollback()
+            print(f"❌ Erreur SeedReferentials : {e}")
+            sys.exit(1)
+
+    print("✅ Seeding terminé avec succès.")
 
 
 if __name__ == "__main__":

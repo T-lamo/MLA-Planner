@@ -3,7 +3,8 @@ from typing import List, cast
 
 from sqlmodel import Session, col, select
 
-from core.exceptions import BadRequestException, NotFoundException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import Campus, CampusCreate, CampusRead, CampusUpdate
 from models.schema_db_model import Ministere  # Import du modèle pour la liaison
 from repositories.campus_repository import CampusRepository
@@ -24,13 +25,10 @@ class CampusService(BaseService[CampusCreate, CampusRead, CampusUpdate, Campus])
     def create(self, data: CampusCreate) -> Campus:
         """Crée un campus après validation de l'existence du pays."""
         if not self.pays_repo.get_by_id(data.pays_id):
-            raise NotFoundException(f"Pays avec l'ID {data.pays_id} introuvable.")
+            raise AppException(ErrorRegistry.PAYS_NOT_FOUND)
 
         db_obj = Campus(**data.model_dump())
-        return self._execute_with_flush(
-            lambda: self.repo.create(db_obj),
-            "Un campus avec ce nom existe déjà dans ce secteur.",
-        )
+        return self._execute_with_flush(lambda: self.repo.create(db_obj))
 
     def update(self, identifiant: str, data: CampusUpdate) -> Campus:
         """Met à jour un campus avec validation différentielle du pays."""
@@ -39,11 +37,10 @@ class CampusService(BaseService[CampusCreate, CampusRead, CampusUpdate, Campus])
 
         if "pays_id" in update_data and update_data["pays_id"]:
             if not self.pays_repo.get_by_id(str(update_data["pays_id"])):
-                raise NotFoundException("Le nouveau pays spécifié est invalide.")
+                raise AppException(ErrorRegistry.PAYS_NOT_FOUND)
 
         return self._execute_with_flush(
-            lambda: self.repo.update(campus_db, update_data),
-            "Mise à jour impossible : violation d'intégrité.",
+            lambda: self.repo.update(campus_db, update_data)
         )
 
     def link_ministeres(self, campus_id: str, ministere_ids: List[str]) -> Campus:
@@ -64,22 +61,18 @@ class CampusService(BaseService[CampusCreate, CampusRead, CampusUpdate, Campus])
             if len(found_ministeres) != len(set(ministere_ids)):
                 found_ids = {m.id for m in found_ministeres}
                 missing_ids = set(ministere_ids) - found_ids
-                raise NotFoundException(f"Ministères introuvables : {missing_ids}")
+                raise AppException(ErrorRegistry.MINST_NOT_FOUND, id=str(missing_ids))
 
             campus_db.ministeres = list(found_ministeres)
 
         try:
             self.db.add(campus_db)
             self.db.flush()
-            # On commit ici seulement si ce service est appelé hors d'un orchestrateur
-            # Sinon, laissez le commit au niveau du routeur ou de l'orchestrateur
             return campus_db
         except Exception as e:
             self.db.rollback()
             logger.error(f"Erreur lors de la liaison campus-ministères : {e}")
-            raise BadRequestException(
-                "Impossible de mettre à jour les liaisons ministères."
-            ) from e
+            raise AppException(ErrorRegistry.CAMP_LINK_ERROR) from e
 
     def add_single_ministere(self, campus_id: str, ministere_id: str) -> Campus:
         """Ajoute un seul ministère à la liste existante sans supprimer les autres."""
@@ -91,7 +84,7 @@ class CampusService(BaseService[CampusCreate, CampusRead, CampusUpdate, Campus])
 
         ministere = self.db.get(Ministere, ministere_id)
         if not ministere:
-            raise NotFoundException(f"Ministère {ministere_id} introuvable.")
+            raise AppException(ErrorRegistry.MINST_NOT_FOUND, id=ministere_id)
 
         campus_db.ministeres.append(ministere)
         self.db.add(campus_db)
@@ -105,9 +98,7 @@ class CampusService(BaseService[CampusCreate, CampusRead, CampusUpdate, Campus])
         campus_db = self.repo.get_with_details(campus_id)
 
         if not campus_db:
-            raise NotFoundException(
-                f"{self.resource_name} avec l'ID {campus_id} introuvable."
-            )
+            raise AppException(ErrorRegistry.CORE_RESOURCE_NOT_FOUND, resource="Campus")
 
         return campus_db
 
@@ -115,16 +106,10 @@ class CampusService(BaseService[CampusCreate, CampusRead, CampusUpdate, Campus])
         """
         Orchestre la récupération enrichie des ministères d'un campus.
         """
-        # 1. Récupération du campus
-        # campus_db est typé 'Campus' par get_details
         campus_db = self.get_details(campus_id)
 
-        # 3. Extraction sécurisée et typée des IDs
-        # On s'assure que ministeres est itérable et on cast pour Mypy
         ministeres_list = cast(List[Ministere], campus_db.ministeres or [])
 
-        # 4. Enrichissement avec compréhension de liste typée
-        # On filtre les IDs potentiellement nuls pour la sécurité
         detailed_ministeres: List[Ministere] = [
             self.ministere_svc.get_detailed(str(m.id))
             for m in ministeres_list

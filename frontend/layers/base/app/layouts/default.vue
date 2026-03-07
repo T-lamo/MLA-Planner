@@ -123,6 +123,75 @@
             </Teleport>
           </div>
         </div>
+
+        <!-- Section Administration (ADMIN et SUPER ADMIN uniquement) -->
+        <div v-if="authStore.hasAdminAccess" class="relative">
+          <button
+            ref="adminTriggerRef"
+            class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
+            :class="[
+              isAdminOpen && !ui.isSidebarCollapsed
+                ? 'bg-slate-50 text-(--color-primary-700)'
+                : 'text-slate-600',
+            ]"
+            @click="handleAdminMenuClick"
+            @mouseenter="handleAdminMouseEnter"
+            @mouseleave="handleAdminMouseLeave"
+          >
+            <Users class="size-5 shrink-0" />
+            <span
+              v-if="!ui.isSidebarCollapsed"
+              class="flex-1 text-left text-[10px] font-bold tracking-wider uppercase"
+              >Administration</span
+            >
+            <ChevronDown
+              v-if="!ui.isSidebarCollapsed"
+              :class="[
+                'size-3.5 transition-transform duration-200',
+                isAdminOpen ? 'rotate-180' : '',
+              ]"
+            />
+          </button>
+
+          <transition name="expand">
+            <ul v-if="isAdminOpen && !ui.isSidebarCollapsed" class="mt-1 space-y-1 overflow-hidden">
+              <SidebarLink
+                to="/admin/profiles"
+                :icon="Users"
+                label="Profils"
+                :collapsed="false"
+                class="pl-9"
+              />
+            </ul>
+          </transition>
+
+          <Teleport to="body">
+            <transition name="fade-in">
+              <div
+                v-if="ui.isSidebarCollapsed && isAdminPopupVisible"
+                :style="adminPopupStyle"
+                class="fixed z-[9999] w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl"
+                @mouseenter="cancelAdminClose"
+                @mouseleave="handleAdminMouseLeave"
+              >
+                <div
+                  class="mb-2 border-b border-slate-50 px-3 py-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase"
+                >
+                  Administration
+                </div>
+                <ul class="space-y-1">
+                  <SidebarLink
+                    to="/admin/profiles"
+                    :icon="Users"
+                    label="Profils"
+                    :collapsed="false"
+                    @click="closeAdminPopup"
+                  />
+                </ul>
+              </div>
+            </transition>
+          </Teleport>
+        </div>
       </nav>
 
       <div class="border-t border-slate-100 p-4">
@@ -145,7 +214,14 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ChevronLeft, ChevronRight, CalendarDays, ListTodo, ChevronDown } from 'lucide-vue-next'
+import {
+  ChevronLeft,
+  ChevronRight,
+  CalendarDays,
+  ListTodo,
+  ChevronDown,
+  Users,
+} from 'lucide-vue-next'
 import { useUIStore } from '../stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 
@@ -159,6 +235,62 @@ const popupTop = ref(0)
 const planningStore = { draftCount: 5 }
 
 let closeTimer: ReturnType<typeof setTimeout> | null = null
+
+// --- Administration menu state ---
+const isAdminOpen = ref(true)
+const isAdminPopupVisible = ref(false)
+const adminTriggerRef = ref<HTMLElement | null>(null)
+const adminPopupTop = ref(0)
+let adminCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+const adminPopupStyle = computed(() => ({
+  top: `${adminPopupTop.value}px`,
+  left: '76px',
+}))
+
+const updateAdminPopupPosition = () => {
+  if (adminTriggerRef.value) {
+    const rect = adminTriggerRef.value.getBoundingClientRect()
+    adminPopupTop.value = rect.top
+  }
+}
+
+const handleAdminMenuClick = () => {
+  if (ui.isSidebarCollapsed) {
+    updateAdminPopupPosition()
+    isAdminPopupVisible.value = !isAdminPopupVisible.value
+  } else {
+    isAdminOpen.value = !isAdminOpen.value
+  }
+}
+
+const handleAdminMouseEnter = () => {
+  if (ui.isSidebarCollapsed) {
+    cancelAdminClose()
+    updateAdminPopupPosition()
+    isAdminPopupVisible.value = true
+  }
+}
+
+const handleAdminMouseLeave = () => {
+  if (ui.isSidebarCollapsed) {
+    adminCloseTimer = setTimeout(() => {
+      isAdminPopupVisible.value = false
+    }, 150)
+  }
+}
+
+const cancelAdminClose = () => {
+  if (adminCloseTimer) {
+    clearTimeout(adminCloseTimer)
+    adminCloseTimer = null
+  }
+}
+
+const closeAdminPopup = () => {
+  cancelAdminClose()
+  isAdminPopupVisible.value = false
+}
 
 const popupStyle = computed(() => ({
   top: `${popupTop.value}px`,

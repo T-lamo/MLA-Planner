@@ -2,7 +2,8 @@ from typing import Dict, List
 
 from sqlmodel import Session
 
-from core.exceptions import ConflictException, NotFoundException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import (
     CategorieRole,
     RoleCompetence,
@@ -27,12 +28,12 @@ class RoleCompetenceService(
     def create(self, data: RoleCompetenceCreate) -> RoleCompetence:
         # 1. Vérifier si le code existe déjà
         if self.repo.get_by_id(data.code):
-            raise ConflictException(f"Le rôle avec le code '{data.code}' existe déjà.")
+            raise AppException(ErrorRegistry.ROLE_COMP_DUPLICATE, code=data.code)
 
         # 2. Vérifier si la catégorie parente existe
         cat = self.repo.db.get(CategorieRole, data.categorie_code)
         if not cat:
-            raise NotFoundException(f"Catégorie '{data.categorie_code}' introuvable.")
+            raise AppException(ErrorRegistry.ROLE_CAT_NOT_FOUND)
 
         db_obj = RoleCompetence.model_validate(data)
         return self.repo.create(db_obj)
@@ -45,7 +46,7 @@ class RoleCompetenceService(
         if "categorie_code" in update_data and update_data["categorie_code"]:
             cat = self.repo.db.get(CategorieRole, update_data["categorie_code"])
             if not cat:
-                raise NotFoundException("Nouvelle catégorie introuvable.")
+                raise AppException(ErrorRegistry.ROLE_CAT_NOT_FOUND)
 
         return self.repo.update(obj, update_data)
 
