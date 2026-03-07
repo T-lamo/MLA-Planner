@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Any, cast
+from typing import Any, List, cast
 
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
@@ -246,6 +246,30 @@ class PlanningServiceSvc(
 
         except Exception as e:
             logger.error(f"Erreur get_full_planning ID {planning_id}: {str(e)}")
+            raise
+
+    def list_by_ministere(self, ministere_id: str) -> List[PlanningFullRead]:
+        """Retourne tous les plannings complets dont l'activité est organisée
+        par un ministère donné, avec activite + slots + affectations chargés."""
+        try:
+            query = (
+                select(PlanningService)
+                .join(Activite)
+                .where(Activite.ministere_organisateur_id == ministere_id)
+                .where(
+                    PlanningService.deleted_at == None  # noqa: E711
+                )  # pylint: disable=C0121
+                .options(
+                    selectinload(cast(Any, PlanningService.activite)),
+                    selectinload(cast(Any, PlanningService.slots))
+                    .selectinload(cast(Any, Slot.affectations))
+                    .selectinload(cast(Any, Affectation.membre)),
+                )
+            )
+            results = self.db.exec(query).unique().all()
+            return [PlanningFullRead.model_validate(p) for p in results]
+        except Exception as e:
+            logger.error(f"Erreur list_by_ministere {ministere_id}: {str(e)}")
             raise
 
     def get_member_agenda_full(
