@@ -2,13 +2,17 @@ from fastapi import Depends, status
 from sqlmodel import Session
 
 from conf.db.database import Database
+from core.auth.auth_dependencies import get_current_active_user
 from mla_enum.custom_enum import PlanningStatusCode
 from models import (
+    DataListResponse,
+    DataResponse,
     PlanningServiceCreate,
     PlanningServiceRead,
     PlanningServiceUpdate,
     SlotCreate,
     SlotRead,
+    Utilisateur,
 )
 from models.planning_model import (
     PlanningFullCreate,
@@ -140,12 +144,32 @@ def delete_full_planning_endpoint(
     svc.delete_full_planning(planning_id)
 
 
-@router.get("/{planning_id}/full", response_model=PlanningFullRead)
+@router.get("/{planning_id}/full", response_model=DataResponse[PlanningFullRead])
 def read_full_planning(
     planning_id: str, db: Session = Depends(Database.get_db_for_route)
 ):
     svc = PlanningServiceSvc(db)
-    # On récupère d'abord les infos de base pour vérifier la sécurité
-    # planning = svc.get_one(id)
+    return {"data": svc.get_full_planning(planning_id)}
 
-    return svc.get_full_planning(planning_id)
+
+@router.get(
+    "/by-ministere/{ministere_id}",
+    response_model=DataListResponse[PlanningFullRead],
+    summary="Plannings d'un ministère",
+    description=(
+        "Retourne tous les plannings complets (activité + slots + affectations) "
+        "organisés par un ministère donné. Accessible à tout utilisateur authentifié."
+    ),
+)
+def list_by_ministere(
+    ministere_id: str,
+    db: Session = Depends(Database.get_db_for_route),
+    _: Utilisateur = Depends(get_current_active_user),
+):
+    svc = PlanningServiceSvc(db)
+    return {"data": svc.list_by_ministere(ministere_id)}
+
+
+# Garantit que les routes littérales (ex: /by-ministere/..., /full, /slots)
+# sont évaluées avant les routes paramétriques (ex: /{planning_id}).
+router.routes.sort(key=lambda r: (1 if "{" in getattr(r, "path", "") else 0))
