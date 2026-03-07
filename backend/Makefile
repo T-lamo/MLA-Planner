@@ -74,7 +74,7 @@ test-debug:
 
 # --- BASE DE DONNEES (DEV) ---
 db-reset:
-	DATABASE_URL=$(DB_TEST_URL) $(PYTHON) $(DB_ADMIN_SCRIPT) reset
+	$(PYTHON) $(DB_ADMIN_SCRIPT) reset
 
 db-seed:
 	$(PYTHON) $(DB_ADMIN_SCRIPT) seed

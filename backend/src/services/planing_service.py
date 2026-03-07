@@ -272,6 +272,31 @@ class PlanningServiceSvc(
             logger.error(f"Erreur list_by_ministere {ministere_id}: {str(e)}")
             raise
 
+    def list_my_plannings_full(self, membre_id: str) -> List[PlanningFullRead]:
+        """Retourne tous les plannings complets où l'utilisateur connecté
+        est affecté dans au moins un slot (vue calendrier personnelle)."""
+        try:
+            query = (
+                select(PlanningService)
+                .join(cast(Any, PlanningService.slots))
+                .join(cast(Any, Slot.affectations))
+                .where(Affectation.membre_id == membre_id)
+                .where(
+                    PlanningService.deleted_at == None  # noqa: E711
+                )  # pylint: disable=C0121
+                .options(
+                    selectinload(cast(Any, PlanningService.activite)),
+                    selectinload(cast(Any, PlanningService.slots))
+                    .selectinload(cast(Any, Slot.affectations))
+                    .selectinload(cast(Any, Affectation.membre)),
+                )
+            )
+            results = self.db.exec(query).unique().all()
+            return [PlanningFullRead.model_validate(p) for p in results]
+        except Exception as e:
+            logger.error(f"Erreur list_my_plannings_full {membre_id}: {str(e)}")
+            raise
+
     def get_member_agenda_full(
         self, membre_id: str, campus_id: str, start: datetime, end: datetime
     ):
