@@ -41,6 +41,7 @@ class MembreBase(SQLModel):
     email: Optional[EmailStr] = Field(default=None, max_length=100)
     telephone: Optional[str] = Field(default=None, max_length=20)
     actif: bool = Field(default=True)
+    campus_principal_id: Optional[str] = None
 
     @field_validator("nom", "prenom")
     @classmethod
@@ -106,6 +107,7 @@ class MembreUpdate(SQLModel):
     campus_ids: Optional[List[str]] = None
     ministere_ids: Optional[List[str]] = None
     pole_ids: Optional[List[str]] = None
+    campus_principal_id: Optional[str] = None
 
 
 # -------------------------

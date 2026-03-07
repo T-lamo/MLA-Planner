@@ -67,6 +67,7 @@ const handleFormSubmit = async (formData: ProfilCreateFull) => {
         telephone: formData.telephone,
         actif: formData.actif,
         campus_ids: formData.campus_ids,
+        campus_principal_id: formData.campus_principal_id ?? null,
         ministere_ids: formData.ministere_ids,
         pole_ids: formData.pole_ids,
         role_codes: formData.role_codes,
@@ -78,6 +79,9 @@ const handleFormSubmit = async (formData: ProfilCreateFull) => {
         }
         if (formData.utilisateur.password) {
           updatePayload.utilisateur.password = formData.utilisateur.password
+        }
+        if (formData.utilisateur.roles_ids?.length) {
+          updatePayload.utilisateur.roles_ids = formData.utilisateur.roles_ids
         }
       }
       await update(editingProfile.value.id, updatePayload)

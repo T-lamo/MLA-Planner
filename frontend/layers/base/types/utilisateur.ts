@@ -13,5 +13,5 @@ export interface UtilisateurRead extends UtilisateurBase {
 
 export interface UtilisateurWrite extends UtilisateurBase {
   password?: string
-  roles_ids: UUID[]
+  roles_ids?: UUID[]
 }

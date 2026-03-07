@@ -26,6 +26,7 @@ export interface ProfilReadFull {
   campuses: CampusRead[]
   ministeres: MinistereSimple[]
   poles: PoleSimple[]
+  campus_principal_id?: string | null
 }
 
 export interface ProfilCreateFull {
@@ -38,11 +39,19 @@ export interface ProfilCreateFull {
   ministere_ids: UUID[]
   pole_ids: UUID[]
   role_codes?: string[]
+  campus_principal_id?: string | null
   utilisateur?: UtilisateurWrite
 }
 
 export interface ProfilUpdateFull extends Partial<Omit<ProfilCreateFull, 'utilisateur'>> {
   utilisateur?: Partial<UtilisateurWrite>
+}
+
+export interface ProfilSelfUpdate {
+  nom?: string
+  prenom?: string
+  email?: string
+  telephone?: string | null
 }
 
 export type ProfilesPaginationResponse = PaginatedResponse<ProfilReadFull>

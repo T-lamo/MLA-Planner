@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useCampusStore } from './useCampusStore'
+import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 
 export const useUIStore = defineStore('ui', () => {
   // --- Dependency Injection ---
@@ -37,23 +38,25 @@ export const useUIStore = defineStore('ui', () => {
   async function initializeUI() {
     // 1. Fetch campuses if the domain store is empty
     if (campusStore.items.length === 0) {
-      // We fetch with a large limit to ensure we have the referential list for the UI
       await campusStore.fetchAll({ limit: 100, offset: 0 })
     }
 
-    // 2. Default Selection Logic
-    // If no ID is selected or the selected ID no longer exists in the list
-    const exists = campusStore.items.some((c) => c.id === selectedCampusId.value)
+    // 2. Si l'utilisateur a déjà sélectionné un campus valide dans la session, on le conserve
+    const currentIsValid = campusStore.items.some((c) => c.id === selectedCampusId.value)
+    if (selectedCampusId.value && currentIsValid) return
 
-    // 1. Vérification de l'existence et de l'expiration
-    if (!selectedCampusId.value || !exists) {
-      if (campusStore.items && campusStore.items.length > 0) {
-        const firstCampus = campusStore.items[0]
+    // 3. Priorité 1 : campus principal de l'utilisateur connecté
+    const authStore = useAuthStore()
+    const principalId = authStore.currentUser?.campusPrincipalId
+    if (principalId && campusStore.items.some((c) => c.id === principalId)) {
+      selectedCampusId.value = principalId
+      return
+    }
 
-        if (firstCampus) {
-          selectedCampusId.value = firstCampus.id
-        }
-      }
+    // 4. Fallback : premier campus de la liste
+    const firstCampus = campusStore.items[0]
+    if (firstCampus) {
+      selectedCampusId.value = firstCampus.id
     }
   }
 

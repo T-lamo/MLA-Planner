@@ -26,6 +26,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   const currentUser = computed(() => user.value)
 
+  const isSuperAdmin = computed(() => user.value?.roles?.includes('Super Admin') ?? false)
+  const isAdmin = computed(() => user.value?.roles?.includes('Admin') ?? false)
+  const hasAdminAccess = computed(() => isSuperAdmin.value || isAdmin.value)
+
   // --- ACTIONS ---
 
   async function login(credentials: Record<'username' | 'password', string>) {
@@ -104,6 +108,9 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     expiresAt,
     isAuthenticated,
+    isSuperAdmin,
+    isAdmin,
+    hasAdminAccess,
     currentUser,
     login,
     logout,

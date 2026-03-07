@@ -10,6 +10,8 @@ from core.auth.security import create_access_token, get_password_hash, verify_pa
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models import Utilisateur
+from models.role_model import RoleRead
+from models.utilisateur_model import UtilisateurRead
 
 
 class AuthService:
@@ -67,11 +69,30 @@ class AuthService:
 
         token, expire = create_access_token(data=token_data)
 
+        campus_principal_id = user.membre.campus_principal_id if user.membre else None
+        name = (
+            f"{user.membre.prenom} {user.membre.nom}" if user.membre else user.username
+        )
+        roles = [
+            RoleRead(libelle=aff.role.libelle, id=aff.role.id)
+            for aff in user.affectations
+            if aff.role
+        ]
+        user_read = UtilisateurRead(
+            id=user.id,
+            username=user.username,
+            actif=user.actif,
+            membre_id=user.membre_id,
+            campus_principal_id=campus_principal_id,
+            name=name,
+            roles=roles,
+        )
+
         return {
             "access_token": token,
             "token_type": "bearer",
             "expires_at": expire.isoformat(),
-            "user": user,
+            "user": user_read,
         }
 
     def change_password(

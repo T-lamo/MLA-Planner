@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { User, MapPin, Building2, ShieldCheck, Info, Award } from 'lucide-vue-next'
 import { useProfileFormLogic } from '../../composables/useProfileFormLogic'
 import { useDraftProfile } from '../../composables/useDraftProfile'
@@ -43,6 +43,7 @@ const form = ref<ProfilCreateFull>({
   telephone: '',
   actif: true,
   campus_ids: [],
+  campus_principal_id: null,
   ministere_ids: [],
   pole_ids: [],
   role_codes: [],
@@ -88,6 +89,7 @@ const resetForm = () => {
     telephone: '',
     actif: true,
     campus_ids: [],
+    campus_principal_id: null,
     ministere_ids: [],
     pole_ids: [],
     role_codes: [],
@@ -131,6 +133,31 @@ watch(
   },
   { deep: true },
 )
+
+// Auto-sélection du campus principal
+watch(
+  () => form.value.campus_ids,
+  (ids) => {
+    if (ids.length === 1) {
+      form.value.campus_principal_id = ids[0]
+    } else if (form.value.campus_principal_id && !ids.includes(form.value.campus_principal_id)) {
+      form.value.campus_principal_id = ids.length === 1 ? ids[0] : null
+    }
+  },
+)
+
+const onSetPrincipal = (id: string) => {
+  form.value.campus_principal_id = id
+}
+
+const campusBadge = computed<string | number | undefined>(() => {
+  if (form.value.campus_ids.length === 0) return undefined
+  if (form.value.campus_principal_id) {
+    const principal = props.campuses.find((c) => c.id === form.value.campus_principal_id)
+    return principal?.nom ?? form.value.campus_ids.length
+  }
+  return form.value.campus_ids.length
+})
 
 // --- HANDLERS ÉVÉNEMENTS ---
 const onToggleMin = (min: MinistereReadWithRelations) => {
@@ -208,10 +235,22 @@ const handleSubmit = () => {
         title="Affectation Campus"
         :icon="MapPin"
         :isOpen="activeSections.has('campus')"
-        :badge="form.campus_ids.length > 0 ? form.campus_ids.length : undefined"
+        :badge="campusBadge"
         @toggle="toggleSection('campus')"
       >
-        <ProfileCampusSelector v-model="form.campus_ids" :campuses="campuses" />
+        <ProfileCampusSelector
+          v-model="form.campus_ids"
+          :campuses="campuses"
+          :principalId="form.campus_principal_id"
+          @set-principal="onSetPrincipal"
+        />
+        <div
+          v-if="form.campus_ids.length > 1 && !form.campus_principal_id"
+          class="mt-2 flex items-center gap-1 text-[11px] text-amber-600"
+        >
+          <Info class="size-3 shrink-0" />
+          <span>Cliquez sur la couronne d'un campus pour le définir comme principal.</span>
+        </div>
       </FormSection>
 
       <FormSection
@@ -247,7 +286,10 @@ const handleSubmit = () => {
         :badge="form.utilisateur ? 'Actif' : undefined"
         @toggle="toggleSection('security')"
       >
-        <ProfileSecurityAccess v-model="form.utilisateur" />
+        <ProfileSecurityAccess
+          v-model="form.utilisateur"
+          :existingRoles="editingProfile?.utilisateur?.roles ?? []"
+        />
       </FormSection>
 
       <div class="mt-4 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50/50 p-4">

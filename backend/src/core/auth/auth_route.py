@@ -73,17 +73,29 @@ def change_password(
 # ---------------------------
 # UTILISATEUR ACTIF (ME)
 # ---------------------------
-@router.get(
-    "/users/me", response_model=Any
-)  # Tu peux créer un schéma UserRead plus tard
+@router.get("/users/me", response_model=Any)
 async def read_users_me(
     current_user: Utilisateur = Depends(get_current_active_user),
-) -> Utilisateur:
+) -> dict:
     """
     Retourne les informations de l'utilisateur actuellement connecté
     extraites de la base de données via le token.
     """
-    return current_user
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "actif": current_user.actif,
+        "membre_id": current_user.membre_id,
+        "campus_principal_id": (
+            current_user.membre.campus_principal_id if current_user.membre else None
+        ),
+        "name": (
+            f"{current_user.membre.prenom} {current_user.membre.nom}"
+            if current_user.membre
+            else current_user.username
+        ),
+        "roles": [aff.role.libelle for aff in current_user.affectations if aff.role],
+    }
 
 
 # ---------------------------
