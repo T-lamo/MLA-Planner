@@ -4,13 +4,10 @@ import { ref, reactive, watch } from 'vue'
 import { useUIStore } from './useUiStore'
 import type { ProfilReadFull, ProfilCreateFull, ProfilUpdateFull } from '../../types/profiles'
 import { ProfileRepository } from '../repositories/ProfileRepository'
-import { useMinistereStore } from './useMinistereStore'
 
 export const useProfileStore = defineStore('profile', () => {
   const uiStore = useUIStore()
   const notify = useMLANotify()
-  const ministereStore = useMinistereStore()
-
   const repository = new ProfileRepository()
 
   const profiles = ref<ProfilReadFull[]>([])
@@ -105,7 +102,6 @@ export const useProfileStore = defineStore('profile', () => {
     () => {
       pagination.offset = 0
       fetchProfiles()
-      ministereStore.fetchFullById('740ab849-699f-4c53-b08e-2e35096498ce')
     },
   )
 

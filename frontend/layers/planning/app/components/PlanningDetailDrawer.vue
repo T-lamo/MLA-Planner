@@ -54,27 +54,34 @@
 
       <div class="space-y-3">
         <p class="text-[10px] font-bold text-slate-400 uppercase">Équipe Assignée</p>
-        <div class="flex flex-wrap gap-2">
+        <div
+          v-if="event.extendedProps.membres?.length"
+          class="flex flex-wrap gap-2"
+        >
           <div
-            v-for="member in event.extendedProps.membreIds"
-            :key="member"
-            class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm"
+            v-for="member in event.extendedProps.membres"
+            :key="member.id"
+            class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white
+                   px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm"
           >
             <div
-              class="flex size-5 items-center justify-center rounded-full bg-slate-100 text-[8px] font-bold"
+              class="flex size-6 shrink-0 items-center justify-center rounded-full
+                     text-[9px] font-bold text-white"
+              :style="{ backgroundColor: event.backgroundColor }"
             >
-              {{ member.slice(-2).toUpperCase() }}
+              {{ member.prenom[0] }}{{ member.nom[0] }}
             </div>
-            {{ member }}
+            {{ member.prenom }} {{ member.nom }}
           </div>
         </div>
+        <p v-else class="text-xs italic text-slate-400">Aucun membre affecté</p>
       </div>
     </div>
 
     <template #footer>
       <div class="flex gap-3">
         <button
-          class="flex-1 rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-(--color-primary-700)"
+          class="flex-1 rounded-lg bg-primary-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-700"
         >
           Modifier
         </button>

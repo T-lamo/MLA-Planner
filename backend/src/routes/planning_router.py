@@ -153,6 +153,25 @@ def read_full_planning(
 
 
 @router.get(
+    "/my/calendar",
+    response_model=DataListResponse[PlanningFullRead],
+    summary="Plannings personnels de l'utilisateur connecté",
+    description=(
+        "Retourne tous les plannings complets où l'utilisateur connecté "
+        "est affecté dans au moins un créneau."
+    ),
+)
+def list_my_calendar(
+    current_user: Utilisateur = Depends(get_current_active_user),
+    db: Session = Depends(Database.get_db_for_route),
+):
+    if not current_user.membre_id:
+        return {"data": []}
+    svc = PlanningServiceSvc(db)
+    return {"data": svc.list_my_plannings_full(current_user.membre_id)}
+
+
+@router.get(
     "/by-ministere/{ministere_id}",
     response_model=DataListResponse[PlanningFullRead],
     summary="Plannings d'un ministère",

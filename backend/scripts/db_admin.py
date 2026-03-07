@@ -5,7 +5,6 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
 from conf.db.database import Database
-from conf.db.seed.seed_referential import SeedReferentials
 from conf.db.seed.seed_service import SeedService
 from sqlmodel import Session, SQLModel
 
@@ -38,16 +37,10 @@ def seed_db():
             print(f"❌ Erreur SeedService : {e}")
             sys.exit(1)
 
-    # SeedReferentials (référentiels de base + membres de démo)
-    with Session(engine) as session:
-        try:
-            SeedReferentials(session).run()
-            session.commit()
-            print("✅ SeedReferentials terminé.")
-        except Exception as e:
-            session.rollback()
-            print(f"❌ Erreur SeedReferentials : {e}")
-            sys.exit(1)
+    # SeedReferentials désactivé : ses données (campus "Toulouse", org "ICC_WORLD",
+    # pays "FRANCE", ministères "MLA"/"ACCUEIL"/"MFI") conflictent avec SeedService
+    # ("Campus Toulouse", "ICC Europe", "France", "Louange et Adoration"…).
+    # SeedService couvre désormais l'intégralité des données de référence.
 
     print("✅ Seeding terminé avec succès.")
 

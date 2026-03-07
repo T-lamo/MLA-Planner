@@ -59,9 +59,16 @@ export const usePlanning = () => {
     const color: MinistereColor =
       ministereColorMap.value.get(ministereId) ?? getMinistereColor(ministereId, ministereIds.value)
 
-    const membreIds = planning.slots
-      .flatMap((s) => s.affectations.map((a) => a.membre?.id ?? ''))
+    const allAffectations = planning.slots.flatMap((s) => s.affectations)
+
+    const membreIds = allAffectations
+      .map((a) => a.membre?.id ?? '')
       .filter(Boolean)
+
+    const membres = allAffectations
+      .filter((a): a is typeof a & { membre: NonNullable<typeof a.membre> } => a.membre != null)
+      .map((a) => ({ id: a.membre.id, prenom: a.membre.prenom, nom: a.membre.nom }))
+      .filter((m, idx, arr) => arr.findIndex((x) => x.id === m.id) === idx)
 
     const isPersonal =
       perspective.value === 'PERSONAL' ||
@@ -82,6 +89,7 @@ export const usePlanning = () => {
         typeActivite: planning.activite?.type ?? '',
         statut: planning.statut_code,
         membreIds,
+        membres,
         responsableId: '',
         isPersonal,
         ministereColor: color,

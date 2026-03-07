@@ -19,11 +19,11 @@ export interface MinistereColor {
 export const MINISTERE_PALETTE: readonly MinistereColor[] = [
   { bg: '#3B82F6', text: '#FFFFFF', light: '#EFF6FF', border: '#93C5FD' }, // bleu
   { bg: '#10B981', text: '#FFFFFF', light: '#ECFDF5', border: '#6EE7B7' }, // vert
-  { bg: '#F59E0B', text: '#FFFFFF', light: '#FFFBEB', border: '#FCD34D' }, // ambre
+  { bg: '#F59E0B', text: '#78350F', light: '#FFFBEB', border: '#FCD34D' }, // ambre — WCAG AA
   { bg: '#8B5CF6', text: '#FFFFFF', light: '#F5F3FF', border: '#C4B5FD' }, // violet
   { bg: '#EF4444', text: '#FFFFFF', light: '#FEF2F2', border: '#FCA5A5' }, // rouge
   { bg: '#06B6D4', text: '#FFFFFF', light: '#ECFEFF', border: '#67E8F9' }, // cyan
-  { bg: '#F97316', text: '#FFFFFF', light: '#FFF7ED', border: '#FDBA74' }, // orange
+  { bg: '#F97316', text: '#7C2D12', light: '#FFF7ED', border: '#FDBA74' }, // orange — WCAG AA
   { bg: '#EC4899', text: '#FFFFFF', light: '#FDF2F8', border: '#F9A8D4' }, // rose
   { bg: '#14B8A6', text: '#FFFFFF', light: '#F0FDFA', border: '#5EEAD4' }, // teal
   { bg: '#6366F1', text: '#FFFFFF', light: '#EEF2FF', border: '#A5B4FC' }, // indigo
@@ -59,6 +59,8 @@ export interface PlanningEventMetadata {
   statut: PlanningStatus
   membreIds: string[]
   responsableId: string
+  /** Membres affectés avec noms résolus (pour affichage drawer) */
+  membres?: Array<{ id: string; prenom: string; nom: string }>
   /** Vrai si l'utilisateur connecté est affecté à cet événement */
   isPersonal?: boolean
   /** Couleur calculée pour le ministère organisateur */

@@ -21,15 +21,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, h } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import allLocales from '@fullcalendar/core/locales-all'
-// Imports des types officiels
-import type { EventClickArg, DateSelectArg, CalendarOptions, EventApi } from '@fullcalendar/core'
+import type {
+  EventClickArg,
+  DateSelectArg,
+  CalendarOptions,
+  EventApi,
+  EventContentArg,
+} from '@fullcalendar/core'
 import type { PlanningEvent } from '../types/planning.types'
 
 const props = defineProps<{
@@ -107,84 +112,179 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   handleWindowResize: true,
   windowResizeDelay: 100,
 
-  // Utilisation des types d'arguments de FullCalendar
   eventClick: (info: EventClickArg) => emit('event-click', info.event),
   select: (info: DateSelectArg) => emit('date-select', info),
 
   eventClassNames: (arg: { event: EventApi }) => {
     const isPersonal = arg.event.extendedProps.isPersonal ? 'is-personal' : ''
-    // On convertit le statut en chaîne de caractères pour plus de sécurité
     const status = String(arg.event.extendedProps.statut || 'brouillon').toLowerCase()
-    return ['mla-calendar-event', `status-${status}`, isPersonal]
+    return ['mla-calendar-event', `status-${status}`, isPersonal].filter(Boolean)
+  },
+
+  // Vue liste : dot coloré par ministère + titre
+  eventContent: (arg: EventContentArg) => {
+    if (arg.view.type.startsWith('list')) {
+      return h('div', { class: 'fc-list-custom-event' }, [
+        h('span', {
+          class: 'list-event-dot',
+          style: { backgroundColor: arg.event.backgroundColor },
+        }),
+        h('span', { class: 'list-event-title' }, arg.event.title),
+      ])
+    }
+    return true
   },
 }))
 </script>
 <style>
 @reference "~~/layers/base/app/assets/css/main.css";
 
-/* Base FullCalendar */
+/* ── Variables FullCalendar ─────────────────────────────────────────── */
 .fc {
   @apply p-2 font-sans text-slate-700 md:p-4;
   --fc-border-color: #f1f5f9;
   --fc-button-bg-color: #ffffff;
   --fc-button-border-color: #e2e8f0;
   --fc-button-text-color: #475569;
+  --fc-button-hover-bg-color: #f8fafc;
+  --fc-button-hover-border-color: #cbd5e1;
+  --fc-button-active-bg-color: var(--color-primary-600);
+  --fc-button-active-border-color: var(--color-primary-600);
   --fc-now-indicator-color: var(--color-primary-600);
 }
 
-/* Toolbar Responsive */
+/* ── Toolbar ────────────────────────────────────────────────────────── */
 .fc .fc-toolbar {
   @apply mb-6 flex-col gap-3 md:flex-row;
 }
-
 .fc .fc-toolbar-title {
-  @apply text-base font-bold text-slate-800 capitalize md:text-lg;
+  @apply text-base font-bold capitalize text-slate-800 md:text-lg;
 }
 
-/* Boutons plus gros sur mobile pour le tactile */
+/* ── Boutons ────────────────────────────────────────────────────────── */
 .fc .fc-button {
-  @apply px-2 py-2 text-[10px] font-semibold shadow-none transition-all outline-none md:px-4 md:text-xs;
+  @apply px-2 py-2 text-[10px] font-semibold shadow-none outline-none transition-all md:px-4 md:text-xs;
+  border-radius: 8px;
+}
+.fc .fc-button-active,
+.fc .fc-button:focus-visible {
+  background-color: var(--color-primary-600) !important; /* active state — FullCalendar override */
+  border-color: var(--color-primary-600) !important;
+  color: #ffffff !important;
+}
+.fc .fc-button:hover:not(.fc-button-active) {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
 }
 
-/* Optimisation Mobile des Grilles */
+/* ── Responsive mobile ──────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .fc .fc-daygrid-day-number {
     @apply p-1 text-xs;
   }
-
-  /* Cacher les colonnes de temps trop larges sur petit écran */
   .fc .fc-timegrid-axis-cushion {
     @apply p-0 text-[10px];
   }
-
   .fc .fc-toolbar-chunk {
     @apply flex w-full justify-center;
   }
 }
 
-/* Style des événements */
+/* ── Événements — base ──────────────────────────────────────────────── */
+/* NE PAS écraser background-color ni border-color ici :
+   FullCalendar les pose en inline style depuis backgroundColor/borderColor de l'event */
 .fc-timegrid-event {
-  @apply rounded-lg border-l-4 border-l-(--color-primary-600)! bg-(--color-primary-50)! shadow-sm;
+  @apply rounded-lg shadow-sm;
+  border-left-width: 4px; /* épaissit la bordure gauche déjà colorée inline */
 }
 
 .mla-calendar-event {
-  @apply cursor-pointer rounded-md border-none px-1 py-0.5 text-[10px] font-medium shadow-sm transition-transform active:scale-95 md:px-2 md:text-xs;
+  @apply cursor-pointer rounded-md border-none px-1 py-0.5 text-[10px]
+         font-medium shadow-sm transition-transform active:scale-95 md:px-2 md:text-xs;
 }
 
+/* ── Indicateur événement personnel ────────────────────────────────── */
 .mla-calendar-event.is-personal {
-  @apply ring-2 ring-(--color-primary-500) ring-offset-1;
+  position: relative;
+}
+.mla-calendar-event.is-personal::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  z-index: 2;
 }
 
-.fc-v-event {
-  @apply bg-(--color-primary-600);
+/* ── Statuts ────────────────────────────────────────────────────────── */
+.status-brouillon {
+  opacity: 0.85;
+  position: relative;
+}
+.status-brouillon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.22) 4px,
+    rgba(255, 255, 255, 0.22) 8px
+  );
+  pointer-events: none;
 }
 
-.fc-timegrid-now-indicator-line {
-  @apply border-(--color-primary-600);
+/* ANNULE / TERMINE : override du bg inline de FullCalendar — voulu */
+.status-annule {
+  background-color: #94a3b8 !important; /* slate-400 — remplace couleur ministère */
+  border-color: #94a3b8 !important;
+  color: #ffffff !important;
+}
+.status-annule .fc-event-title {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 255, 255, 0.7);
 }
 
-/* Ajustement pour la vue liste sur mobile */
+.status-termine {
+  background-color: #e2e8f0 !important; /* slate-200 — remplace couleur ministère */
+  border-color: #cbd5e1 !important;
+  color: #64748b !important; /* slate-500 */
+  opacity: 0.75;
+}
+
+/* ── Vue liste — custom eventContent ───────────────────────────────── */
 .fc-list-event {
-  @apply cursor-pointer hover:bg-slate-50;
+  @apply cursor-pointer;
+}
+.fc-list-event:hover td {
+  @apply bg-slate-50;
+}
+.fc-list-custom-event {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+}
+.list-event-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.list-event-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+/* ── Indicateur "maintenant" ────────────────────────────────────────── */
+.fc-timegrid-now-indicator-line {
+  @apply border-primary-600;
 }
 </style>
