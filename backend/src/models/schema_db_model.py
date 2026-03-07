@@ -192,6 +192,9 @@ class Membre(MembreBase, table=True):  # type: ignore
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     date_inscription: datetime = Field(default_factory=datetime.now)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
+    campus_principal_id: Optional[str] = Field(
+        default=None, foreign_key="t_campus.id", ondelete="SET NULL"
+    )
 
     # Relations N:N (Architecture Flexible)
     campuses: List["Campus"] = Relationship(

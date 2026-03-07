@@ -16,10 +16,10 @@
 
       <div v-if="!collapsed" class="flex flex-1 flex-col overflow-hidden text-left">
         <span class="truncate text-sm font-bold text-slate-900">
-          {{ authStore.user?.name || 'Utilisateur MLA' }}
+          {{ authStore.user?.name || authStore.user?.username || 'Utilisateur' }}
         </span>
         <span class="truncate text-xs text-slate-500">
-          {{ authStore.user?.role || 'Responsable' }}
+          {{ authStore.user?.roles?.[0] ?? '' }}
         </span>
       </div>
 
@@ -34,29 +34,11 @@
       class="absolute bottom-full left-0 z-50 mb-2 w-full min-w-[200px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
     >
       <div class="px-3 py-2 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-        Paramètres
+        Mon compte
       </div>
-      <button class="menu-item" @click="navigate('/profile')">
+      <button class="menu-item" @click="navigate('/settings/profile')">
         <User class="size-4" />
         <span>Mon Profil</span>
-      </button>
-      <button class="menu-item" @click="navigate('/settings')">
-        <Settings class="size-4" />
-        <span>Préférences</span>
-      </button>
-
-      <div class="my-1 border-t border-slate-100" />
-      <div
-        class="px-3 py-2 text-[10px] font-bold tracking-widest text-(--color-primary-600) uppercase"
-      >
-        Administration
-      </div>
-      <button
-        class="menu-item bg-slate-50 font-bold text-(--color-primary-600) hover:bg-(--color-primary-600) hover:text-white"
-        @click="navigate('/admin/profiles')"
-      >
-        <ShieldCheck class="size-4" />
-        <span>Gestion des Profils</span>
       </button>
 
       <div class="my-1 border-t border-slate-100" />
@@ -66,34 +48,6 @@
         <span>Déconnexion</span>
       </button>
     </div>
-
-    <!-- <Transition name="fade-slide">
-      <div
-        v-if="isDropdownOpen"
-        class="absolute bottom-full left-0 z-50 mb-2 w-full min-w-[200px] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
-      >
-        <div class="px-3 py-2 text-xs font-semibold tracking-wider text-slate-400 uppercase">
-          Paramètres
-        </div>
-
-        <button class="menu-item" @click="navigate('/profile')">
-          <User class="size-4" />
-          <span>Mon Profil</span>
-        </button>
-
-        <button class="menu-item" @click="navigate('/settings')">
-          <Settings class="size-4" />
-          <span>Préférences</span>
-        </button>
-
-        <div class="my-1 border-t border-slate-100" />
-
-        <button class="menu-item text-red-600 hover:bg-red-50" @click="handleLogout">
-          <LogOut class="size-4" />
-          <span>Déconnexion</span>
-        </button>
-      </div>
-    </Transition> -->
 
     <div
       v-if="isDropdownOpen"
@@ -105,20 +59,16 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ShieldCheck, ChevronUp, User, LogOut, Settings } from 'lucide-vue-next'
+import { ChevronUp, User, LogOut } from 'lucide-vue-next'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 
-// Propriété transmise par le Layout (default.vue)
-const _props = defineProps<{
-  collapsed: boolean
-}>()
+defineProps<{ collapsed: boolean }>()
 
 const authStore = useAuthStore()
 const isDropdownOpen = ref(false)
 
-// Calcul des initiales (ex: "Amos Dorceus" -> "AD")
 const userInitials = computed(() => {
-  const name = authStore.user?.name || 'Admin'
+  const name = authStore.user?.name || authStore.user?.username || '?'
   return name
     .split(' ')
     .map((word) => word[0])
@@ -127,43 +77,26 @@ const userInitials = computed(() => {
     .slice(0, 2)
 })
 
-// Navigation programmatique
 const navigate = (path: string) => {
   isDropdownOpen.value = false
   navigateTo(path)
 }
 
-// Logique de déconnexion
 const handleLogout = async () => {
   isDropdownOpen.value = false
   try {
     await authStore.logout()
     await navigateTo('/login')
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Logout failed:', error)
+  } catch {
+    // logout failure is silent — user stays on current page
   }
 }
 </script>
 
 <style scoped>
-/* On importe les références du thème pour que @apply fonctionne.
-  Ajuste le chemin selon l'emplacement de ton fichier CSS principal.
-*/
 @reference "../assets/css/main.css";
 
 .menu-item {
   @apply flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-slate-50;
-}
-
-/* Animation du Dropdown */
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: all 0.2s ease;
-}
-.fade-slide-enter-from,
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
 }
 </style>

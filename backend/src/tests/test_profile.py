@@ -12,6 +12,7 @@ from models import (
     UtilisateurUpdate,
 )
 from models.schema_db_model import (
+    Campus,
     Membre,
 )
 from services.profile_service import ProfileService
@@ -323,3 +324,183 @@ class TestProfileService:
         assert all(
             any(c.id == seed_data["campus_id"] for c in p.campuses) for p in filtered
         )
+
+    # --- TESTS CAMPUS PRINCIPAL ---
+
+    def test_create_profil_auto_assigns_single_campus_principal(
+        self, session: Session, seed_data
+    ):
+        """Un seul campus fourni → campus_principal_id auto-assigné."""
+        service = ProfileService(session)
+
+        profil_in = ProfilCreateFull(
+            nom="PRINCIPAL",
+            prenom="Auto",
+            email=f"p1_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"]],
+            utilisateur=UtilisateurCreate(
+                username=f"p1_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"p1_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+        result = service.create(profil_in)
+
+        assert result.campus_principal_id == seed_data["campus_id"]
+
+    def test_create_profil_no_auto_assign_multiple_campuses(
+        self, session: Session, seed_data
+    ):
+        """Plusieurs campus sans campus_principal_id explicite → None."""
+        service = ProfileService(session)
+
+        # Créer un second campus
+
+        campus2 = Campus(
+            id=str(uuid4()),
+            nom="Campus Lyon",
+            ville="Lyon",
+            pays_id=seed_data["pays_id"],
+            timezone="Europe/Paris",
+        )
+        session.add(campus2)
+        session.flush()
+
+        profil_in = ProfilCreateFull(
+            nom="MULTI",
+            prenom="Campus",
+            email=f"p2_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"], campus2.id],
+            utilisateur=UtilisateurCreate(
+                username=f"p2_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"p2_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+        result = service.create(profil_in)
+
+        assert result.campus_principal_id is None
+
+    def test_create_profil_explicit_campus_principal_valid(
+        self, session: Session, seed_data
+    ):
+        """campus_principal_id explicite et dans campus_ids → stocké."""
+        service = ProfileService(session)
+
+        profil_in = ProfilCreateFull(
+            nom="EXPLICIT",
+            prenom="Principal",
+            email=f"p3_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"]],
+            campus_principal_id=seed_data["campus_id"],
+            utilisateur=UtilisateurCreate(
+                username=f"p3_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"p3_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+        result = service.create(profil_in)
+
+        assert result.campus_principal_id == seed_data["campus_id"]
+
+    def test_create_profil_invalid_campus_principal_raises_error(
+        self, session: Session, seed_data
+    ):
+        """campus_principal_id hors campus_ids →
+        CORE_ACTION_IMPOSSIBLE (create rewrap)."""
+        service = ProfileService(session)
+
+        profil_in = ProfilCreateFull(
+            nom="INVALID",
+            prenom="Principal",
+            email=f"p4_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"]],
+            campus_principal_id=str(uuid4()),  # ID inexistant
+            utilisateur=UtilisateurCreate(
+                username=f"p4_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"p4_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+
+        with pytest.raises(AppException) as exc:
+            service.create(profil_in)
+        assert exc.value.code == "CORE_002"
+
+    def test_update_clears_principal_when_principal_campus_removed(
+        self, session: Session, seed_data
+    ):
+        """Retirer le campus principal de campus_ids
+        → campus_principal_id auto-effacé."""
+        service = ProfileService(session)
+
+        campus2 = Campus(
+            id=str(uuid4()),
+            nom="Campus Bordeaux",
+            ville="Bordeaux",
+            pays_id=seed_data["pays_id"],
+            timezone="Europe/Paris",
+        )
+        session.add(campus2)
+        session.flush()
+
+        # Créer avec 2 campus, principal = campus_id
+        profil_in = ProfilCreateFull(
+            nom="CLEAR",
+            prenom="Principal",
+            email=f"p5_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"], campus2.id],
+            campus_principal_id=seed_data["campus_id"],
+            utilisateur=UtilisateurCreate(
+                username=f"p5_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"p5_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+        created = service.create(profil_in)
+        assert created.campus_principal_id == seed_data["campus_id"]
+
+        # Update : enlever le campus principal → auto-assign sur campus2 (seul restant)
+        updated = service.update(
+            created.id,
+            ProfilUpdateFull(campus_ids=[campus2.id]),
+        )
+        assert updated.campus_principal_id == campus2.id
+
+    def test_update_explicit_campus_principal_on_update(
+        self, session: Session, seed_data
+    ):
+        """campus_principal_id explicite sur update → validé et stocké."""
+        service = ProfileService(session)
+
+        campus2 = Campus(
+            id=str(uuid4()),
+            nom="Campus Nantes",
+            ville="Nantes",
+            pays_id=seed_data["pays_id"],
+            timezone="Europe/Paris",
+        )
+        session.add(campus2)
+        session.flush()
+
+        profil_in = ProfilCreateFull(
+            nom="SWITCH",
+            prenom="Principal",
+            email=f"p6_{uuid4().hex[:6]}@test.com",
+            campus_ids=[seed_data["campus_id"], campus2.id],
+            campus_principal_id=seed_data["campus_id"],
+            utilisateur=UtilisateurCreate(
+                username=f"p6_{uuid4().hex[:6]}",
+                password="Password123!",
+                email=f"p6_{uuid4().hex[:6]}@test.com",
+            ),
+        )
+        created = service.create(profil_in)
+        assert created.campus_principal_id == seed_data["campus_id"]
+
+        # Changer le campus principal vers campus2
+        updated = service.update(
+            created.id,
+            ProfilUpdateFull(campus_principal_id=campus2.id),
+        )
+        assert updated.campus_principal_id == campus2.id

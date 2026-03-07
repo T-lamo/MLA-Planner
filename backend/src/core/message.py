@@ -298,6 +298,11 @@ class ErrorRegistry:
         message="Un profil avec cet email existe déjà.",
         http_status=status.HTTP_409_CONFLICT,
     )
+    PROFIL_CAMPUS_PRINCIPAL_INVALID = ErrorDetail(
+        code="PROF_004",
+        message="Le campus principal doit être parmi les campus affectés au membre.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
 
     # --- DOMAINE CORE / GÉNÉRIQUE (CORE) ---
     CORE_RESOURCE_NOT_FOUND = ErrorDetail(

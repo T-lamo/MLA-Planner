@@ -9,15 +9,16 @@ from sqlmodel import Session, SQLModel, select
 from conf.db.database import Database  # Adapter l'import selon ton projet
 from models import (
     Campus,
+    Membre,
     Ministere,
     OrganisationICC,
     Pays,
     Permission,
-    Role,
     StatutAffectation,
     StatutPlanning,
     TypeResponsabilite,
 )
+from models.schema_db_model import MembreCampusLink
 
 # Configuration du Logger
 console = Console()
@@ -78,11 +79,7 @@ class SeedReferentials:
                 self.get_or_create_upsert(TypeResponsabilite, {"code": c}, {})
 
             # --- GROUPE B : Sécurité (Correction F841: suppression p_admin) ---
-            self.get_or_create_upsert(
-                Permission, {"code": "ALL_ACCESS"}, {"nom": "Accès Total"}
-            )
-            self.get_or_create_upsert(Role, {"id": "ADMIN_ID"}, {"nom": "Admin"})
-            self.get_or_create_upsert(Role, {"id": "MEMBRE_ID"}, {"nom": "Membre"})
+            self.get_or_create_upsert(Permission, {"code": "ALL_ACCESS"}, {})
 
             # --- GROUPE C : Hiérarchie (Correction E501: split des lignes) ---
             org = self.get_or_create_upsert(
@@ -116,6 +113,57 @@ class SeedReferentials:
                 if campus_tls not in ministere.campuses:
                     ministere.campuses.append(campus_tls)
                     self.session.add(ministere)
+
+            # Second campus for multi-campus demo
+            campus_mrs = self.get_or_create_upsert(
+                Campus,
+                {"nom": "Marseille"},
+                {
+                    "ville": "Marseille",
+                    "pays_id": pays_fr.id,
+                    "timezone": "Europe/Paris",
+                },
+            )
+
+            # --- GROUPE E : Membres de démonstration ---
+            # Membre 1 : 1 campus (Toulouse) → campus_principal_id auto
+            m1 = self.get_or_create_upsert(
+                Membre,
+                {"email": "demo1@icc.fr"},
+                {
+                    "nom": "Martin",
+                    "prenom": "Pierre",
+                    "actif": True,
+                    "campus_principal_id": campus_tls.id,
+                },
+            )
+            self.get_or_create_upsert(
+                MembreCampusLink,
+                {"membre_id": m1.id, "campus_id": campus_tls.id},
+                {},
+            )
+
+            # Membre 2 : 2 campus (Toulouse + Marseille) → principal = Toulouse
+            m2 = self.get_or_create_upsert(
+                Membre,
+                {"email": "demo2@icc.fr"},
+                {
+                    "nom": "Bernard",
+                    "prenom": "Sophie",
+                    "actif": True,
+                    "campus_principal_id": campus_tls.id,
+                },
+            )
+            self.get_or_create_upsert(
+                MembreCampusLink,
+                {"membre_id": m2.id, "campus_id": campus_tls.id},
+                {},
+            )
+            self.get_or_create_upsert(
+                MembreCampusLink,
+                {"membre_id": m2.id, "campus_id": campus_mrs.id},
+                {},
+            )
 
             # --- GROUPE D : Métier ---
             # cat_chant = self.get_or_create_upsert(CategorieRole, {"nom": "Chant"}, {})

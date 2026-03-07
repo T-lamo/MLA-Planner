@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, SQLModel, select
 
 from core.auth.security import get_password_hash
+from mla_enum import RoleName
 from models import Slot  # Nouveau
 from models import StatutAffectation  # Nouveau
 from models import (
@@ -53,6 +54,8 @@ from .data import (
     SEED_ORGANISATIONS,
     SEED_PAYS,
     STATUTS_PLANNING,
+    SUPERADMIN_PASSWORD,
+    SUPERADMIN_USERNAME,
     TYPES_RESPONSABILITE,
     MembreInfo,
 )
@@ -263,6 +266,15 @@ class SeedService:
             )
             self._assign_member_roles(membre.id, info.get("roles") or [])
 
+            # Définit le campus principal (idempotent)
+            campus_names = info.get("campus_names") or []
+            if campus_names and campus_names[0] in campus_map:
+                principal_id = campus_map[campus_names[0]].id
+                if membre.campus_principal_id != principal_id:
+                    membre.campus_principal_id = principal_id
+                    self.db.add(membre)
+                    self.db.flush()
+
     def _link_member_to_entities(
         self,
         m_id: str,
@@ -395,15 +407,43 @@ class SeedService:
                 )
 
     def _seed_users_for_roles(self, rm):
+        """
+        Crée les utilisateurs techniques pour chaque rôle.
+        Le SUPER_ADMIN a un compte fixe sans lien membre.
+        Les autres rôles ont un compte avec username basé sur la clé d'enum.
+        Retourne uniquement les utilisateurs non-superadmin (pour le seed membres).
+        """
         users = []
         for rn, role in rm.items():
-            u, _ = self._get_or_create(
-                Utilisateur,
-                username=f"user_{rn.lower()}",
-                defaults={"password": get_password_hash("Admin123!"), "actif": True},
-            )
-            self._get_or_create(AffectationRole, utilisateur_id=u.id, role_id=role.id)
-            users.append(u)
+            if rn == RoleName.SUPER_ADMIN:
+                # Compte superadmin fixe — pas de lien membre
+                u, _ = self._get_or_create(
+                    Utilisateur,
+                    username=SUPERADMIN_USERNAME,
+                    defaults={
+                        "password": get_password_hash(SUPERADMIN_PASSWORD),
+                        "actif": True,
+                    },
+                )
+                self._get_or_create(
+                    AffectationRole, utilisateur_id=u.id, role_id=role.id
+                )
+                # Ne pas inclure dans users (pas de membre associé)
+            else:
+                # username basé sur la clé d'enum (ex: "admin", "responsable_mla")
+                username = f"user_{rn.name.lower()}"
+                u, _ = self._get_or_create(
+                    Utilisateur,
+                    username=username,
+                    defaults={
+                        "password": get_password_hash("Admin123!"),
+                        "actif": True,
+                    },
+                )
+                self._get_or_create(
+                    AffectationRole, utilisateur_id=u.id, role_id=role.id
+                )
+                users.append(u)
         return users
 
     def _seed_equipes(self, mm: dict[str, Ministere]) -> dict[str, Equipe]:

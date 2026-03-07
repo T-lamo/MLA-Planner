@@ -1,5 +1,10 @@
 import type { PaginatedResponse } from '../../types/api'
-import type { ProfilCreateFull, ProfilReadFull, ProfilUpdateFull } from '../../types/profiles'
+import type {
+  ProfilCreateFull,
+  ProfilReadFull,
+  ProfilSelfUpdate,
+  ProfilUpdateFull,
+} from '../../types/profiles'
 import { GenericRepository } from './GeneriqueRepository'
 export class ProfileRepository extends GenericRepository<
   ProfilReadFull,
@@ -14,6 +19,30 @@ export class ProfileRepository extends GenericRepository<
   /**
    * Récupère tous les profils d'un campus spécifique
    */
+  async getMyProfile(): Promise<ProfilReadFull> {
+    const { data } = await this.apiRequest<ProfilReadFull>('/profiles/me')
+    return data
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    await this.apiRequest(`/auth/utilisateurs/${userId}/password`, {
+      method: 'PATCH',
+      body: { current_password: currentPassword, new_password: newPassword },
+    })
+  }
+
+  async updateMyProfile(payload: ProfilSelfUpdate): Promise<ProfilReadFull> {
+    const { data } = await this.apiRequest<ProfilReadFull>('/profiles/me', {
+      method: 'PATCH',
+      body: payload,
+    })
+    return data
+  }
+
   async getAllByCampus(
     campusId: string,
     params?: Record<string, unknown>,
