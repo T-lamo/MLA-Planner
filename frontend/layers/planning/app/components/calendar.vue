@@ -54,7 +54,7 @@ const rawEvents = ref<PlanningEvent[]>([
       ministereId: 'M_LOUANGE',
       ministereLabel: 'Louange',
       typeActivite: 'Culte',
-      statut: 'VALIDÉ',
+      statut: 'PUBLIE',
       membreIds: ['user-001', 'user-005'],
       responsableId: 'user-005',
     },

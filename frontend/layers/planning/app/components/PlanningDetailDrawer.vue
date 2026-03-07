@@ -5,9 +5,11 @@
         <span
           :class="[
             'rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase',
-            event.extendedProps.statut === 'VALIDÉ'
+            event.extendedProps.statut === 'PUBLIE'
               ? 'bg-emerald-100 text-emerald-600'
-              : 'bg-amber-100 text-amber-600',
+              : event.extendedProps.statut === 'ANNULE' || event.extendedProps.statut === 'TERMINE'
+                ? 'bg-slate-100 text-slate-600'
+                : 'bg-amber-100 text-amber-600',
           ]"
         >
           {{ event.extendedProps.statut }}
