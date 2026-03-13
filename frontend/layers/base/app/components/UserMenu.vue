@@ -86,7 +86,6 @@ const handleLogout = async () => {
   isDropdownOpen.value = false
   try {
     await authStore.logout()
-    await navigateTo('/login')
   } catch {
     // logout failure is silent — user stays on current page
   }

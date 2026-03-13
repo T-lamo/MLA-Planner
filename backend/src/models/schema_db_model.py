@@ -276,6 +276,7 @@ class Affectation(AffectationBase, table=True):  # type: ignore
         back_populates="affectations"
     )
     membre: Optional["Membre"] = Relationship(back_populates="affectations")
+    ministere: Optional["Ministere"] = Relationship()
 
 
 # -------------------------

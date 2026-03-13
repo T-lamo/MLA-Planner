@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from sqlmodel import Field, SQLModel
 
 from models.role_model import RoleRead
@@ -38,6 +38,33 @@ class UtilisateurRead(UtilisateurBase):
     roles: List[RoleRead] = []
 
     # password n’est jamais exposé
+
+    @model_validator(mode="before")
+    @classmethod
+    def _extract_roles_from_affectations(cls, data: Any) -> Any:
+        """Popule `roles` depuis `utilisateur.affectations[].role`.
+
+        Le modèle ORM Utilisateur expose `affectations` (AffectationRole)
+        et non un `roles` direct. Ce validateur extrait les rôles si la
+        relation a été chargée via selectinload (présente dans __dict__).
+        Si elle n’est pas chargée, `roles` conserve sa valeur par défaut [].
+        """
+        if isinstance(data, dict):
+            return data
+        loaded = getattr(data, "__dict__", {})
+        if "affectations" not in loaded:
+            return data
+        affs = loaded["affectations"] or []
+        roles = [aff.role for aff in affs if aff.__dict__.get("role") is not None]
+        return {
+            "id": data.id,
+            "username": data.username,
+            "actif": data.actif,
+            "membre_id": getattr(data, "membre_id", None),
+            "campus_principal_id": getattr(data, "campus_principal_id", None),
+            "name": getattr(data, "name", None),
+            "roles": roles,
+        }
 
 
 class UtilisateurUpdate(SQLModel):

@@ -153,10 +153,10 @@ def test_create_full_planning_minimal_payload(session, test_campus, test_ministe
     assert result.activite.type.lower() == unique_type
 
 
-def test_create_full_planning_overlapping_slots_error(
+def test_create_full_planning_overlapping_slots_allowed(
     session, test_campus, test_ministere
 ):
-    """Vérifie que le validateur de timing bloque les chevauchements."""
+    """Vérifie que les créneaux chevauchants sont désormais autorisés."""
     svc = PlanningServiceSvc(session)
     now = datetime.now()
 
@@ -176,7 +176,7 @@ def test_create_full_planning_overlapping_slots_error(
                 "affectations": [],
             },
             {
-                "nom_creneau": "Slot 2 (Overlap)",
+                "nom_creneau": "Slot 2 (Overlap autorisé)",
                 "date_debut": (now + timedelta(hours=1, minutes=30)).isoformat(),
                 "date_fin": (now + timedelta(hours=2, minutes=30)).isoformat(),
                 "affectations": [],
@@ -185,17 +185,9 @@ def test_create_full_planning_overlapping_slots_error(
     }
 
     full_data = validate_and_create_payload(payload)
-
-    # MISE À JOUR : On attend un ConflictException (409) au lieu de BadRequest
-    with pytest.raises(AppException) as exc:
-        svc.create_full_planning(full_data)
-    assert exc.value.code == ErrorRegistry.SLOT_COLLISION.code
-    assert exc.value.http_status == status.HTTP_409_CONFLICT
-
-    # On vérifie que le message contient bien l'explication du conflit
-    assert (
-        "collision" in str(exc.value).lower() or "chevauche" in str(exc.value).lower()
-    )
+    result = svc.create_full_planning(full_data)
+    assert result.id is not None
+    assert len(result.slots) == 2
 
 
 def test_atomic_integrity_on_slot_failure(session, test_campus, test_ministere):

@@ -37,7 +37,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // 3. Guards de navigation
   if (isPublicRoute && authStore.isAuthenticated) {
-    return navigateTo('/')
+    return navigateTo('/planning/calendar')
   }
 
   if (!isPublicRoute && !authStore.isAuthenticated) {

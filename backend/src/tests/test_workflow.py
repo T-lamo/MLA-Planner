@@ -12,7 +12,7 @@ from services.planing_service import PlanningServiceSvc
 # On remplace l'ancienne BadRequestException par AppException dans les tests
 
 
-def test_planning_workflow_success_publish(session, test_planning):
+def test_planning_workflow_success_publish(session, test_planning, test_affectation):
     svc = PlanningServiceSvc(session)
     test_planning.statut_code = PlanningStatusCode.BROUILLON.value
     session.flush()
@@ -61,7 +61,9 @@ def test_affectation_workflow_conditionnal(session, test_affectation, test_plann
     assert exc.value.code == ErrorRegistry.PLANNING_NOT_PUBLISHED.code
 
 
-def test_workflow_rollback_on_hook_failure(session, test_planning, monkeypatch):
+def test_workflow_rollback_on_hook_failure(
+    session, test_planning, test_affectation, monkeypatch
+):
     svc = PlanningServiceSvc(session)
     planning_id = str(test_planning.id)
     test_planning.statut_code = PlanningStatusCode.BROUILLON.value
@@ -104,7 +106,7 @@ def test_immutability_failure(session, planning_svc, test_planning):
 
 
 def test_atomic_rollback_on_hook_failure(
-    session, planning_svc, test_planning, monkeypatch
+    session, planning_svc, test_planning, test_affectation, monkeypatch
 ):
     original_type = test_planning.activite.type
 
@@ -159,7 +161,9 @@ def test_cross_workflow_violation(
     assert exc.value.code == ErrorRegistry.PLANNING_NOT_PUBLISHED.code
 
 
-def test_valid_transition_triggers_hook(planning_svc, test_planning, monkeypatch):
+def test_valid_transition_triggers_hook(
+    planning_svc, test_planning, test_affectation, monkeypatch
+):
     hook_called = False
 
     def mock_hook(_planning):

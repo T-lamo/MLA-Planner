@@ -21,3 +21,7 @@ class TokenData(BaseModel):
 class PasswordChangeRequest(BaseModel):
     current_password: Annotated[str, constr(min_length=6)]
     new_password: str = Field(min_length=6, max_length=128)
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

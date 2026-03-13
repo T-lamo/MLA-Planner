@@ -20,7 +20,8 @@ from models import (
     Utilisateur,
 )
 from models.base_pagination import PaginatedResponse
-from models.schema_db_model import AffectationRole
+from models.ministere_model import MinistereSimple
+from models.schema_db_model import AffectationRole, CampusMinistereLink
 from services.membre_service import MembreService
 
 from .base_service import BaseService
@@ -219,7 +220,9 @@ class ProfileService(
                 select(Membre)
                 .where(Membre.id == identifiant)
                 .options(
-                    selectinload(cast(Any, Membre.utilisateur)),
+                    selectinload(cast(Any, Membre.utilisateur))
+                    .selectinload(cast(Any, Utilisateur.affectations))
+                    .selectinload(cast(Any, AffectationRole.role)),
                     selectinload(cast(Any, Membre.campuses)),
                     selectinload(cast(Any, Membre.ministeres)),
                     selectinload(cast(Any, Membre.poles)),
@@ -253,6 +256,22 @@ class ProfileService(
         except Exception as e:
             logger.error(f"Erreur list_paginated: {e}")
             raise AppException(ErrorRegistry.PROFIL_DATA_ERROR) from e
+
+    def get_my_ministeres_by_campus(
+        self, membre_id: str, campus_id: str
+    ) -> List[MinistereSimple]:
+        """Ministères de l'utilisateur filtrés sur un campus donné."""
+        profil = self.get_one(membre_id)
+        stmt = select(CampusMinistereLink).where(
+            CampusMinistereLink.campus_id == campus_id
+        )
+        links = self.db.exec(stmt).all()
+        campus_min_ids = {lnk.ministere_id for lnk in links}
+        return [
+            MinistereSimple.model_validate(m)
+            for m in profil.ministeres
+            if m.id in campus_min_ids
+        ]
 
     def list_all(self, campus_id: Optional[str] = None) -> List[ProfilReadFull]:
         try:

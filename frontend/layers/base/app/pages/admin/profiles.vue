@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ProfileHeader from '../../components/profile/ProfileHeader.vue'
 import ProfileFilters from '../../components/profile/ProfileFilters.vue'
 import ProfileCard from '../../components/profile/ProfileCard.vue'
@@ -11,9 +11,22 @@ import type {
   ProfilCreateFull,
   ProfilUpdateFull,
 } from '~~/layers/base/types/profiles'
+import type { CampusRead } from '~~/layers/base/types/campus'
+import { ProfileRepository } from '~~/layers/base/app/repositories/ProfileRepository'
 
 const { profiles, isFetching, totalProfiles, activeCampusId, campuses, create, update, remove } =
   useProfiles()
+
+// All campuses for the form selector (admins can assign any campus to a member)
+const allCampuses = ref<CampusRead[]>([])
+onMounted(async () => {
+  try {
+    allCampuses.value = await new ProfileRepository().getAllCampuses()
+  } catch {
+    // Fallback to user's campuses if endpoint unreachable
+    allCampuses.value = campuses.value
+  }
+})
 
 const { ministeresByCampus, fetchDetailedMinisteres } = useCampuses()
 
@@ -141,7 +154,8 @@ const handleDelete = async (id: string) => {
     <ProfileFormDrawer
       :isOpen="isDrawerOpen"
       :editingProfile="editingProfile"
-      :campuses="campuses"
+      :campuses="allCampuses"
+      :prefillCampusId="editingProfile ? undefined : activeCampusId"
       :ministeresDetailed="ministeresByCampus"
       :isSubmitting="isSubmitting"
       @close="isDrawerOpen = false"

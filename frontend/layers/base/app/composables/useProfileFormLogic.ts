@@ -24,7 +24,11 @@ export function useProfileFormLogic() {
       pole_ids: pIds,
       role_codes: p.roles_assoc?.map((r) => r.role_code) || [],
       utilisateur: p.utilisateur
-        ? { username: p.utilisateur.username, actif: p.utilisateur.actif, roles_ids: [] }
+        ? {
+            username: p.utilisateur.username,
+            actif: p.utilisateur.actif,
+            roles_ids: p.utilisateur.roles?.map((r) => r.id) ?? [],
+          }
         : undefined,
     }
   }

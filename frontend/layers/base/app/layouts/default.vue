@@ -18,11 +18,10 @@
       ]"
     >
       <div class="flex h-16 shrink-0 items-center justify-between px-6">
-        <span
-          v-if="!ui.isSidebarCollapsed"
-          class="truncate text-xl font-bold text-(--color-primary-700)"
-          >MLA App</span
-        >
+        <div v-if="!ui.isSidebarCollapsed" class="flex min-w-0 items-center gap-2">
+          <img src="/Logo.png" alt="Logo" class="h-8 w-8 shrink-0 object-contain" />
+          <span class="truncate text-xl font-bold text-(--color-primary-700)">Planner</span>
+        </div>
         <button
           class="rounded-lg p-1 transition-colors hover:bg-slate-100"
           @click="ui.toggleSidebar"
@@ -224,9 +223,11 @@ import {
 } from 'lucide-vue-next'
 import { useUIStore } from '../stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
+import { useSessionManager } from '~~/layers/auth/app/composables/useSessionManager'
 
 const ui = useUIStore()
 const authStore = useAuthStore()
+useSessionManager()
 
 const isPlanningOpen = ref(true)
 const isPopupVisible = ref(false)

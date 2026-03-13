@@ -21,6 +21,16 @@ class AffectationService:
         self.validator = ValidationEngine()
         self.workflow = WorkflowEngine[AffectationStatusCode](affectation_transitions)
 
+    @staticmethod
+    def _extract_ministere_id(a_data: Any) -> Optional[str]:
+        """Extrait ministere_id depuis un dict ou un objet Pydantic."""
+        raw = (
+            a_data.get("ministere_id")
+            if isinstance(a_data, dict)
+            else getattr(a_data, "ministere_id", None)
+        )
+        return raw if isinstance(raw, str) else None
+
     def _validate_pointing_status(self, planning: Optional[PlanningService]):
         """
         Mutualisation de la règle métier :
@@ -37,7 +47,9 @@ class AffectationService:
         slot_id: str,
         membre_id: str,
         role_code: str,
+        *,
         status: Optional[AffectationStatusCode] = None,
+        ministere_id: Optional[str] = None,
     ) -> Affectation:
         self.validator.validate_member_for_slot(self.db, membre_id, slot_id, role_code)
 
@@ -61,6 +73,7 @@ class AffectationService:
             role_code=role_code,
             statut_affectation_code=final_status.value,
             presence_confirmee=False,
+            ministere_id=ministere_id,
         )
         return self.repo.create_affectation(new_affectation)
 
@@ -139,6 +152,7 @@ class AffectationService:
                         membre_id=m_id,
                         role_code=r_code,
                         status=requested_status,
+                        ministere_id=self._extract_ministere_id(a_data),
                     )
                 else:
                     if not potential_id:

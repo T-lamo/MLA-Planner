@@ -43,12 +43,12 @@ const selectCampus = (id: string) => {
         class="absolute top-full left-0 z-50 mt-1.5 w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl shadow-slate-200/50"
         role="listbox"
       >
-        <div v-if="ui.campuses.length === 0" class="px-3 py-4 text-center text-xs text-slate-400">
-          Aucun campus disponible
+        <div v-if="ui.myCampuses.length === 0" class="px-3 py-4 text-center text-xs text-slate-400">
+          Aucun campus assigné
         </div>
 
         <button
-          v-for="campus in ui.campuses"
+          v-for="campus in ui.myCampuses"
           :key="campus.id"
           role="option"
           :aria-selected="ui.selectedCampusId === campus.id"

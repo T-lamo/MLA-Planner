@@ -1,3 +1,5 @@
+from typing import List
+
 from fastapi import Depends, HTTPException, Query, status
 
 from core.auth.auth_dependencies import get_current_active_user
@@ -10,6 +12,8 @@ from models import (
     Utilisateur,
 )
 from models.base_pagination import PaginatedResponse
+from models.campus_model import CampusRead
+from models.ministere_model import MinistereSimple
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.profile_service import ProfileService
 
@@ -77,6 +81,40 @@ def update_my_profile(
         )
     payload = ProfilUpdateFull(**data.model_dump(exclude_unset=True))
     return service.update(current_user.membre_id, payload)
+
+
+# 1d. Campus du membre connecté
+@router.get(
+    "/me/campuses",
+    response_model=List[CampusRead],
+    summary="Récupère les campus du membre connecté",
+)
+def get_my_campuses(
+    current_user: Utilisateur = Depends(get_current_active_user),
+    service: ProfileService = Depends(router_factory.get_service),
+) -> List[CampusRead]:
+    """Retourne la liste des campus auxquels appartient le membre connecté."""
+    if not current_user.membre_id:
+        return []
+    profil = service.get_one(current_user.membre_id)
+    return list(profil.campuses)
+
+
+# 1e. Ministères du membre connecté filtrés par campus
+@router.get(
+    "/me/ministeres/by-campus/{campus_id}",
+    response_model=List[MinistereSimple],
+    summary="Ministères de l'utilisateur pour un campus donné",
+)
+def get_my_ministeres_by_campus(
+    campus_id: str,
+    current_user: Utilisateur = Depends(get_current_active_user),
+    service: ProfileService = Depends(router_factory.get_service),
+) -> List[MinistereSimple]:
+    """Intersection : ministères du profil ∩ ministères liés au campus."""
+    if not current_user.membre_id:
+        return []
+    return service.get_my_ministeres_by_campus(current_user.membre_id, campus_id)
 
 
 # 2. Surcharge de la route Paginated pour inclure le filtre campus_id
