@@ -11,6 +11,7 @@
       @auth-submit="onLogin"
     >
       <div slot="logo" class="flex flex-col items-center gap-4">
+        <img src="/Logo.png" alt="Logo" class="h-16 w-auto object-contain" />
         <h2 class="text-xl font-bold text-slate-800">Espace Membre</h2>
       </div>
     </ui-login>
@@ -60,7 +61,7 @@ const onLogin = async (event: LoginEvent) => {
       password,
     })
 
-    const redirectPath = (route.query.redirect as string) || '/'
+    const redirectPath = (route.query.redirect as string) || '/planning/calendar'
     await router.push(redirectPath)
   } catch (error: unknown) {
     // On caste en EnhancedApiError pour le traitement

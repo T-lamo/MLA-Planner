@@ -56,6 +56,8 @@ class ActiviteUpdate(SQLModel):
     date_fin: Optional[datetime] = None
     lieu: Optional[str] = Field(None, min_length=2, max_length=255)
     description: Optional[str] = Field(None, max_length=1000)
+    campus_id: Optional[str] = None
+    ministere_organisateur_id: Optional[str] = None
 
     @model_validator(mode="after")
     def validate_dates(self):
@@ -71,4 +73,17 @@ class ActiviteRead(ActiviteBase):
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
 
-__all__ = ["ActiviteBase", "ActiviteRead", "ActiviteUpdate", "ActiviteCreate"]
+class ActiviteFullRead(ActiviteRead):
+    """ActiviteRead enrichi avec les noms résolus du campus et du ministère."""
+
+    campus_nom: Optional[str] = None
+    ministere_organisateur_nom: Optional[str] = None
+
+
+__all__ = [
+    "ActiviteBase",
+    "ActiviteRead",
+    "ActiviteFullRead",
+    "ActiviteUpdate",
+    "ActiviteCreate",
+]

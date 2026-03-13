@@ -30,6 +30,15 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "votre_cle_secrete_super_longue"  # À définir sur Render aussi
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # --- MAIL CONFIG (Nouveautés) ---
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: Optional[str] = None  # À définir dans le .env
+    SMTP_PASS: Optional[str] = None  # À définir dans le .env
+    EMAIL_FROM: str = "noreply@planning-mla.com"
+    EMAIL_FROM_NAME: str = "Planning MLA"
 
     model_config = {
         "extra": "allow",

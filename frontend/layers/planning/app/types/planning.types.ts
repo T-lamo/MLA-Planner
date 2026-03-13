@@ -93,6 +93,11 @@ export interface ActiviteRead {
   ministere_organisateur_id: string
 }
 
+export interface ActiviteFullRead extends ActiviteRead {
+  campus_nom?: string | null
+  ministere_organisateur_nom?: string | null
+}
+
 export interface ActiviteCreate {
   type: string
   date_debut: string
@@ -109,6 +114,8 @@ export interface ActiviteUpdate {
   date_fin?: string
   lieu?: string
   description?: string
+  campus_id?: string
+  ministere_organisateur_id?: string
 }
 
 // --- Membre résumé (dans les affectations) ---
@@ -124,6 +131,7 @@ export interface MemberSummaryRead {
 export interface AffectationSimpleCreate {
   membre_id: string
   role_code: string
+  ministere_id?: string | null
 }
 
 export interface AffectationFullUpdate {
@@ -131,6 +139,7 @@ export interface AffectationFullUpdate {
   membre_id: string
   role_code: string
   statut_affectation_code?: string
+  ministere_id?: string | null
 }
 
 export interface AffectationFullRead {
@@ -138,6 +147,8 @@ export interface AffectationFullRead {
   statut_affectation_code: string
   role_code: string
   membre?: MemberSummaryRead | null
+  ministere_id?: string | null
+  ministere_nom?: string | null
 }
 
 // --- Slots ---
@@ -146,6 +157,7 @@ export interface SlotFullNested {
   nom_creneau: string
   date_debut: string
   date_fin: string
+  nb_personnes_requis?: number
   affectations: AffectationSimpleCreate[]
 }
 
@@ -183,7 +195,7 @@ export interface PlanningFullRead {
   id: string
   statut_code: PlanningStatus
   activite_id?: string | null
-  activite?: ActiviteRead | null
+  activite?: ActiviteFullRead | null
   slots: SlotFullRead[]
   view_context?: ViewContext | null
 }
@@ -206,3 +218,89 @@ export interface CampusFilterParams {
   start?: string
   end?: string
 }
+
+// ============================================================
+// 5. TYPES FORMULAIRE — usage interne PlanningFormModal
+// ============================================================
+
+/** Membre simplifié pour l'autocomplete */
+export interface MembreSimple {
+  id: string
+  nom: string
+  prenom: string
+  email?: string | null
+  actif: boolean
+}
+
+/** Rôle de compétence pour le select affectation */
+export interface RoleCompetenceRead {
+  code: string
+  libelle: string
+  categorie_code: string
+}
+
+// ============================================================
+// 6. TEAM — GET /campus/{campus_id}/team
+// ============================================================
+
+export interface TeamMemberRead {
+  id: string
+  nom: string
+  prenom: string
+  roles: string[] // liste de role_code
+}
+
+export interface TeamMinistereRead {
+  id: string
+  nom: string
+  membres: TeamMemberRead[]
+}
+
+export interface CampusTeamRead {
+  ministeres: TeamMinistereRead[]
+}
+
+/** Item affectation dans le formulaire */
+export interface AffectationFormItem {
+  _tempId: string
+  id?: string
+  membre_id: string
+  membre_prenom: string
+  membre_nom: string
+  role_code: string
+  ministere_id: string
+}
+
+/** Slot dans le formulaire */
+export interface SlotFormItem {
+  _tempId: string
+  id?: string
+  nom_creneau: string
+  heure_debut: string
+  heure_fin: string
+  nb_personnes_requis: number
+  affectations: AffectationFormItem[]
+}
+
+/** État interne de la section activité */
+export interface ActiviteFormState {
+  type: string
+  date_debut: string
+  date_fin: string
+  lieu: string
+  description: string
+  campus_id: string
+  ministere_organisateur_id: string
+}
+
+/** Types d'activité disponibles */
+export const ACTIVITE_TYPES = [
+  'Culte',
+  'Répétition',
+  'Conférence',
+  'Formation',
+  'Réunion',
+  'Jeunesse',
+  'Soirée Louange',
+  'Événement spécial',
+] as const

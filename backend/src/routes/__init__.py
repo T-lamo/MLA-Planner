@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from core.auth.auth_route import router as auth_router
+from notification.notification_router import router as notification
 
 from .activite_router import router as activite  # Doit être après planning pour les FK
 from .affectation_router import (
@@ -23,6 +24,7 @@ from .profil_router import router as profile
 from .role_competence_router import router as role_competence
 from .role_router import router as role
 from .slot_router import router as slot  # Doit être après membre_role pour les FK
+from .team_router import router as team
 
 router = APIRouter()
 router.include_router(auth_router)
@@ -43,4 +45,7 @@ router.include_router(planning)  # Doit être après slot pour les FK
 router.include_router(affectation)  # Doit être après planning pour les FK
 router.include_router(activite)  # Doit être après planning pour les FK
 router.include_router(profile)
+router.include_router(team)
+router.include_router(notification)
+
 __all__ = ["router"]

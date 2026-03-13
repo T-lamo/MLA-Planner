@@ -1,9 +1,13 @@
 import { BaseRepository } from '~~/layers/base/app/repositories/BaseRepository'
+import type { MinistereSimple } from '~~/layers/base/types/ministere'
 import type {
   CampusFilterParams,
+  CampusTeamRead,
+  MembreSimple,
   PlanningFullCreate,
   PlanningFullRead,
   PlanningFullUpdate,
+  RoleCompetenceRead,
 } from '../types/planning.types'
 
 export class PlanningRepository extends BaseRepository {
@@ -11,11 +15,10 @@ export class PlanningRepository extends BaseRepository {
 
   /**
    * Extrait le contenu de l'enveloppe `{ data: T }` retournée par le backend.
-   * Les endpoints custom (full, by-ministere, etc.) utilisent DataResponse/DataListResponse.
    */
   private async unwrap<T>(
     url: string,
-    options?: Parameters<BaseRepository['apiRequest']>[1],
+    options?: Omit<Parameters<BaseRepository['apiRequest']>[1], 'transform'>,
   ): Promise<T> {
     const { data } = await this.apiRequest<{ data: T }>(url, options)
     return (data as unknown as { data: T }).data
@@ -29,22 +32,18 @@ export class PlanningRepository extends BaseRepository {
     return this.unwrap<PlanningFullRead>(`${this.endpoint}/${id}/full`)
   }
 
-  async listByMinistere(ministereId: string): Promise<PlanningFullRead[]> {
-    return this.unwrap<PlanningFullRead[]>(`${this.endpoint}/by-ministere/${ministereId}`)
+  async listByMinistere(ministereId: string, campusId?: string): Promise<PlanningFullRead[]> {
+    return this.unwrap<PlanningFullRead[]>(`${this.endpoint}/by-ministere/${ministereId}`, {
+      query: campusId ? { campus_id: campusId } : undefined,
+    })
   }
 
-  /**
-   * Plannings de l'utilisateur connecté (slots où il est affecté).
-   * Endpoint : GET /plannings/my/calendar — implémenté dans MLA-PLAN-07.
-   */
-  async listMyCalendar(): Promise<PlanningFullRead[]> {
-    return this.unwrap<PlanningFullRead[]>(`${this.endpoint}/my/calendar`)
+  async listMyCalendar(campusId?: string): Promise<PlanningFullRead[]> {
+    return this.unwrap<PlanningFullRead[]>(`${this.endpoint}/my/calendar`, {
+      query: campusId ? { campus_id: campusId } : undefined,
+    })
   }
 
-  /**
-   * Tous les plannings d'un campus, avec filtres optionnels.
-   * Endpoint : GET /plannings/by-campus/{campus_id} — implémenté dans MLA-PLAN-07.
-   */
   async listByCampus(campusId: string, filters?: CampusFilterParams): Promise<PlanningFullRead[]> {
     return this.unwrap<PlanningFullRead[]>(`${this.endpoint}/by-campus/${campusId}`, {
       query: filters as Record<string, unknown>,
@@ -56,27 +55,21 @@ export class PlanningRepository extends BaseRepository {
   // -----------------------------------------------------------------------
 
   async createFull(payload: PlanningFullCreate): Promise<PlanningFullRead> {
-    const { data } = await this.apiRequest<PlanningFullRead>(`${this.endpoint}/full`, {
+    return this.unwrap<PlanningFullRead>(`${this.endpoint}/full`, {
       method: 'POST',
       body: payload,
     })
-    return data
   }
 
   async updateFull(id: string, payload: PlanningFullUpdate): Promise<PlanningFullRead> {
-    const { data } = await this.apiRequest<PlanningFullRead>(`${this.endpoint}/${id}/full`, {
+    return this.unwrap<PlanningFullRead>(`${this.endpoint}/${id}/full`, {
       method: 'PATCH',
       body: payload,
     })
-    return data
   }
 
-  /**
-   * Avance le workflow du planning.
-   * new_status est un query param (type simple, non-Pydantic côté FastAPI).
-   */
-  async updateStatus(id: string, newStatus: string): Promise<void> {
-    await this.apiRequest(`${this.endpoint}/${id}/status`, {
+  async updateStatus(id: string, newStatus: string): Promise<PlanningFullRead> {
+    return this.unwrap<PlanningFullRead>(`${this.endpoint}/${id}/status`, {
       method: 'PATCH',
       query: { new_status: newStatus },
     })
@@ -86,5 +79,30 @@ export class PlanningRepository extends BaseRepository {
     await this.apiRequest(`${this.endpoint}/${id}/full`, {
       method: 'DELETE',
     })
+  }
+
+  // -----------------------------------------------------------------------
+  // Données de référence pour le formulaire
+  // -----------------------------------------------------------------------
+
+  async getMembersByMinistere(ministereId: string): Promise<MembreSimple[]> {
+    const { data } = await this.apiRequest<MembreSimple[]>(`/membres/by-ministere/${ministereId}`)
+    return data
+  }
+
+  async getRoleCompetences(): Promise<RoleCompetenceRead[]> {
+    return this.unwrap<RoleCompetenceRead[]>('/roles-competences/all')
+  }
+
+  async getMyMinistreresByCampus(campusId: string): Promise<MinistereSimple[]> {
+    const { data } = await this.apiRequest<MinistereSimple[]>(
+      `/profiles/me/ministeres/by-campus/${campusId}`,
+    )
+    return data
+  }
+
+  async getCampusTeam(campusId: string): Promise<CampusTeamRead> {
+    const { data } = await this.apiRequest<CampusTeamRead>(`/campus/${campusId}/team`)
+    return data
   }
 }

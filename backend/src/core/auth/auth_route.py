@@ -7,7 +7,7 @@ from sqlmodel import Session
 from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from core.auth.auth_service import AuthService
-from core.auth.models import PasswordChangeRequest, Token
+from core.auth.models import PasswordChangeRequest, RefreshTokenRequest, Token
 from models import Utilisateur
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -107,6 +107,15 @@ async def read_users_me(
 async def test_admin_route() -> dict[str, str]:
     """Route de test accessible uniquement aux administrateurs."""
     return {"message": "Bienvenue, Administrateur."}
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh_token(
+    body: RefreshTokenRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+) -> Any:
+    """Émet une nouvelle paire access/refresh token par rotation."""
+    return auth_service.refresh_access_token(body.refresh_token)
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)

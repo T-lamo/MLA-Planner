@@ -56,7 +56,7 @@ onMounted(() => roleStore.fetchRoles())
 
 // Pré-sélectionner les rôles existants dès que le model et le store sont prêts
 watch(
-  [() => modelValue.value, () => roleStore.items],
+  [() => modelValue.value, () => roleStore.items, () => props.existingRoles],
   ([val, items]) => {
     if (!val || val.roles_ids?.length || !items.length || !props.existingRoles?.length) return
     val.roles_ids = items.filter((r) => props.existingRoles!.includes(r.libelle)).map((r) => r.id)

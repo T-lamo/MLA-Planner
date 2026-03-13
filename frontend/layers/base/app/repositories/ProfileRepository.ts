@@ -1,4 +1,5 @@
 import type { PaginatedResponse } from '../../types/api'
+import type { CampusRead } from '../../types/campus'
 import type {
   ProfilCreateFull,
   ProfilReadFull,
@@ -41,6 +42,16 @@ export class ProfileRepository extends GenericRepository<
       body: payload,
     })
     return data
+  }
+
+  async getMyCampuses(): Promise<CampusRead[]> {
+    const { data } = await this.apiRequest<CampusRead[]>('/profiles/me/campuses')
+    return data
+  }
+
+  async getAllCampuses(): Promise<CampusRead[]> {
+    const { data } = await this.apiRequest<{ data: CampusRead[] }>('/campuses/all')
+    return (data as unknown as { data: CampusRead[] }).data
   }
 
   async getAllByCampus(

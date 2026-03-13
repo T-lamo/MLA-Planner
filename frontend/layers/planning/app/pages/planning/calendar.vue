@@ -49,7 +49,7 @@
 
       <!-- Bouton "Nouveau planning" (desktop uniquement) -->
       <button
-        v-if="canCreatePlanning"
+        v-if="canWrite"
         class="bg-primary-600 hover:bg-primary-700 hidden items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors sm:flex"
         @click="openCreateModal(null)"
       >
@@ -66,8 +66,7 @@
       <div
         v-for="m in ministeres"
         :key="m.id"
-        class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full border
-               px-3 py-1.5 text-xs font-medium transition-opacity"
+        class="flex min-h-8 cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-opacity"
         :style="{
           backgroundColor: ministereColorMap.get(m.id)?.light,
           borderColor: ministereColorMap.get(m.id)?.border,
@@ -154,7 +153,7 @@
         <p class="max-w-xs text-sm text-slate-400">{{ emptyStateMessage }}</p>
       </div>
       <button
-        v-if="canCreatePlanning"
+        v-if="canWrite"
         class="bg-primary-600 hover:bg-primary-700 flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors"
         @click="openCreateModal(null)"
       >
@@ -171,18 +170,28 @@
       :events="filteredEvents"
       @event-click="onEventClick"
       @date-select="onDateSelect"
+      @event-drop="onEventDrop"
     />
 
     <!-- ================================================================
-         DRAWER DE DÉTAIL
+         DRAWER UNIQUE (détail / création / édition)
          ================================================================ -->
-    <PlanningDetailDrawer :event="selectedEvent" @close="selectedEvent = null" />
+    <PlanningDetailDrawer
+      :mode="drawerMode"
+      :event="drawerEvent"
+      :planning="drawerPlanning"
+      :prefillDate="drawerPrefillDate"
+      @close="closeDrawer"
+      @saved="onDrawerSaved"
+      @status-changed="onStatusChanged"
+      @deleted="onPlanningDeleted"
+    />
 
     <!-- ================================================================
          FAB — mobile uniquement
          ================================================================ -->
     <button
-      v-if="canCreatePlanning"
+      v-if="canWrite"
       class="bg-primary-600 hover:bg-primary-700 fixed right-6 bottom-6 z-50 flex size-14 items-center justify-center rounded-full text-white shadow-lg transition-transform active:scale-95 sm:hidden"
       @click="openCreateModal(null)"
     >
@@ -196,8 +205,13 @@ import { ref, computed, onMounted } from 'vue'
 import { Plus, CalendarDays, AlertCircle } from 'lucide-vue-next'
 import type { EventApi, DateSelectArg } from '@fullcalendar/core'
 import { usePlanning } from '../../composables/usePlanning'
-import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
-import type { PlanningEvent, PlanningEventMetadata } from '../../types/planning.types'
+import { usePlanningPermissions } from '../../composables/usePlanningPermissions'
+import { PlanningRepository } from '../../repositories/PlanningRepository'
+import type {
+  PlanningEvent,
+  PlanningEventMetadata,
+  PlanningFullRead,
+} from '../../types/planning.types'
 
 // -----------------------------------------------------------------------
 // Composable principal
@@ -207,23 +221,19 @@ const {
   activeMinistereId,
   ministeres,
   ministereColorMap,
+  rawPlannings,
   events,
   isLoading,
   error,
   setView,
   setMinistere,
   refresh,
+  patchLocalPlanning,
+  removeLocalPlanning,
 } = usePlanning()
 
-const authStore = useAuthStore()
-
-// -----------------------------------------------------------------------
-// Droits de création
-// -----------------------------------------------------------------------
-const canCreatePlanning = computed<boolean>(() => {
-  const roles = authStore.currentUser?.roles ?? []
-  return authStore.hasAdminAccess || roles.some((r) => r.toLowerCase().includes('responsable'))
-})
+const { canWrite } = usePlanningPermissions()
+const planningRepo = new PlanningRepository()
 
 // -----------------------------------------------------------------------
 // Filtre légende (clic sur un chip filtre par ministère côté client)
@@ -240,12 +250,15 @@ const filteredEvents = computed<PlanningEvent[]>(() => {
 })
 
 // -----------------------------------------------------------------------
-// Drawer de détail
+// Drawer unique (détail / création / édition)
 // -----------------------------------------------------------------------
-const selectedEvent = ref<PlanningEvent | null>(null)
+const drawerMode = ref<'detail' | 'create' | 'edit' | null>(null)
+const drawerEvent = ref<PlanningEvent | null>(null)
+const drawerPlanning = ref<PlanningFullRead | null>(null)
+const drawerPrefillDate = ref<string | null>(null)
 
 function onEventClick(eventApi: EventApi): void {
-  selectedEvent.value = {
+  drawerEvent.value = {
     id: eventApi.id,
     title: eventApi.title,
     start: eventApi.startStr || eventApi.start?.toISOString() || '',
@@ -255,23 +268,90 @@ function onEventClick(eventApi: EventApi): void {
     textColor: eventApi.textColor,
     extendedProps: eventApi.extendedProps as PlanningEventMetadata,
   }
+  drawerPlanning.value = rawPlannings.value.find((p) => p.id === eventApi.id) ?? null
+  drawerMode.value = 'detail'
+}
+
+function openCreateModal(selectInfo: DateSelectArg | null): void {
+  drawerEvent.value = null
+  drawerPlanning.value = null
+  drawerPrefillDate.value = selectInfo?.startStr ?? null
+  drawerMode.value = 'create'
+}
+
+function closeDrawer(): void {
+  drawerMode.value = null
+  drawerEvent.value = null
+  drawerPlanning.value = null
+  drawerPrefillDate.value = null
+}
+
+function onDrawerSaved(updated: PlanningFullRead, isNew: boolean): void {
+  if (isNew) {
+    refresh()
+  } else {
+    patchLocalPlanning(updated)
+  }
+  closeDrawer()
+}
+
+function onStatusChanged(updated: PlanningFullRead): void {
+  patchLocalPlanning(updated)
+  closeDrawer()
+}
+
+function onPlanningDeleted(id: string): void {
+  removeLocalPlanning(id)
+  closeDrawer()
 }
 
 // -----------------------------------------------------------------------
-// Sélection de date → pré-remplissage création (MLA-PLAN-06)
+// Drag-and-drop — persist new dates via PATCH
 // -----------------------------------------------------------------------
-const pendingDateSelect = ref<DateSelectArg | null>(null)
+async function onEventDrop(payload: {
+  id: string
+  start: string
+  end: string | null
+  revert: () => void
+}): Promise<void> {
+  const original = rawPlannings.value.find((p) => p.id === payload.id)
+  if (!original?.activite) {
+    payload.revert()
+    return
+  }
 
+  // Strips timezone offset from FullCalendar's ISO strings to preserve local time
+  // (toISOString() would convert to UTC and shift the stored datetime)
+  const localStart = payload.start.substring(0, 19)
+  const localEnd = payload.end
+    ? payload.end.substring(0, 19)
+    : (() => {
+        const durationMs =
+          new Date(original.activite!.date_fin).getTime() -
+          new Date(original.activite!.date_debut).getTime()
+        const d = new Date(new Date(payload.start).getTime() + durationMs)
+        const p = (n: number) => String(n).padStart(2, '0')
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+      })()
+
+  try {
+    const updated = await planningRepo.updateFull(payload.id, {
+      activite: {
+        date_debut: localStart,
+        date_fin: localEnd,
+      },
+    })
+    patchLocalPlanning(updated)
+  } catch {
+    payload.revert()
+  }
+}
+
+// -----------------------------------------------------------------------
+// Sélection de date → pré-remplissage création
+// -----------------------------------------------------------------------
 function onDateSelect(selectInfo: DateSelectArg): void {
-  pendingDateSelect.value = selectInfo
   openCreateModal(selectInfo)
-}
-
-// -----------------------------------------------------------------------
-// Modal de création (MLA-PLAN-06 — stub pour l'instant)
-// -----------------------------------------------------------------------
-function openCreateModal(_selectInfo: DateSelectArg | null): void {
-  // TODO MLA-PLAN-06 : ouvrir PlanningFormModal avec date pré-remplie
 }
 
 // -----------------------------------------------------------------------

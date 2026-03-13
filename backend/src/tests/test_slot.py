@@ -38,35 +38,28 @@ def test_create_slot_out_of_bounds(session, test_planning):
     assert excinfo.value.code == ErrorRegistry.SLOT_OUT_OF_BOUNDS.code
 
 
-def test_create_slot_collision(session, test_planning, test_slot):
+def test_create_slot_overlap_exact_same_window(session, test_planning, test_slot):
+    """Deux slots avec exactement la même fenêtre horaire sont désormais autorisés."""
     service = PlanningServiceSvc(session)
     activity = test_planning.activite
 
-    # On cale le slot en base
     test_slot.date_debut = activity.date_debut + timedelta(minutes=10)
     test_slot.date_fin = activity.date_debut + timedelta(minutes=50)
     session.add(test_slot)
     session.flush()
 
-    # Tentative de création en collision
     data = SlotCreate(
         planning_id=test_planning.id,
-        nom_creneau="Slot en collision",
+        nom_creneau="Slot fenêtre identique",
         date_debut=test_slot.date_debut,
         date_fin=test_slot.date_fin,
     )
-
-    with pytest.raises(AppException) as excinfo:
-        service.create_slot(data)
-
-    # Vérification du statut HTTP 409 et du code métier
-    assert excinfo.value.http_status == 409
-    assert excinfo.value.code == ErrorRegistry.SLOT_COLLISION.code
-    assert "Collision" in excinfo.value.message
+    result = service.create_slot(data)
+    assert result.id is not None
 
 
-def test_create_slot_overlap_start(session, test_planning, test_slot):
-    """Nouveau slot commence pendant un slot existant."""
+def test_create_slot_overlap_start_allowed(session, test_planning, test_slot):
+    """Nouveau slot commençant pendant un slot existant est autorisé."""
     service = PlanningServiceSvc(session)
     activity = test_planning.activite
 
@@ -77,19 +70,16 @@ def test_create_slot_overlap_start(session, test_planning, test_slot):
 
     data = SlotCreate(
         planning_id=test_planning.id,
-        nom_creneau="Collision Start",
+        nom_creneau="Overlap Start",
         date_debut=activity.date_debut + timedelta(minutes=30),
         date_fin=activity.date_debut + timedelta(minutes=90),
     )
-
-    with pytest.raises(AppException) as excinfo:
-        service.create_slot(data)
-
-    assert excinfo.value.code == ErrorRegistry.SLOT_COLLISION.code
+    result = service.create_slot(data)
+    assert result.id is not None
 
 
-def test_create_slot_overlap_end(session, test_planning, test_slot):
-    """Nouveau slot commence avant et finit pendant un slot existant."""
+def test_create_slot_overlap_end_allowed(session, test_planning, test_slot):
+    """Nouveau slot finissant pendant un slot existant est autorisé."""
     service = PlanningServiceSvc(session)
 
     test_slot.date_debut = test_planning.activite.date_debut + timedelta(hours=1)
@@ -99,15 +89,12 @@ def test_create_slot_overlap_end(session, test_planning, test_slot):
 
     data = SlotCreate(
         planning_id=test_planning.id,
-        nom_creneau="Collision End",
+        nom_creneau="Overlap End",
         date_debut=test_slot.date_debut - timedelta(minutes=30),
         date_fin=test_slot.date_debut + timedelta(minutes=30),
     )
-
-    with pytest.raises(AppException) as excinfo:
-        service.create_slot(data)
-
-    assert excinfo.value.code == ErrorRegistry.SLOT_COLLISION.code
+    result = service.create_slot(data)
+    assert result.id is not None
 
 
 def test_create_slot_edge_to_edge_success(session, test_planning, test_slot):
@@ -128,4 +115,47 @@ def test_create_slot_edge_to_edge_success(session, test_planning, test_slot):
     )
 
     result = service.create_slot(data)
+    assert result.id is not None
+
+
+def test_create_slot_overlapping_different_ministere(session, test_planning):
+    """Simule Louange (toute la durée) + Son&Scène (5 min) : overlap autorisé."""
+    service = PlanningServiceSvc(session)
+    base = test_planning.activite.date_debut
+    activity_end = test_planning.activite.date_fin
+
+    slot1 = service.create_slot(
+        SlotCreate(
+            planning_id=test_planning.id,
+            nom_creneau="Louange — service complet",
+            date_debut=base,
+            date_fin=activity_end,
+        )
+    )
+    assert slot1.id is not None
+
+    slot2 = service.create_slot(
+        SlotCreate(
+            planning_id=test_planning.id,
+            nom_creneau="Son & Scène — intervention courte",
+            date_debut=activity_end - timedelta(minutes=5),
+            date_fin=activity_end,
+        )
+    )
+    assert slot2.id is not None
+
+
+def test_create_slot_arbitrary_minutes(session, test_planning):
+    """Les minutes libres (non multiples de 15) sont désormais acceptées."""
+    service = PlanningServiceSvc(session)
+    base = test_planning.activite.date_debut
+
+    result = service.create_slot(
+        SlotCreate(
+            planning_id=test_planning.id,
+            nom_creneau="Slot minutes libres",
+            date_debut=base + timedelta(minutes=7),
+            date_fin=base + timedelta(minutes=82),
+        )
+    )
     assert result.id is not None

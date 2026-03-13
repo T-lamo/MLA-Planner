@@ -23,6 +23,7 @@ interface Props {
   ministeresDetailed: MinistereReadWithRelations[]
   isSubmitting: boolean
   isLoadingReferences?: boolean
+  prefillCampusId?: string | null
 }
 
 const props = defineProps<Props>()
@@ -82,20 +83,22 @@ watch(
 )
 
 const resetForm = () => {
+  const prefill = props.prefillCampusId ?? null
   form.value = {
     nom: '',
     prenom: '',
     email: '',
     telephone: '',
     actif: true,
-    campus_ids: [],
-    campus_principal_id: null,
+    campus_ids: prefill ? [prefill] : [],
+    campus_principal_id: prefill,
     ministere_ids: [],
     pole_ids: [],
     role_codes: [],
     utilisateur: { ...EMPTY_UTILISATEUR },
   }
-  activeSections.value = new Set(['basic'])
+  if (prefill) activeSections.value = new Set(['basic', 'campus'])
+  else activeSections.value = new Set(['basic'])
 }
 
 const restoreFromDraft = () => {
@@ -288,7 +291,7 @@ const handleSubmit = () => {
       >
         <ProfileSecurityAccess
           v-model="form.utilisateur"
-          :existingRoles="editingProfile?.utilisateur?.roles ?? []"
+          :existingRoles="editingProfile?.utilisateur?.roles?.map((r) => r.libelle) ?? []"
         />
       </FormSection>
 

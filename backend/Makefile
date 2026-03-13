@@ -29,7 +29,7 @@ lint:
 	isort --check-only --profile black src
 	black --check src
 	mypy src
-	pylint --rcfile=$(shell pwd)/.pylintrc src || pylint --rcfile=../.pylintrc src
+	pylint --rcfile=$(shell pwd)/.pylintrc src
 
 flake:
 	flake8 src

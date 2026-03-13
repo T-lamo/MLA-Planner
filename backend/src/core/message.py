@@ -70,12 +70,13 @@ class ErrorRegistry:
         http_status=404,
     )
 
-    # --- DOMAINE SLOT ---
-    SLOT_COLLISION = ErrorDetail(
-        code="SLOT_001",
-        message="Collision avec le créneau existant : '{nom}'.",
-        http_status=status.HTTP_409_CONFLICT,
+    PLANNING_CANT_PUBLISH = ErrorDetail(
+        code="PLAN_012",
+        message="Impossible de publier : aucun membre n'est affecté.",
+        http_status=status.HTTP_400_BAD_REQUEST,
     )
+
+    # --- DOMAINE SLOT ---
     SLOT_OUT_OF_BOUNDS = ErrorDetail(
         code="SLOT_002",
         message="Le créneau doit être compris dans l'activité ({debut} - {fin}).",
@@ -97,13 +98,6 @@ class ErrorRegistry:
         message="Le slot doit être compris entre {debut} et {fin}.",
         http_status=status.HTTP_400_BAD_REQUEST,
     )
-    # Nouveau : Context spécifique ValidationEngine (Collision AC3 avec détails)
-    VALIDATION_SLOT_COLLISION_DETAIL = ErrorDetail(
-        code="SLOT_006",
-        message="Collision avec le slot existant '{nom}' ({debut} - {fin}).",
-        http_status=status.HTTP_409_CONFLICT,
-    )
-
     # --- DOMAINE Affectation (ASGN) ---
     Affectation_NOT_FOUND = ErrorDetail(
         code="ASGN_001",
@@ -216,6 +210,11 @@ class ErrorRegistry:
         code="AUTH_005",
         message="Token invalide pour la déconnexion.",
         http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    AUTH_REFRESH_TOKEN_INVALID = ErrorDetail(
+        code="AUTH_006",
+        message="Token de rafraîchissement invalide ou expiré.",
+        http_status=status.HTTP_401_UNAUTHORIZED,
     )
 
     # --- DOMAINE RÔLES ET CATÉGORIES (ROLE) ---

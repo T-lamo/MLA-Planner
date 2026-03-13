@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="calendarWrapperRef"
     class="calendar-wrapper relative min-h-[500px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:min-h-[650px]"
   >
     <ClientOnly>
@@ -21,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, h } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted, h } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -34,6 +35,7 @@ import type {
   CalendarOptions,
   EventApi,
   EventContentArg,
+  EventDropArg,
 } from '@fullcalendar/core'
 import type { PlanningEvent } from '../types/planning.types'
 
@@ -42,33 +44,72 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  /** * On émet l'objet EventApi de FullCalendar pour que le parent
+  /** On émet l'objet EventApi de FullCalendar pour que le parent
    * puisse extraire les données proprement.
    */
   (e: 'event-click', event: EventApi): void
   (e: 'date-select', selectInfo: DateSelectArg): void
+  (
+    e: 'event-drop',
+    payload: { id: string; start: string; end: string | null; revert: () => void },
+  ): void
 }>()
 
 const fullCalendarRef = ref<InstanceType<typeof FullCalendar> | null>(null)
+const calendarWrapperRef = ref<HTMLDivElement | null>(null)
 const isMobile = ref(false)
+const calendarHeight = ref<number | string>('700px')
 
 const checkMobile = () => {
   isMobile.value = window.innerWidth < 768
 }
 
+const updateCalendarHeight = () => {
+  if (isMobile.value) {
+    calendarHeight.value = 'auto'
+    return
+  }
+  const el = calendarWrapperRef.value
+  if (!el) return
+  const top = el.getBoundingClientRect().top
+  calendarHeight.value = Math.max(400, window.innerHeight - top - 24)
+}
+
+const onResize = () => {
+  checkMobile()
+  updateCalendarHeight()
+}
+
 onMounted(() => {
   checkMobile()
-  window.addEventListener('resize', checkMobile)
+  updateCalendarHeight()
+  window.addEventListener('resize', onResize)
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkMobile)
+  window.removeEventListener('resize', onResize)
 })
+
+// Sync impératif des dates quand un événement existant est mis à jour (ex : patchLocalPlanning).
+// La liaison déclarative `events: props.events` ne met pas à jour la durée pour les IDs existants.
+watch(
+  () => props.events,
+  (newEvents) => {
+    const api = fullCalendarRef.value?.getApi()
+    if (!api) return
+    for (const evt of newEvents) {
+      const fcEvent = api.getEventById(evt.id)
+      if (fcEvent) {
+        fcEvent.setDates(evt.start, evt.end ?? null)
+      }
+    }
+  },
+)
 
 // Typage explicite de la constante computed
 const calendarOptions = computed<CalendarOptions>(() => ({
   plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
-  initialView: isMobile.value ? 'listWeek' : 'dayGridMonth',
+  initialView: 'timeGridWeek',
   locales: allLocales,
   locale: 'fr',
   firstDay: 1,
@@ -77,7 +118,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     ? {
         left: 'prev,next',
         center: 'title',
-        right: 'listWeek,timeGridDay',
+        right: 'timeGridWeek,timeGridDay,listWeek',
       }
     : {
         left: 'prev,next today',
@@ -87,7 +128,6 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 
   buttonText: {
     today: isMobile.value ? 'Auj.' : "Aujourd'hui",
-    month: 'Mois',
     week: 'Sem.',
     day: 'Jour',
     list: 'Liste',
@@ -108,12 +148,20 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   selectable: true,
   selectMirror: true,
   dayMaxEvents: isMobile.value ? 2 : true,
-  height: isMobile.value ? 'auto' : '700px',
+  height: isMobile.value ? 'auto' : calendarHeight.value,
+  contentHeight: isMobile.value ? 'auto' : undefined,
   handleWindowResize: true,
   windowResizeDelay: 100,
 
   eventClick: (info: EventClickArg) => emit('event-click', info.event),
   select: (info: DateSelectArg) => emit('date-select', info),
+  eventDrop: (info: EventDropArg) =>
+    emit('event-drop', {
+      id: info.event.id,
+      start: info.event.startStr,
+      end: info.event.endStr || null,
+      revert: info.revert,
+    }),
 
   eventClassNames: (arg: { event: EventApi }) => {
     const isPersonal = arg.event.extendedProps.isPersonal ? 'is-personal' : ''
@@ -121,15 +169,43 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     return ['mla-calendar-event', `status-${status}`, isPersonal].filter(Boolean)
   },
 
-  // Vue liste : dot coloré par ministère + titre
+  // Vue liste : rendu enrichi (dot + titre + badge statut + méta campus/ministère)
   eventContent: (arg: EventContentArg) => {
     if (arg.view.type.startsWith('list')) {
-      return h('div', { class: 'fc-list-custom-event' }, [
+      const statut = String(arg.event.extendedProps.statut || 'brouillon').toLowerCase()
+      const ministereLabel =
+        typeof arg.event.extendedProps.ministereLabel === 'string'
+          ? arg.event.extendedProps.ministereLabel
+          : ''
+      const campus =
+        typeof arg.event.extendedProps.campus === 'string' ? arg.event.extendedProps.campus : ''
+
+      const statusLabels: Record<string, string> = {
+        brouillon: 'Brouillon',
+        publie: 'Publié',
+        annule: 'Annulé',
+        termine: 'Terminé',
+      }
+      const statusLabel = statusLabels[statut] ?? statut.toUpperCase()
+
+      const metaChildren = [
+        campus ? h('span', { class: 'mla-list-meta-chip' }, campus) : null,
+        campus && ministereLabel ? h('span', { class: 'mla-list-meta-sep' }, '·') : null,
+        ministereLabel ? h('span', { class: 'mla-list-meta-chip' }, ministereLabel) : null,
+      ].filter(Boolean)
+
+      return h('div', { class: 'mla-list-event' }, [
         h('span', {
-          class: 'list-event-dot',
+          class: 'mla-list-dot',
           style: { backgroundColor: arg.event.backgroundColor },
         }),
-        h('span', { class: 'list-event-title' }, arg.event.title),
+        h('div', { class: 'mla-list-body' }, [
+          h('div', { class: 'mla-list-top' }, [
+            h('span', { class: 'mla-list-title' }, arg.event.title),
+            h('span', { class: `mla-list-status mla-list-status--${statut}` }, statusLabel),
+          ]),
+          metaChildren.length > 0 ? h('div', { class: 'mla-list-meta' }, metaChildren) : null,
+        ]),
       ])
     }
     return true
@@ -158,12 +234,12 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   @apply mb-6 flex-col gap-3 md:flex-row;
 }
 .fc .fc-toolbar-title {
-  @apply text-base font-bold capitalize text-slate-800 md:text-lg;
+  @apply text-base font-bold text-slate-800 capitalize md:text-lg;
 }
 
 /* ── Boutons ────────────────────────────────────────────────────────── */
 .fc .fc-button {
-  @apply px-2 py-2 text-[10px] font-semibold shadow-none outline-none transition-all md:px-4 md:text-xs;
+  @apply px-2 py-2 text-[10px] font-semibold shadow-none transition-all outline-none md:px-4 md:text-xs;
   border-radius: 8px;
 }
 .fc .fc-button-active,
@@ -188,6 +264,24 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   .fc .fc-toolbar-chunk {
     @apply flex w-full justify-center;
   }
+  /* TimeGridWeek mobile : éviter le débordement horizontal */
+  .fc .fc-timegrid-col-frame {
+    min-width: 40px;
+  }
+  .fc .fc-col-header-cell-cushion {
+    @apply px-0.5 py-1 text-[10px];
+  }
+  .fc .fc-timegrid-slot-label-cushion {
+    @apply px-0.5 text-[9px];
+  }
+  .fc-timegrid-event .fc-event-title {
+    @apply text-[9px];
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
 }
 
 /* ── Événements — base ──────────────────────────────────────────────── */
@@ -199,8 +293,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 }
 
 .mla-calendar-event {
-  @apply cursor-pointer rounded-md border-none px-1 py-0.5 text-[10px]
-         font-medium shadow-sm transition-transform active:scale-95 md:px-2 md:text-xs;
+  @apply cursor-pointer rounded-md border-none px-1 py-0.5 text-[10px] font-medium shadow-sm transition-transform active:scale-95 md:px-2 md:text-xs;
 }
 
 /* ── Indicateur événement personnel ────────────────────────────────── */
@@ -258,29 +351,154 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   opacity: 0.75;
 }
 
-/* ── Vue liste — custom eventContent ───────────────────────────────── */
+/* ── Vue liste — structure de base ──────────────────────────────────── */
+.fc-list-table {
+  border-collapse: collapse;
+}
+
+/* Entête de jour */
+.fc .fc-list-day-cushion {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #f8fafc; /* slate-50 */
+  border-bottom: 1px solid #f1f5f9; /* slate-100 */
+  padding: 8px 12px;
+}
+.fc .fc-list-day-text,
+.fc .fc-list-day-side-text {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #334155; /* slate-700 */
+  text-transform: capitalize;
+  text-decoration: none;
+}
+
+/* Lignes d'événements */
 .fc-list-event {
   @apply cursor-pointer;
 }
+.fc-list-event td {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom: none !important;
+  transition: background-color 150ms ease;
+}
 .fc-list-event:hover td {
-  @apply bg-slate-50;
+  background-color: rgba(248, 250, 252, 0.6); /* slate-50/60 */
 }
-.fc-list-custom-event {
+
+/* Colonne heure */
+.fc .fc-list-event-time {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b; /* slate-500 */
+  min-width: 90px;
+  background-color: transparent !important;
+  white-space: nowrap;
+}
+
+/* Colonne dot */
+.fc .fc-list-event-graphic {
+  vertical-align: middle;
+  padding-right: 6px;
+}
+
+/* Colonne titre */
+.fc .fc-list-event-title a {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b; /* slate-800 */
+  text-decoration: none;
+  max-width: 260px;
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Vue liste — suppression du dot natif FC (remplacé par mla-list-dot) ── */
+.fc .fc-list-event-graphic {
+  display: none;
+}
+
+/* ── Vue liste — eventContent enrichi ──────────────────────────────── */
+.mla-list-event {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 2px 0;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 3px 0;
+  width: 100%;
 }
-.list-event-dot {
+.mla-list-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+  margin-top: 3px;
 }
-.list-event-title {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: #334155;
+.mla-list-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.mla-list-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mla-list-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b; /* slate-800 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+.mla-list-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.mla-list-meta-chip {
+  font-size: 0.6875rem;
+  color: #64748b; /* slate-500 */
+}
+.mla-list-meta-sep {
+  font-size: 0.6875rem;
+  color: #cbd5e1; /* slate-300 */
+}
+.mla-list-status {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.mla-list-status--brouillon {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.mla-list-status--publie {
+  background: #dcfce7;
+  color: #15803d;
+}
+.mla-list-status--annule {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.mla-list-status--termine {
+  background: #e2e8f0;
+  color: #475569;
 }
 
 /* ── Indicateur "maintenant" ────────────────────────────────────────── */

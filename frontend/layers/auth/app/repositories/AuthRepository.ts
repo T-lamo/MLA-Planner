@@ -2,9 +2,6 @@ import { BaseRepository } from '~~/layers/base/app/repositories/BaseRepository'
 
 // --- Interfaces DTO (Data Transfer Objects) ---
 
-/**
- * Structure exacte retournée par ton FastAPI (OAuth2 / Snake Case)
- */
 interface RoleSchema {
   id: string
   libelle: string
@@ -36,9 +33,6 @@ interface MeSchema {
   roles: string[]
 }
 
-/**
- * Modèle propre pour le Frontend (Camel Case & Clean)
- */
 export interface AuthUser {
   id: string
   username: string
@@ -52,36 +46,40 @@ export interface AuthUser {
 export interface AuthResponse {
   token: string
   expiresAt: string
+  refreshToken: string | null
   user: AuthUser
+}
+
+// --- Transform partagé ---
+
+function transformLoginSchema(response: LoginSchema): AuthResponse {
+  return {
+    token: response.access_token,
+    expiresAt: response.expires_at,
+    refreshToken: response.refresh_token,
+    user: {
+      id: response.user.id,
+      username: response.user.username,
+      isActive: response.user.actif,
+      membreId: response.user.membre_id,
+      campusPrincipalId: response.user.campus_principal_id ?? null,
+      name: response.user.name ?? response.user.username,
+      roles: response.user.roles.map((r) => r.libelle),
+    },
+  }
 }
 
 // --- Implémentation du Repository ---
 
 export class AuthRepository extends BaseRepository {
-  /**
-   * Authentification utilisateur
-   */
   async login(credentials: Record<'username' | 'password', string>): Promise<AuthResponse> {
     const { data } = await this.apiRequest<LoginSchema, AuthResponse>('/auth/token', {
       method: 'POST',
       body: credentials,
       headers: {
-        // Indispensable pour que FastAPI reconnaisse le format
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      transform: (response): AuthResponse => ({
-        token: response.access_token,
-        expiresAt: response.expires_at,
-        user: {
-          id: response.user.id,
-          username: response.user.username,
-          isActive: response.user.actif,
-          membreId: response.user.membre_id,
-          campusPrincipalId: response.user.campus_principal_id ?? null,
-          name: response.user.name ?? response.user.username,
-          roles: response.user.roles.map((r) => r.libelle),
-        },
-      }),
+      transform: transformLoginSchema,
     })
 
     if (!data) throw new Error('Données de connexion introuvables')
@@ -89,11 +87,19 @@ export class AuthRepository extends BaseRepository {
     return data
   }
 
-  /**
-   * Récupération du profil actuel
-   */
+  async refresh(refreshToken: string): Promise<AuthResponse> {
+    const { data } = await this.apiRequest<LoginSchema, AuthResponse>('/auth/refresh', {
+      method: 'POST',
+      body: { refresh_token: refreshToken },
+      transform: transformLoginSchema,
+    })
+
+    if (!data) throw new Error('Rafraîchissement du token échoué')
+
+    return data
+  }
+
   async getMe(): Promise<AuthUser> {
-    // Note : /auth/users/me renvoie généralement l'objet "user" directement
     const { data } = await this.apiRequest<MeSchema, AuthUser>('/auth/users/me', {
       method: 'GET',
       transform: (user): AuthUser => ({
@@ -112,11 +118,7 @@ export class AuthRepository extends BaseRepository {
     return data
   }
 
-  /**
-   * Déconnexion
-   */
   async logout() {
-    // On passe unknown car on n'attend pas de retour spécifique
     return await this.apiRequest<unknown>('/auth/logout', { method: 'POST' })
   }
 }

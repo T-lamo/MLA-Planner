@@ -8,7 +8,7 @@ export interface UtilisateurBase {
 export interface UtilisateurRead extends UtilisateurBase {
   id: UUID
   membre_id: UUID
-  roles: string[]
+  roles: { id: string; libelle: string }[]
 }
 
 export interface UtilisateurWrite extends UtilisateurBase {

@@ -1,4 +1,5 @@
 import { ref, computed, watch } from 'vue'
+import type { EnhancedApiError } from '~~/layers/base/types/api'
 import type {
   CampusFilterParams,
   MinistereColor,
@@ -10,13 +11,17 @@ import { getMinistereColor } from '../types/planning.types'
 import { PlanningRepository } from '../repositories/PlanningRepository'
 import { ProfileRepository } from '~~/layers/base/app/repositories/ProfileRepository'
 import type { ProfilReadFull } from '~~/layers/base/types/profiles'
+import type { CampusRead } from '~~/layers/base/types/campus'
 import type { MinistereSimple } from '~~/layers/base/types/ministere'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
+import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 
 export const usePlanning = () => {
   const authStore = useAuthStore()
+  const uiStore = useUIStore()
   const planningRepo = new PlanningRepository()
   const profileRepo = new ProfileRepository()
+  const { notifyError } = useErrorHandler()
 
   // -----------------------------------------------------------------------
   // État
@@ -35,7 +40,11 @@ export const usePlanning = () => {
 
   const ministeres = computed<MinistereSimple[]>(() => myProfile.value?.ministeres ?? [])
   const ministereIds = computed<string[]>(() => ministeres.value.map((m) => m.id))
-  const currentMembreId = computed<string | null>(() => authStore.currentUser?.membre_id ?? null)
+  const currentMembreId = computed<string | null>(() => authStore.currentUser?.membreId ?? null)
+  const userCampuses = computed<CampusRead[]>(() => myProfile.value?.campuses ?? [])
+  const userCampusPrincipalId = computed<string | null>(
+    () => myProfile.value?.campus_principal_id ?? null,
+  )
 
   // -----------------------------------------------------------------------
   // Couleurs par ministère (attribution déterministe par position)
@@ -55,15 +64,16 @@ export const usePlanning = () => {
 
   function toCalendarEvent(planning: PlanningFullRead): PlanningEvent {
     const ministereId = planning.activite?.ministere_organisateur_id ?? ''
-    const ministereLabel = ministeres.value.find((m) => m.id === ministereId)?.nom ?? ministereId
+    const ministereLabel =
+      ministeres.value.find((m) => m.id === ministereId)?.nom ??
+      planning.activite?.ministere_organisateur_nom ??
+      ministereId
     const color: MinistereColor =
       ministereColorMap.value.get(ministereId) ?? getMinistereColor(ministereId, ministereIds.value)
 
     const allAffectations = planning.slots.flatMap((s) => s.affectations)
 
-    const membreIds = allAffectations
-      .map((a) => a.membre?.id ?? '')
-      .filter(Boolean)
+    const membreIds = allAffectations.map((a) => a.membre?.id ?? '').filter(Boolean)
 
     const membres = allAffectations
       .filter((a): a is typeof a & { membre: NonNullable<typeof a.membre> } => a.membre != null)
@@ -83,7 +93,11 @@ export const usePlanning = () => {
       borderColor: color.border,
       textColor: color.text,
       extendedProps: {
-        campus: planning.activite?.campus_id ?? '',
+        campus:
+          planning.activite?.campus_nom ??
+          userCampuses.value.find((c) => c.id === planning.activite?.campus_id)?.nom ??
+          planning.activite?.campus_id ??
+          '',
         ministereId,
         ministereLabel,
         typeActivite: planning.activite?.type ?? '',
@@ -126,6 +140,7 @@ export const usePlanning = () => {
   // -----------------------------------------------------------------------
 
   async function refresh(): Promise<void> {
+    if (!authStore.isAuthenticated) return
     if (isLoading.value) return
     isLoading.value = true
     error.value = null
@@ -133,31 +148,32 @@ export const usePlanning = () => {
     try {
       await ensureProfile()
 
+      const campusId = uiStore.selectedCampusId || undefined
+
       if (perspective.value === 'PERSONAL') {
-        // Endpoint MLA-PLAN-07 : GET /plannings/my/calendar
-        rawPlannings.value = await planningRepo.listMyCalendar()
+        rawPlannings.value = await planningRepo.listMyCalendar(campusId)
       } else if (perspective.value === 'MINISTERE') {
         if (activeMinistereId.value) {
-          rawPlannings.value = await planningRepo.listByMinistere(activeMinistereId.value)
+          rawPlannings.value = await planningRepo.listByMinistere(activeMinistereId.value, campusId)
         } else {
           // Aucun ministère actif → union de tous les ministères de l'utilisateur
           const results = await Promise.all(
-            ministereIds.value.map((id) => planningRepo.listByMinistere(id)),
+            ministereIds.value.map((id) => planningRepo.listByMinistere(id, campusId)),
           )
           rawPlannings.value = deduplicatePlannings(results.flat())
         }
       } else {
-        // CAMPUS — sera complété dans MLA-PLAN-09
-        const campusId = myProfile.value?.campus_principal_id
-        if (!campusId) {
-          error.value = 'Aucun campus principal configuré sur votre profil.'
+        // CAMPUS — utilise le campus sélectionné dans la navbar
+        if (!uiStore.selectedCampusId) {
+          error.value = 'Aucun campus sélectionné.'
           rawPlannings.value = []
           return
         }
-        rawPlannings.value = await planningRepo.listByCampus(campusId)
+        rawPlannings.value = await planningRepo.listByCampus(uiStore.selectedCampusId)
       }
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Erreur lors du chargement du planning'
+      notifyError(e as EnhancedApiError)
     } finally {
       isLoading.value = false
     }
@@ -181,7 +197,13 @@ export const usePlanning = () => {
    */
   function patchLocalPlanning(updated: PlanningFullRead): void {
     const idx = rawPlannings.value.findIndex((p) => p.id === updated.id)
-    if (idx !== -1) rawPlannings.value[idx] = updated
+    if (idx === -1) return
+    const existing = rawPlannings.value[idx]!
+    const patched = {
+      ...updated,
+      activite: updated.activite ?? existing.activite,
+    }
+    rawPlannings.value = rawPlannings.value.map((p, i) => (i === idx ? patched : p))
   }
 
   /** Supprime un planning du cache local (après DELETE). */
@@ -189,8 +211,8 @@ export const usePlanning = () => {
     rawPlannings.value = rawPlannings.value.filter((p) => p.id !== id)
   }
 
-  // Auto-refresh lorsque la perspective ou le ministère actif change
-  watch([perspective, activeMinistereId], () => {
+  // Auto-refresh when perspective, active ministère or selected campus changes
+  watch([perspective, activeMinistereId, () => uiStore.selectedCampusId], () => {
     refresh()
   })
 
@@ -211,6 +233,8 @@ export const usePlanning = () => {
     ministereIds,
     ministereColorMap,
     events,
+    userCampuses,
+    userCampusPrincipalId,
 
     // Filtres campus (pour MLA-PLAN-09)
     campusFilters: ref<CampusFilterParams>({}),
