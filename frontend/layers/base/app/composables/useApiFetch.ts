@@ -12,6 +12,9 @@ interface ResponseErrorInterceptorCtx {
   request: { toString(): string }
 }
 
+// Flag module-level pour éviter les boucles de refresh concurrentes
+let _isRefreshing = false
+
 /**
  * Logique commune de configuration (Headers, Intercepteurs)
  */
@@ -31,13 +34,26 @@ function getApiConfig() {
         }
       }
     },
-    onResponseError({ response, request }: ResponseErrorInterceptorCtx) {
-      const isLoginRequest = request.toString().includes('/auth/token')
+    async onResponseError({ response, request }: ResponseErrorInterceptorCtx) {
+      const url = request.toString()
+      const isLoginRequest = url.includes('/auth/token')
+      const isRefreshRequest = url.includes('/auth/refresh')
 
-      if (response.status === 401 && !isLoginRequest) {
-        authStore.logout()
-        if (route.path !== '/login') {
-          navigateTo({ path: '/login', query: { redirect: route.fullPath } })
+      if (response.status === 401 && !isLoginRequest && !isRefreshRequest) {
+        // Tentative de refresh silencieux (une seule fois, pas de boucle)
+        if (!_isRefreshing) {
+          _isRefreshing = true
+          try {
+            const ok = await authStore.silentRefresh()
+            if (!ok) {
+              authStore.logout()
+              if (route.path !== '/login') {
+                navigateTo({ path: '/login', query: { redirect: route.fullPath } })
+              }
+            }
+          } finally {
+            _isRefreshing = false
+          }
         }
         return
       }
@@ -55,7 +71,6 @@ function getApiConfig() {
 
 /**
  * Utilitaire pour les appels IMPÉRATIFS (Actions, Repositories, Watchers)
- * Résout l'erreur "Component is already mounted"
  */
 export const $api = <T>(url: string, options: NitroFetchOptions<NitroFetchRequest> = {}) => {
   const defaults = getApiConfig()

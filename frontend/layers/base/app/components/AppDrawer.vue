@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="drawer-fade">
       <div v-if="isOpen" class="fixed inset-0 z-[10000] flex justify-end">
-        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" @click="handleClose"></div>
+        <div class="absolute inset-0 bg-slate-900/20" @click="handleClose"></div>
 
         <Transition name="drawer-slide">
           <aside

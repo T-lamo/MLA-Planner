@@ -29,7 +29,7 @@ lint:
 	isort --check-only --profile black src
 	black --check src
 	mypy src
-	pylint --rcfile=$(shell pwd)/.pylintrc src || pylint --rcfile=../.pylintrc src
+	pylint --rcfile=$(shell pwd)/.pylintrc src
 
 flake:
 	flake8 src
@@ -74,7 +74,7 @@ test-debug:
 
 # --- BASE DE DONNEES (DEV) ---
 db-reset:
-	DATABASE_URL=$(DB_TEST_URL) $(PYTHON) $(DB_ADMIN_SCRIPT) reset
+	$(PYTHON) $(DB_ADMIN_SCRIPT) reset
 
 db-seed:
 	$(PYTHON) $(DB_ADMIN_SCRIPT) seed

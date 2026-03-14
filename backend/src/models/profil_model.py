@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional, Sequence
 
-from pydantic import computed_field
+from pydantic import EmailStr, computed_field
+from sqlmodel import Field, SQLModel
 
 # Importation des modèles de base et de lecture optimisés
 from .campus_model import CampusRead
@@ -84,8 +85,22 @@ class ProfilUpdateFull(MembreUpdate):
     role_codes: List[str] = []
 
 
+# ---------------------------------------------------------
+# 4. SELF UPDATE (utilisateur connecté — champs personnels uniquement)
+# ---------------------------------------------------------
+class ProfilSelfUpdate(SQLModel):
+    """Mise à jour restreinte : l'utilisateur peut modifier ses propres
+    infos personnelles."""
+
+    nom: Optional[str] = Field(default=None, max_length=50)
+    prenom: Optional[str] = Field(default=None, max_length=50)
+    email: Optional[EmailStr] = Field(default=None, max_length=100)
+    telephone: Optional[str] = Field(default=None, max_length=20)
+
+
 __all__ = [
     "ProfilReadFull",
     "ProfilCreateFull",
     "ProfilUpdateFull",
+    "ProfilSelfUpdate",
 ]

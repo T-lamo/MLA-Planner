@@ -1,9 +1,10 @@
 # core/auth/auth_dependencies.py
 from enum import Enum
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jwt import InvalidTokenError as JWTError
 from sqlmodel import Session
 
 from conf.db.database import Database

@@ -19,10 +19,16 @@ export function useProfileFormLogic() {
       telephone: p.telephone ?? '',
       actif: p.actif,
       campus_ids: p.campuses?.map((c) => c.id) || [],
+      campus_principal_id: p.campus_principal_id ?? null,
       ministere_ids: Array.from(mIds),
       pole_ids: pIds,
+      role_codes: p.roles_assoc?.map((r) => r.role_code) || [],
       utilisateur: p.utilisateur
-        ? { username: p.utilisateur.username, actif: p.utilisateur.actif, roles_ids: [] }
+        ? {
+            username: p.utilisateur.username,
+            actif: p.utilisateur.actif,
+            roles_ids: p.utilisateur.roles?.map((r) => r.id) ?? [],
+          }
         : undefined,
     }
   }

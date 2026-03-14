@@ -9,6 +9,9 @@ class AffectationBase(SQLModel):
     role_code: str = Field(max_length=50)
     statut_affectation_code: str = Field(foreign_key="t_statutaffectation.code")
     presence_confirmee: bool = Field(default=False)
+    ministere_id: Optional[str] = Field(
+        default=None, foreign_key="t_ministere.id", ondelete="SET NULL"
+    )
 
 
 class AffectationUpdate(SQLModel):
