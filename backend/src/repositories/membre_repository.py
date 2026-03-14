@@ -5,8 +5,10 @@ from sqlmodel import Session, col, distinct, func, select
 
 from models import Membre
 from models.schema_db_model import (
+    AffectationRole,
     Campus,
     MembreRole,
+    Utilisateur,
 )
 from repositories.base_repository import BaseRepository
 
@@ -42,18 +44,17 @@ class MembreRepository(BaseRepository[Membre]):
                 Campus.id == campus_id
             )
 
-        rels = (
-            load_relations
-            if load_relations is not None
-            else [
-                cast(Any, Membre.utilisateur),
-                cast(Any, Membre.campuses),
-                cast(Any, Membre.ministeres),
-                cast(Any, Membre.poles),
-            ]
-        )
-
-        statement = statement.options(*[selectinload(r) for r in rels])
+        if load_relations is not None:
+            statement = statement.options(*[selectinload(r) for r in load_relations])
+        else:
+            statement = statement.options(
+                selectinload(cast(Any, Membre.utilisateur))
+                .selectinload(cast(Any, Utilisateur.affectations))
+                .selectinload(cast(Any, AffectationRole.role)),
+                selectinload(cast(Any, Membre.campuses)),
+                selectinload(cast(Any, Membre.ministeres)),
+                selectinload(cast(Any, Membre.poles)),
+            )
         statement = statement.limit(limit).offset(offset).distinct()
 
         return list(self.db.exec(statement).unique().all())
@@ -62,7 +63,7 @@ class MembreRepository(BaseRepository[Membre]):
         """Compte total de membres avec filtre campus."""
         # pylint: disable=not-callable
         statement = select(func.count(distinct(Membre.id))).where(
-            col(Membre.deleted_at).is_(None)
+            col(Membre.deleted_at) == None  # noqa: E711
         )
 
         if campus_id:

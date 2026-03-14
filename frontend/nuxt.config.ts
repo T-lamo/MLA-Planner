@@ -5,6 +5,13 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxt/eslint', '@pinia/nuxt'],
 
+  app: {
+    head: {
+      title: 'Planner',
+      link: [{ rel: 'icon', type: 'image/png', href: '/Logo.png' }],
+    },
+  },
+
   // Configuration des variables d'environnement
   runtimeConfig: {
     public: {

@@ -192,6 +192,9 @@ class Membre(MembreBase, table=True):  # type: ignore
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     date_inscription: datetime = Field(default_factory=datetime.now)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
+    campus_principal_id: Optional[str] = Field(
+        default=None, foreign_key="t_campus.id", ondelete="SET NULL"
+    )
 
     # Relations N:N (Architecture Flexible)
     campuses: List["Campus"] = Relationship(
@@ -236,6 +239,7 @@ class Activite(ActiviteBase, table=True):  # type: ignore
 class Slot(SlotBase, table=True):  # type: ignore
     __tablename__ = "t_slot"
     __table_args__ = {"extend_existing": True}
+    __mapper_args__ = {"confirm_deleted_rows": False}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     planning: Optional["PlanningService"] = Relationship(back_populates="slots")
     affectations: List["Affectation"] = Relationship(back_populates="slot")
@@ -272,6 +276,7 @@ class Affectation(AffectationBase, table=True):  # type: ignore
         back_populates="affectations"
     )
     membre: Optional["Membre"] = Relationship(back_populates="affectations")
+    ministere: Optional["Ministere"] = Relationship()
 
 
 # -------------------------

@@ -5,7 +5,19 @@
     </header> -->
     <div ref="containerRef" class="space-y-3">
       <div v-if="modelValue.length > 0" class="flex flex-wrap gap-2">
-        <span v-for="cId in modelValue.slice(0, 5)" :key="cId" class="campus-tag">
+        <span
+          v-for="cId in modelValue.slice(0, 5)"
+          :key="cId"
+          class="campus-tag"
+          :class="{ 'campus-tag--principal': cId === principalId }"
+        >
+          <Crown
+            v-if="modelValue.length > 1"
+            class="size-3 cursor-pointer transition-colors"
+            :class="cId === principalId ? 'text-amber-500' : 'text-slate-300 hover:text-amber-400'"
+            :title="cId === principalId ? 'Campus principal' : 'Définir comme campus principal'"
+            @click.stop="emit('set-principal', cId)"
+          />
           {{ campuses.find((c) => c.id === cId)?.nom }}
           <X class="size-3 cursor-pointer hover:text-red-500" @click.stop="removeCampus(cId)" />
         </span>
@@ -49,10 +61,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { Search, Check, X } from 'lucide-vue-next'
+import { Search, Check, X, Crown } from 'lucide-vue-next'
 import type { CampusRead } from '~~/layers/base/types/campus'
 
-const props = defineProps<{ campuses: CampusRead[] }>()
+const props = defineProps<{ campuses: CampusRead[]; principalId?: string | null }>()
+const emit = defineEmits<{ 'set-principal': [id: string] }>()
 const modelValue = defineModel<string[]>({ default: () => [] })
 
 const search = ref('')

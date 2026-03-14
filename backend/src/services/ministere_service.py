@@ -3,7 +3,8 @@ from typing import List
 
 from sqlmodel import Session, col, select
 
-from core.exceptions import BadRequestException, NotFoundException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import Ministere, MinistereCreate, MinistereRead, MinistereUpdate
 from models.schema_db_model import Campus  # Import du modèle de table
 from repositories.campus_repository import CampusRepository
@@ -17,7 +18,6 @@ class MinistereService(
     BaseService[MinistereCreate, MinistereRead, MinistereUpdate, Ministere]
 ):
     def __init__(self, db: Session):
-        # On passe le repo à la classe parente
         super().__init__(repo=MinistereRepository(db), resource_name="Ministère")
         self.db = db
         self.campus_repo = CampusRepository(db)
@@ -27,15 +27,11 @@ class MinistereService(
         Crée un ministère et l'associe à un ou plusieurs campus.
         """
         # 1. Vérification proactive du doublon de nom
-        #  global (puisque unique=True sur le nom)
         statement = select(Ministere).where(Ministere.nom == data.nom)
         if self.db.exec(statement).first():
-            raise BadRequestException(
-                f"Le ministère '{data.nom}' existe déjà dans l'organisation."
-            )
+            raise AppException(ErrorRegistry.MINST_DUPLICATE, nom=data.nom)
 
         # 2. Préparation de l'objet sans les relations
-        # On exclut campus_ids du dump pour l'instanciation du modèle de table
         ministere_data = data.model_dump(exclude={"campus_ids"})
         db_obj = Ministere(**ministere_data)
 
@@ -43,16 +39,9 @@ class MinistereService(
         if data.campus_ids:
             self._sync_campuses(db_obj, data.campus_ids)
         else:
-            # Optionnel : Règle métier - un ministère doit-il être
-            #  lié à au moins un campus ?
-            raise BadRequestException(
-                "Un ministère doit être lié à au moins un campus."
-            )
+            raise AppException(ErrorRegistry.MINST_CAMPUS_REQUIRED)
 
-        return self._execute_with_flush(
-            lambda: self.repo.create(db_obj),
-            "Erreur d'intégrité : vérifiez les données du ministère.",
-        )
+        return self._execute_with_flush(lambda: self.repo.create(db_obj))
 
     def update(self, identifiant: str, data: MinistereUpdate) -> Ministere:
         """
@@ -67,10 +56,7 @@ class MinistereService(
         if data.campus_ids is not None:
             self._sync_campuses(obj_db, data.campus_ids)
 
-        return self._execute_with_flush(
-            lambda: self.repo.update(obj_db, update_data),
-            "Mise à jour impossible : violation d'intégrité.",
-        )
+        return self._execute_with_flush(lambda: self.repo.update(obj_db, update_data))
 
     def _sync_campuses(self, ministere: Ministere, campus_ids: List[str]) -> None:
         """
@@ -88,23 +74,21 @@ class MinistereService(
         if len(found_campuses) != len(set(campus_ids)):
             found_ids = {c.id for c in found_campuses}
             missing_ids = set(campus_ids) - found_ids
-            raise NotFoundException(f"Campus suivants introuvables : {missing_ids}")
+            raise AppException(ErrorRegistry.CAMP_NOT_FOUND, id=str(missing_ids))
 
         # Mise à jour de la relation Many-to-Many
         ministere.campuses = list(found_campuses)
 
-    # À ajouter dans MinistereService
     def get_detailed(self, identifiant: str) -> Ministere:
         """
         Récupère un ministère avec toutes ses relations enrichies.
-        Lève une NotFoundException si l'ID n'existe pas.
+        Lève une AppException si l'ID n'existe pas.
         """
-        # Le repository utilise déjà self.relations par défaut via get_by_id
         db_obj = self.repo.get_by_id(identifiant)
 
         if not db_obj:
-            raise NotFoundException(
-                f"{self.resource_name} avec l'ID {identifiant} introuvable."
+            raise AppException(
+                ErrorRegistry.CORE_RESOURCE_NOT_FOUND, resource=self.resource_name
             )
 
         return db_obj

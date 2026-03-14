@@ -3,11 +3,17 @@ import type { AuthUser } from '../repositories/AuthRepository'
 
 export const useAuthStore = defineStore('auth', () => {
   // --- ÉTAT (STATE) ---
-  const cookieOptions = { maxAge: 60 * 60 * 24 * 7, path: '/' }
+  const cookieOptions = {
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
+    sameSite: 'strict' as const,
+    secure: true,
+  }
 
   const token = useCookie<string | null>('auth_token', cookieOptions)
   const user = useCookie<AuthUser | null>('auth_user', cookieOptions)
   const expiresAt = useCookie<string | null>('auth_expires_at', cookieOptions)
+  const refreshToken = useCookie<string | null>('auth_refresh_token', cookieOptions)
 
   // --- GETTERS (COMPUTED) ---
   const isAuthenticated = computed(() => {
@@ -21,6 +27,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   const currentUser = computed(() => user.value)
 
+  const isSuperAdmin = computed(() => user.value?.roles?.includes('Super Admin') ?? false)
+  const isAdmin = computed(() => user.value?.roles?.includes('Admin') ?? false)
+  const hasAdminAccess = computed(() => isSuperAdmin.value || isAdmin.value)
+
   // --- ACTIONS ---
 
   async function login(credentials: Record<'username' | 'password', string>) {
@@ -31,13 +41,37 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = response.token
     user.value = response.user
     expiresAt.value = response.expiresAt
+    refreshToken.value = response.refreshToken
 
     return response
   }
 
+  /**
+   * Rafraîchit silencieusement la session (rotation du refresh token).
+   * Retourne true si réussi, false sinon (dégradation gracieuse si pas de refresh token).
+   */
+  async function silentRefresh(): Promise<boolean> {
+    if (!refreshToken.value) return false
+
+    try {
+      const { $api } = useNuxtApp()
+      const response = await $api.auth.refresh(refreshToken.value)
+
+      token.value = response.token
+      user.value = response.user
+      expiresAt.value = response.expiresAt
+      refreshToken.value = response.refreshToken
+
+      return true
+    } catch {
+      clearLocalAuth()
+      return false
+    }
+  }
+
   async function initAuth() {
     if (!isAuthenticated.value) {
-      if (token.value) await logout(false)
+      if (token.value) clearLocalAuth()
       return
     }
 
@@ -58,8 +92,6 @@ export const useAuthStore = defineStore('auth', () => {
       const userData = await $api.auth.getMe()
       user.value = userData
     } catch (error: unknown) {
-      // ✅ Correction : Utilisation de unknown au lieu de any
-      // On transtype l'erreur pour vérifier le status
       const fetchError = error as { status?: number }
 
       if (fetchError.status === 401) {
@@ -75,6 +107,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     user.value = null
     expiresAt.value = null
+    refreshToken.value = null
   }
 
   /**
@@ -98,12 +131,17 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     user,
     expiresAt,
+    refreshToken,
     isAuthenticated,
+    isSuperAdmin,
+    isAdmin,
+    hasAdminAccess,
     currentUser,
     login,
     logout,
     fetchMe,
     initAuth,
     clearLocalAuth,
+    silentRefresh,
   }
 })

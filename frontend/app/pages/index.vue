@@ -6,7 +6,7 @@
           Bienvenue, {{ authStore.currentUser?.username }} !
         </h1>
         <p class="mt-2 text-lg text-slate-600">
-          Vous êtes correctement authentifié sur la plateforme MLA.
+          Vous êtes correctement authentifié sur la plateforme Planner.
         </p>
       </header>
 
@@ -92,7 +92,7 @@ const formattedExpiration = computed(() => {
 
 // Définition des métadonnées de la page
 definePageMeta({
-  title: 'Accueil - MLA App',
+  title: 'Accueil - Planner',
   // On s'assure que le middleware global traite cette page
 })
 </script>

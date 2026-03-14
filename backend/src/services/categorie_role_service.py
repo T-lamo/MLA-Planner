@@ -1,6 +1,7 @@
 from sqlmodel import Session
 
-from core.exceptions import ConflictException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import (
     CategorieRole,
     CategorieRoleCreate,
@@ -23,7 +24,7 @@ class CategorieRoleService(
     def create(self, data: CategorieRoleCreate) -> CategorieRole:
         # Vérification préventive pour la PK naturelle
         if self.repo.get_by_id(data.code):
-            raise ConflictException(f"Le code '{data.code}' est déjà utilisé.")
+            raise AppException(ErrorRegistry.ROLE_CAT_DUPLICATE, code=data.code)
 
         db_obj = CategorieRole.model_validate(data)
         return self.repo.create(db_obj)

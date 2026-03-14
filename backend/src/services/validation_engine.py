@@ -56,24 +56,3 @@ class ValidationEngine:
                 debut=activity.date_debut,
                 fin=activity.date_fin,
             )
-
-        # AC3 : Détection de collision
-        existing_slots = repo.get_slots_by_planning(slot_create.planning_id)
-        collision = None
-
-        for existing in existing_slots:
-            # Formule : (Start1 < End2) AND (End1 > Start2)
-            if (
-                slot_create.date_debut < existing.date_fin
-                and slot_create.date_fin > existing.date_debut
-            ):
-                collision = existing
-                break
-
-        if collision:
-            raise AppException(
-                ErrorRegistry.VALIDATION_SLOT_COLLISION_DETAIL,
-                nom=collision.nom_creneau,
-                debut=collision.date_debut,
-                fin=collision.date_fin,
-            )

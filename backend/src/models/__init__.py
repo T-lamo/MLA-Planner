@@ -47,6 +47,8 @@ from .schema_db_model import *  # noqa: F401,F403
 from .schema_db_model import __all__ as schema_dbs
 from .slot_model import *  # noqa: F401,F403
 from .slot_model import __all__ as slot_model
+from .team_model import *  # noqa: F401,F403
+from .team_model import __all__ as team_model
 from .utilisateur_model import *  # noqa: F401,F403
 from .utilisateur_model import __all__ as utilisateurs
 from .voix_model import *  # noqa: F401,F403
@@ -81,5 +83,6 @@ __all__: List[str] = (
     + list(planning_model)
     + list(affectation)
     + list(profile)
+    + list(team_model)
     + list(response)
 )

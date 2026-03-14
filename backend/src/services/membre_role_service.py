@@ -1,6 +1,7 @@
 from sqlmodel import Session
 
-from core.exceptions import ConflictException, NotFoundException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import (
     Membre,
     MembreRole,
@@ -24,13 +25,13 @@ class MembreRoleService(
     def create(self, data: MembreRoleCreate) -> MembreRole:
         # 1. Vérifier si l'affectation existe déjà
         if self.repo.get_by_id((data.membre_id, data.role_code)):
-            raise ConflictException("Ce membre possède déjà ce rôle.")
+            raise AppException(ErrorRegistry.MEMBRE_ROLE_DUPLICATE)
 
         # 2. Vérifier l'existence des entités parentes (Sécurité intégrité)
         if not self.repo.db.get(Membre, data.membre_id):
-            raise NotFoundException("Membre introuvable.")
+            raise AppException(ErrorRegistry.MEMBRE_NOT_FOUND)
         if not self.repo.db.get(RoleCompetence, data.role_code):
-            raise NotFoundException("Rôle technique introuvable.")
+            raise AppException(ErrorRegistry.ROLE_CAT_NOT_FOUND)
 
         db_obj = MembreRole.model_validate(data)
         return self.repo.create(db_obj)

@@ -1,30 +1,40 @@
 <template>
   <section class="security-box">
     <div class="mb-4 flex items-center justify-between">
-      <!-- <div class="flex items-center gap-2">
-        <ShieldCheck class="size-4 text-slate-500" />
-        <h4 class="text-[10px] font-black tracking-widest text-slate-700 uppercase">
-          Accès Applicatif
-        </h4>
-      </div> -->
       <button type="button" class="text-primary-600 text-[11px] font-bold" @click="toggleAccess">
         {{ modelValue ? 'Révoquer' : 'Accorder' }}
       </button>
     </div>
     <Transition name="form-expand">
-      <div
-        v-if="modelValue"
-        class="grid grid-cols-1 gap-4 border-t border-slate-200/60 pt-4 md:grid-cols-2"
-      >
-        <div class="form-group">
-          <label>Utilisateur</label>
-          <input v-model="modelValue.username" type="text" class="input-field" />
+      <div v-if="modelValue" class="space-y-4 border-t border-slate-200/60 pt-4">
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="form-group">
+            <label>Utilisateur</label>
+            <input v-model="modelValue.username" type="text" class="input-field" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <div class="input-wrapper">
+              <Lock class="input-icon" />
+              <input v-model="modelValue.password" type="password" class="input-field with-icon" />
+            </div>
+          </div>
         </div>
+
         <div class="form-group">
-          <label>Password</label>
-          <div class="input-wrapper">
-            <Lock class="input-icon" />
-            <input v-model="modelValue.password" type="password" class="input-field with-icon" />
+          <label>Rôles</label>
+          <div v-if="roleStore.loading" class="text-[11px] text-slate-400">Chargement...</div>
+          <div v-else class="flex flex-wrap gap-3">
+            <label v-for="role in roleStore.items" :key="role.id" class="role-checkbox-label">
+              <input
+                type="checkbox"
+                :value="role.id"
+                :checked="modelValue.roles_ids?.includes(role.id)"
+                class="accent-primary-600"
+                @change="toggleRole(role.id)"
+              />
+              <span>{{ role.libelle }}</span>
+            </label>
           </div>
         </div>
       </div>
@@ -33,12 +43,46 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue'
 import { Lock } from 'lucide-vue-next'
+import { useRoleStore } from '~~/layers/base/app/stores/useRoleStore'
 import type { UtilisateurWrite } from '~~/layers/base/types/utilisateur'
+
+const props = defineProps<{ existingRoles?: string[] }>()
 const modelValue = defineModel<UtilisateurWrite | undefined>()
+const roleStore = useRoleStore()
+
+onMounted(() => roleStore.fetchRoles())
+
+// Pré-sélectionner les rôles existants dès que le model et le store sont prêts
+watch(
+  [() => modelValue.value, () => roleStore.items, () => props.existingRoles],
+  ([val, items]) => {
+    if (!val || val.roles_ids?.length || !items.length || !props.existingRoles?.length) return
+    val.roles_ids = items.filter((r) => props.existingRoles!.includes(r.libelle)).map((r) => r.id)
+  },
+  { immediate: true },
+)
+
 const toggleAccess = () => {
-  if (modelValue.value) modelValue.value = undefined
-  else modelValue.value = { username: '', password: '', actif: true, roles_ids: [] }
+  if (modelValue.value) {
+    modelValue.value = undefined
+  } else {
+    const preselected = roleStore.items
+      .filter((r) => props.existingRoles?.includes(r.libelle))
+      .map((r) => r.id)
+    modelValue.value = { username: '', password: '', actif: true, roles_ids: preselected }
+  }
+}
+
+const toggleRole = (roleId: string) => {
+  if (!modelValue.value) return
+  const ids = modelValue.value.roles_ids ?? []
+  if (ids.includes(roleId)) {
+    modelValue.value.roles_ids = ids.filter((id) => id !== roleId)
+  } else {
+    modelValue.value.roles_ids = [...ids, roleId]
+  }
 }
 </script>
 <style scoped>
@@ -82,6 +126,11 @@ const toggleAccess = () => {
 
 .input-field.with-icon {
   @apply pl-9;
+}
+
+/* Role checkboxes */
+.role-checkbox-label {
+  @apply flex cursor-pointer items-center gap-1.5 text-sm text-slate-700;
 }
 
 /* Animation Expand */

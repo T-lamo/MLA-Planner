@@ -30,7 +30,7 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
         date_fin: datetime,
         exclude_slot_id: Optional[str] = None,
     ):
-        """Valide les règles métier : cohérence, bornes activité et collisions."""
+        """Valide les règles métier : cohérence et bornes activité."""
 
         # 1. Vérification chronologique
         if date_fin <= date_debut:
@@ -51,19 +51,6 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
                 debut=planning.activite.date_debut,
                 fin=planning.activite.date_fin,
             )
-
-        # 4. Détection de collisions
-        query = select(Slot).where(
-            Slot.planning_id == planning_id,
-            Slot.date_debut < date_fin,
-            Slot.date_fin > date_debut,
-        )
-        if exclude_slot_id:
-            query = query.where(Slot.id != exclude_slot_id)
-
-        collision = self.db.exec(query).first()
-        if collision:
-            raise AppException(ErrorRegistry.SLOT_COLLISION, nom=collision.nom_creneau)
 
     def update_slot_secure(self, slot_id: str, data: Any) -> Slot:
         """Met à jour un slot en validant les nouvelles contraintes temporelles."""
@@ -128,6 +115,8 @@ class SlotService(BaseService[SlotCreate, SlotRead, Any, Slot]):
                     **self._prepare_slot_create_dict(s_data), planning_id=planning_id
                 )
                 slot_db = self.add_slot_to_planning(planning_id, s_create)
+
+            self.db.flush()
 
             self.affectation_svc.sync_affectations(
                 slot_db.id, extract_field(s_data, "affectations", [])

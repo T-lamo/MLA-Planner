@@ -1,79 +1,52 @@
 import { defineStore } from 'pinia'
-import { useCampusStore } from './useCampusStore'
+import { ProfileRepository } from '~~/layers/base/app/repositories/ProfileRepository'
+import type { CampusRead } from '~~/layers/base/types/campus'
 
 export const useUIStore = defineStore('ui', () => {
-  // --- Dependency Injection ---
-  const campusStore = useCampusStore()
-
   // --- State ---
   const isSidebarCollapsed = ref(false)
-
-  /**
-   * PERSISTENCE STRATEGY:
-   * To maintain the selection after a refresh in Nuxt 3,
-   * we use useCookie (SSR friendly) or watch with localStorage.
-   */
+  const myCampuses = ref<CampusRead[]>([])
   const selectedCampusId = ref<string>('')
 
-  // --- Computed (Reactive Synchronization) ---
+  // --- Computed ---
 
-  // Direct reference to the domain store's items
-  const campuses = computed(() => campusStore.items)
+  // myCampuses exposed as campuses for backward-compat (ProfileFilters, useProfiles)
+  const campuses = computed(() => myCampuses.value)
 
-  // Dynamically find the full object from the domain store
-  const currentCampus = computed(() => {
-    if (!selectedCampusId.value) return null
-    return campusStore.getById(selectedCampusId.value)
-  })
+  const currentCampus = computed(
+    () => myCampuses.value.find((c) => c.id === selectedCampusId.value) ?? null,
+  )
 
   // --- Actions ---
 
   const toggleSidebar = () => (isSidebarCollapsed.value = !isSidebarCollapsed.value)
 
   /**
-   * Bootstrapping Logic:
-   * Ensures data is present and handles default selection.
+   * Bootstrapping: always loads user's campuses first so the navbar
+   * selector stays populated after SPA navigation, then selects a default.
    */
   async function initializeUI() {
-    // 1. Fetch campuses if the domain store is empty
-    if (campusStore.items.length === 0) {
-      // We fetch with a large limit to ensure we have the referential list for the UI
-      await campusStore.fetchAll({ limit: 100, offset: 0 })
+    try {
+      const profileRepo = new ProfileRepository()
+      myCampuses.value = await profileRepo.getMyCampuses()
+    } catch {
+      // Silently ignore — ex: utilisateur non authentifié (page login)
+      return
     }
 
-    // 2. Default Selection Logic
-    // If no ID is selected or the selected ID no longer exists in the list
-    const exists = campusStore.items.some((c) => c.id === selectedCampusId.value)
+    // Keep current selection if still valid
+    const currentIsValid = myCampuses.value.some((c) => c.id === selectedCampusId.value)
+    if (selectedCampusId.value && currentIsValid) return
 
-    // 1. Vérification de l'existence et de l'expiration
-    if (!selectedCampusId.value || !exists) {
-      if (campusStore.items && campusStore.items.length > 0) {
-        const firstCampus = campusStore.items[0]
-
-        if (firstCampus) {
-          selectedCampusId.value = firstCampus.id
-        }
-      }
-    }
+    // Fallback: first campus in the list
+    selectedCampusId.value = myCampuses.value[0]?.id ?? ''
   }
-
-  /**
-   * Persistence Recommendation:
-   * Uncomment the following to persist selection in local storage
-   */
-  /*
-  watch(selectedCampusId, (newId) => {
-    if (newId) localStorage.setItem('selected_campus_id', newId)
-  }, { immediate: true })
-  
-  // In the setup part of the store:
-  // selectedCampusId.value = localStorage.getItem('selected_campus_id') || null
-  */
 
   return {
     isSidebarCollapsed,
     selectedCampusId,
     campuses,
+    myCampuses,
     currentCampus,
     toggleSidebar,
     initializeUI,
