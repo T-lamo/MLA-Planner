@@ -1,16 +1,32 @@
 from typing import Any, List, Optional, cast
 
+from sqlalchemy import exists
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, distinct, func, select
 
+from mla_enum import RoleName
 from models import Membre
 from models.schema_db_model import (
     AffectationRole,
     Campus,
     MembreRole,
+    Role,
     Utilisateur,
 )
 from repositories.base_repository import BaseRepository
+
+
+def _exclude_superadmin_clause():
+    """Filtre excluant les membres liés à un utilisateur SUPER_ADMIN."""
+    return ~exists(
+        select(Utilisateur.id)
+        .join(AffectationRole, AffectationRole.utilisateur_id == Utilisateur.id)
+        .join(Role, Role.id == AffectationRole.role_id)
+        .where(
+            Utilisateur.membre_id == Membre.id,
+            Role.libelle == RoleName.SUPER_ADMIN,
+        )
+    )
 
 
 class MembreRepository(BaseRepository[Membre]):
@@ -29,17 +45,18 @@ class MembreRepository(BaseRepository[Membre]):
         limit: int,
         offset: int,
         load_relations: Optional[List[Any]] = None,
-        campus_id: Optional[str] = None,  # Ajouté en paramètre nommé optionnel
+        campus_id: Optional[str] = None,
     ) -> List[Membre]:
         """
         Version compatible LSP. On utilise load_relations de la base
         et on ajoute campus_id.
         """
-        # Utilisation de col() pour rassurer mypy sur l'attribut SQL
-        statement = select(Membre).where(col(Membre.deleted_at) == (None))
+        statement = select(Membre).where(
+            col(Membre.deleted_at) == (None),
+            _exclude_superadmin_clause(),
+        )
 
         if campus_id:
-            # On cast Membre.campuses en Any pour mypy lors du join
             statement = statement.join(cast(Any, Membre.campuses)).where(
                 Campus.id == campus_id
             )
@@ -63,7 +80,8 @@ class MembreRepository(BaseRepository[Membre]):
         """Compte total de membres avec filtre campus."""
         # pylint: disable=not-callable
         statement = select(func.count(distinct(Membre.id))).where(
-            col(Membre.deleted_at) == None  # noqa: E711
+            col(Membre.deleted_at) == None,  # noqa: E711
+            _exclude_superadmin_clause(),
         )
 
         if campus_id:
@@ -79,7 +97,10 @@ class MembreRepository(BaseRepository[Membre]):
         campus_id: Optional[str] = None,
     ) -> List[Membre]:
         """Récupère tous les membres actifs avec compatibilité LSP."""
-        statement = select(Membre).where(col(Membre.deleted_at) == None)  # noqa: E711
+        statement = select(Membre).where(
+            col(Membre.deleted_at) == None,  # noqa: E711
+            _exclude_superadmin_clause(),
+        )
 
         if campus_id:
             statement = statement.join(cast(Any, Membre.campuses)).where(

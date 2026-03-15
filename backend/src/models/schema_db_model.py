@@ -18,7 +18,7 @@ from .indisponibilite_model import IndisponibiliteBase
 from .membre_model import MembreBase
 from .membre_role_model import MembreRoleBase
 from .ministere_model import MinistereBase
-from .organisationicc_model import OrganisationICCBase
+from .organisation_model import OrganisationBase
 from .pays_model import PaysBase
 from .permission_model import PermissionBase
 from .pole_model import PoleBase
@@ -71,6 +71,13 @@ class CategorieRole(CategorieRoleBase, table=True):  # type: ignore
     __tablename__ = "t_categorierole"
     __table_args__ = {"extend_existing": True}
     roles: List["RoleCompetence"] = Relationship(back_populates="categorie")
+    # Relation vers le ministère parent (Campus Configuration)
+    # Migration requise :
+    # ALTER TABLE t_categorierole
+    #   ADD COLUMN ministere_id VARCHAR REFERENCES t_ministere(id)
+    #   ON DELETE SET NULL;
+    # ALTER TABLE t_categorierole ADD COLUMN description TEXT;
+    ministere: Optional["Ministere"] = Relationship(back_populates="categories_roles")
 
 
 class RoleCompetence(RoleCompetenceBase, table=True):  # type: ignore
@@ -108,8 +115,8 @@ class TypeResponsabilite(SQLModel, table=True):  # type: ignore
 # -------------------------
 
 
-class OrganisationICC(OrganisationICCBase, table=True):  # type: ignore
-    __tablename__ = "t_organisationicc"
+class Organisation(OrganisationBase, table=True):  # type: ignore
+    __tablename__ = "t_organisation"
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
@@ -123,9 +130,9 @@ class Pays(PaysBase, table=True):  # type: ignore
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     organisation_id: Optional[str] = Field(
-        default=None, foreign_key="t_organisationicc.id", ondelete="SET NULL"
+        default=None, foreign_key="t_organisation.id", ondelete="SET NULL"
     )
-    organisation: Optional["OrganisationICC"] = Relationship(back_populates="pays")
+    organisation: Optional["Organisation"] = Relationship(back_populates="pays")
     campus: List["Campus"] = Relationship(back_populates="pays")
 
 
@@ -167,6 +174,8 @@ class Ministere(MinistereBase, table=True):  # type: ignore
         back_populates="ministeres", link_model=MembreMinistereLink
     )
     equipes: List["Equipe"] = Relationship(back_populates="ministere")
+    # Relation inverse des catégories (Campus Configuration)
+    categories_roles: List["CategorieRole"] = Relationship(back_populates="ministere")
 
 
 class Pole(PoleBase, table=True):  # type: ignore
@@ -437,7 +446,7 @@ __all__ = [
     "MembreRole",
     "StatutPlanning",
     "TypeResponsabilite",
-    "OrganisationICC",
+    "Organisation",
     "Pays",
     "Campus",
     "Ministere",

@@ -22,6 +22,25 @@ class CategorieRoleBase(SQLModel):
     )
     libelle: str = Field(max_length=100, description="Libellé complet de la catégorie")
 
+    # Lien vers le ministère parent (ajouté pour Campus Configuration)
+    # Migration requise :
+    # ALTER TABLE t_categorierole
+    #   ADD COLUMN ministere_id VARCHAR
+    #   REFERENCES t_ministere(id) ON DELETE SET NULL;
+    ministere_id: Optional[str] = Field(
+        default=None,
+        foreign_key="t_ministere.id",
+        description="UUID du ministère parent (Campus Config)",
+    )
+
+    # Champ description optionnel (ajouté pour Campus Configuration)
+    # Migration requise :
+    # ALTER TABLE t_categorierole ADD COLUMN description TEXT;
+    description: Optional[str] = Field(
+        default=None,
+        description="Description libre de la catégorie",
+    )
+
     @field_validator("code")
     @classmethod
     def validate_code(cls, v: str):

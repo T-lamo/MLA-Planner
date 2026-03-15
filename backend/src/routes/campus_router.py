@@ -9,7 +9,7 @@ from models.campus_model import (
     CampusReadWithDetails,
     CampusUpdate,
 )
-from routes.deps import STANDARD_ADMIN_ONLY_DEPS
+from routes.deps import SUPER_ADMIN_ONLY_DEPS
 from services.campus_service import CampusService
 
 from .base_route_factory import CRUDRouterFactory
@@ -22,7 +22,7 @@ campus_factory = CRUDRouterFactory(
     update_schema=CampusUpdate,
     path="/campuses",
     tag="Campuses",
-    dependencies=STANDARD_ADMIN_ONLY_DEPS,
+    dependencies=SUPER_ADMIN_ONLY_DEPS,
 )
 
 router = campus_factory.router
@@ -33,7 +33,7 @@ router = campus_factory.router
     "/{campus_id}/ministeres",
     response_model=CampusReadWithDetails,
     status_code=status.HTTP_200_OK,
-    dependencies=STANDARD_ADMIN_ONLY_DEPS.get("update", []),
+    dependencies=SUPER_ADMIN_ONLY_DEPS.get("update", []),
     summary="Lier des ministères à un campus",
 )
 def link_ministeres_to_campus(
@@ -53,7 +53,7 @@ def link_ministeres_to_campus(
 @router.patch(
     "/{campus_id}/ministeres/{ministere_id}",
     response_model=CampusReadWithDetails,
-    dependencies=STANDARD_ADMIN_ONLY_DEPS.get("update", []),
+    dependencies=SUPER_ADMIN_ONLY_DEPS.get("update", []),
     summary="Ajouter un ministère spécifique",
 )
 def add_single_ministere_to_campus(
@@ -71,7 +71,7 @@ def add_single_ministere_to_campus(
 @router.get(
     "/{campus_id}/details",
     response_model=CampusReadWithDetails,
-    dependencies=STANDARD_ADMIN_ONLY_DEPS.get("read", []),
+    dependencies=SUPER_ADMIN_ONLY_DEPS.get("read", []),
     summary="Récupérer un campus avec ses ministères et membres",
 )
 def get_campus_full_details(
@@ -91,7 +91,7 @@ def get_campus_full_details(
     response_model=DataListResponse[
         MinistereReadWithRelations
     ],  # Ou un schéma spécifique enrichi
-    dependencies=STANDARD_ADMIN_ONLY_DEPS.get("read", []),
+    dependencies=SUPER_ADMIN_ONLY_DEPS.get("read", []),
     summary="Récupérer la liste détaillée des ministères d'un campus",
 )
 def get_campus_ministeres_detailed(

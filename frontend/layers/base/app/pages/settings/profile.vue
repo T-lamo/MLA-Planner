@@ -24,6 +24,141 @@
       </div>
     </div>
 
+    <!-- ── Compte Super Admin ── -->
+    <div v-else-if="authStore.isSuperAdmin" class="superadmin-card">
+      <div class="superadmin-icon">
+        <Shield class="size-8" />
+      </div>
+      <div class="space-y-1 text-center">
+        <p class="text-lg font-bold text-slate-900">Compte Superadministrateur</p>
+        <p class="text-sm text-slate-500">Ce compte système n'est lié à aucun profil membre.</p>
+      </div>
+      <div class="superadmin-info">
+        <div class="readonly-field">
+          <User class="size-3.5 shrink-0 text-slate-400" />
+          <span class="text-sm font-medium text-slate-700">
+            {{ authStore.user?.username }}
+          </span>
+          <span class="readonly-tag">Identifiant système</span>
+        </div>
+      </div>
+      <div class="mt-2 flex flex-wrap justify-center gap-1.5">
+        <span
+          v-for="role in authStore.user?.roles"
+          :key="role"
+          :class="['role-badge', roleColor(role)]"
+        >
+          {{ role }}
+        </span>
+      </div>
+
+      <!-- Séparateur -->
+      <div class="w-full border-t border-slate-100 pt-4">
+        <p class="field-label mb-3 text-center">Mot de passe</p>
+
+        <!-- Formulaire changement mot de passe -->
+        <form
+          v-if="showPasswordForm"
+          class="w-full space-y-4"
+          @submit.prevent="handleChangePassword"
+        >
+          <div class="form-group">
+            <label>Mot de passe actuel</label>
+            <div class="input-wrapper">
+              <Lock class="input-icon" />
+              <input
+                v-model="pwForm.current"
+                type="password"
+                class="input-field with-icon"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Nouveau mot de passe</label>
+            <div class="input-wrapper">
+              <Lock class="input-icon" />
+              <input
+                v-model="pwForm.next"
+                type="password"
+                class="input-field with-icon"
+                placeholder="Min. 6 caractères"
+                minlength="6"
+                required
+              />
+            </div>
+            <div v-if="pwForm.next" class="mt-1.5 space-y-1">
+              <div class="strength-bar">
+                <div :class="['strength-fill', strengthClass]" :style="{ width: strengthWidth }" />
+              </div>
+              <p :class="['text-[10px] font-semibold', strengthTextClass]">{{ strengthLabel }}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Confirmer le nouveau mot de passe</label>
+            <div class="input-wrapper">
+              <Lock class="input-icon" />
+              <input
+                v-model="pwForm.confirm"
+                type="password"
+                class="input-field with-icon"
+                :class="{ 'border-red-300': pwForm.confirm && pwForm.next !== pwForm.confirm }"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+            <p
+              v-if="pwForm.confirm && pwForm.next !== pwForm.confirm"
+              class="mt-0.5 text-[11px] text-red-500"
+            >
+              Les mots de passe ne correspondent pas.
+            </p>
+          </div>
+
+          <div v-if="pwError" class="feedback-box error">
+            <AlertCircle class="size-3.5 shrink-0" />
+            <span>{{ pwError }}</span>
+          </div>
+          <div v-if="pwSuccess" class="feedback-box success">
+            <CheckCircle2 class="size-3.5 shrink-0" />
+            <span>{{ pwSuccess }}</span>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="submit"
+              :disabled="pwLoading"
+              class="btn-primary flex-1 justify-center sm:flex-none"
+            >
+              <span v-if="pwLoading" class="flex items-center gap-1.5">
+                <span class="loading-dot" />Enregistrement...
+              </span>
+              <span v-else>Enregistrer</span>
+            </button>
+            <button
+              type="button"
+              class="btn-secondary flex-1 justify-center sm:flex-none"
+              @click="cancelPasswordForm"
+            >
+              Annuler
+            </button>
+          </div>
+        </form>
+
+        <button
+          v-else
+          class="btn-secondary mx-auto w-full justify-center sm:w-auto"
+          @click="showPasswordForm = true"
+        >
+          <KeyRound class="size-3.5" />
+          Changer le mot de passe
+        </button>
+      </div>
+    </div>
+
     <!-- ── Erreur ── -->
     <div v-else-if="error" class="error-box">
       <AlertCircle class="size-5 shrink-0 text-red-400" />
@@ -434,6 +569,10 @@ const pwError = ref('')
 const pwSuccess = ref('')
 
 onMounted(async () => {
+  if (authStore.isSuperAdmin) {
+    loading.value = false
+    return
+  }
   try {
     profile.value = await profileRepo.getMyProfile()
   } catch {
@@ -610,6 +749,18 @@ const handleChangePassword = async () => {
 /* ── Error box ── */
 .error-box {
   @apply flex items-start gap-3 rounded-2xl border border-red-100 bg-red-50 p-5 text-sm text-red-700;
+}
+
+/* ── Super Admin card ── */
+.superadmin-card {
+  @apply mx-auto flex w-full max-w-md flex-col items-center gap-5 rounded-2xl border border-purple-200/80 bg-white p-5 shadow-sm sm:p-8;
+}
+.superadmin-icon {
+  @apply flex size-14 items-center justify-center rounded-2xl bg-purple-50 sm:size-16;
+  color: var(--color-purple-600, #9333ea);
+}
+.superadmin-info {
+  @apply w-full;
 }
 
 /* ══════════════════════════════════════════

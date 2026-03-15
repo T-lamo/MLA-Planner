@@ -14,17 +14,16 @@ MembreRead.model_rebuild()
 # --- TESTS DE CRÉATION (POST) ---
 
 
-def test_create_campus_as_admin(client, admin_headers, test_pays):
-    """Vérifie la création réussie par un admin."""
+def test_create_campus_as_superadmin(client, superadmin_headers, test_pays):
+    """Vérifie la création réussie par un superadmin."""
     payload = {
-        "nom": f"Campus Admin {uuid4()}",
+        "nom": f"Campus SuperAdmin {uuid4()}",
         "ville": "Abidjan",
         "timezone": "Africa/Abidjan",
-        "pays_id": test_pays.id,  # C'est un UUID
+        "pays_id": test_pays.id,
     }
-    # On utilise jsonable_encoder pour transformer l'UUID en string JSON
     response = client.post(
-        "/campuses/", json=jsonable_encoder(payload), headers=admin_headers
+        "/campuses/", json=jsonable_encoder(payload), headers=superadmin_headers
     )
 
     assert response.status_code == status.HTTP_201_CREATED
@@ -43,15 +42,15 @@ def test_create_campus_as_user_forbidden(client, user_headers, test_pays):
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-def test_create_campus_invalid_pays(client, admin_headers):
+def test_create_campus_invalid_pays(client, superadmin_headers):
     """Vérifie l'erreur 404 sur pays inexistant."""
     payload = {
         "nom": "Campus Perdu",
         "ville": "Nulle part",
-        "pays_id": uuid4(),  # On passe l'objet UUID directement
+        "pays_id": uuid4(),
     }
     response = client.post(
-        "/campuses/", json=jsonable_encoder(payload), headers=admin_headers
+        "/campuses/", json=jsonable_encoder(payload), headers=superadmin_headers
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -77,10 +76,10 @@ def test_get_one_campus(client, test_campus):
 # --- TESTS DE MISE À JOUR (PATCH) ---
 
 
-def test_update_campus_admin(client, admin_headers, test_campus):
+def test_update_campus_superadmin(client, superadmin_headers, test_campus):
     payload = {"nom": f"Nouveau Nom {uuid4()}"}
     response = client.patch(
-        f"/campuses/{test_campus.id}", json=payload, headers=admin_headers
+        f"/campuses/{test_campus.id}", json=payload, headers=superadmin_headers
     )
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["nom"] == payload["nom"]
@@ -89,15 +88,14 @@ def test_update_campus_admin(client, admin_headers, test_campus):
 # --- TESTS DE SUPPRESSION (DELETE) ---
 
 
-def test_delete_campus_admin(client, admin_headers, test_campus, session):
-    # Action
-    response = client.delete(f"/campuses/{test_campus.id}", headers=admin_headers)
+def test_delete_campus_superadmin(client, superadmin_headers, test_campus):
+    response = client.delete(f"/campuses/{test_campus.id}", headers=superadmin_headers)
     assert response.status_code == status.HTTP_204_NO_CONTENT
 
 
-def test_delete_campus_not_found(client, admin_headers):
-    fake_id = uuid4()  # On utilise l'objet UUID
-    response = client.delete(f"/campuses/{fake_id}", headers=admin_headers)
+def test_delete_campus_not_found(client, superadmin_headers):
+    fake_id = uuid4()
+    response = client.delete(f"/campuses/{fake_id}", headers=superadmin_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -117,50 +115,44 @@ def test_list_all_campuses(client, test_campus):
     assert any(c["id"] == str(test_campus.id) for c in data["data"])
 
 
-def test_link_ministeres_to_campus(client, admin_headers, test_campus, test_ministere):
+def test_link_ministeres_to_campus(
+    client, superadmin_headers, test_campus, test_ministere
+):
     """Vérifie la liaison Many-to-Many campus ↔ liste de ministères (remplace)."""
-    # Act
     response = client.post(
         f"/campuses/{test_campus.id}/ministeres",
         json=jsonable_encoder([str(test_ministere.id)]),
-        headers=admin_headers,
+        headers=superadmin_headers,
     )
 
-    # Assert
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert any(m["id"] == str(test_ministere.id) for m in data.get("ministeres", []))
 
 
-def test_link_ministeres_campus_not_found(client, admin_headers):
+def test_link_ministeres_campus_not_found(client, superadmin_headers):
     """Vérifie le 404 si le campus cible n'existe pas."""
-    # Arrange
     fake_campus_id = str(uuid4())
 
-    # Act
     response = client.post(
         f"/campuses/{fake_campus_id}/ministeres",
         json=[str(uuid4())],
-        headers=admin_headers,
+        headers=superadmin_headers,
     )
 
-    # Assert
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
-def test_link_ministeres_ministere_not_found(client, admin_headers, test_campus):
+def test_link_ministeres_ministere_not_found(client, superadmin_headers, test_campus):
     """Vérifie le 404 si un ministère de la liste n'existe pas en base."""
-    # Arrange
     fake_ministere_id = str(uuid4())
 
-    # Act
     response = client.post(
         f"/campuses/{test_campus.id}/ministeres",
         json=[fake_ministere_id],
-        headers=admin_headers,
+        headers=superadmin_headers,
     )
 
-    # Assert
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
@@ -180,33 +172,28 @@ def test_link_ministeres_forbidden_for_user(
 
 
 def test_add_single_ministere_to_campus(
-    client, admin_headers, test_campus, test_ministere
+    client, superadmin_headers, test_campus, test_ministere
 ):
     """Vérifie l'ajout d'un ministère unique sans écraser les liaisons existantes."""
-    # Act
     response = client.patch(
         f"/campuses/{test_campus.id}/ministeres/{test_ministere.id}",
-        headers=admin_headers,
+        headers=superadmin_headers,
     )
 
-    # Assert
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert any(m["id"] == str(test_ministere.id) for m in data.get("ministeres", []))
 
 
-def test_add_single_ministere_not_found(client, admin_headers, test_campus):
+def test_add_single_ministere_not_found(client, superadmin_headers, test_campus):
     """Vérifie le 404 si le ministère à ajouter n'existe pas."""
-    # Arrange
     fake_ministere_id = str(uuid4())
 
-    # Act
     response = client.patch(
         f"/campuses/{test_campus.id}/ministeres/{fake_ministere_id}",
-        headers=admin_headers,
+        headers=superadmin_headers,
     )
 
-    # Assert
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
 

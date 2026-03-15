@@ -7,7 +7,7 @@ from sqlmodel import Session
 from models.schema_db_model import (
     Campus,
     Ministere,
-    OrganisationICC,
+    Organisation,
     Pays,
     Pole,
 )
@@ -21,7 +21,7 @@ def seed_data(session: Session):
     Crée la chaîne de dépendances complète pour éviter les IntegrityError.
     """
     # 1. Organisation (La racine)
-    org = OrganisationICC(
+    org = Organisation(
         id=str(uuid4()),
         nom=f"Organisation_{uuid4().hex[:6]}",
         date_creation=date(2020, 1, 1),

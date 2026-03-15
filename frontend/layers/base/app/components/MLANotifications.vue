@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CircleCheck, CircleAlert, Info, TriangleAlert, X } from 'lucide-vue-next'
 import { useMLANotificationStore } from '../stores/useMLANotificationStore'
+import type { NotificationAction } from '../stores/useMLANotificationStore'
 
 const store = useMLANotificationStore()
 
@@ -16,6 +17,24 @@ const styles = {
   error: 'border-red-500/50 bg-red-50/90 text-red-900',
   warning: 'border-amber-500/50 bg-amber-50/90 text-amber-900',
   info: 'border-blue-500/50 bg-blue-50/90 text-blue-900',
+}
+
+const actionStyles: Record<NonNullable<NotificationAction['variant']>, string> = {
+  primary:
+    'bg-current/10 text-current text-xs font-semibold px-2.5 py-1 rounded-md hover:bg-current/20 transition-colors',
+  danger:
+    'bg-red-600 text-white text-xs font-semibold px-2.5 py-1 rounded-md hover:bg-red-700 transition-colors',
+  ghost:
+    'text-current text-xs px-2.5 py-1 rounded-md opacity-70 hover:opacity-100 hover:bg-current/10 transition-colors',
+}
+
+function getActionStyle(variant: NotificationAction['variant']): string {
+  return actionStyles[variant ?? 'ghost']
+}
+
+function handleActionClick(notifId: string, action: NotificationAction): void {
+  action.onClick()
+  store.remove(notifId)
 }
 </script>
 
@@ -39,13 +58,24 @@ const styles = {
         @mouseenter="store.pauseTimer(n.id)"
         @mouseleave="store.resumeTimer(n.id)"
       >
-        <component :is="icons[n.type]" class="size-5 shrink-0 opacity-80" />
+        <component :is="icons[n.type]" class="mt-0.5 size-5 shrink-0 opacity-80" />
 
         <div class="flex-1">
           <h4 class="text-sm leading-tight font-bold">{{ n.title }}</h4>
           <p v-if="n.description" class="mt-1 text-xs leading-relaxed font-medium opacity-80">
             {{ n.description }}
           </p>
+          <div v-if="n.actions && n.actions.length > 0" class="mt-2.5 flex flex-wrap gap-2">
+            <button
+              v-for="action in n.actions"
+              :key="action.label"
+              type="button"
+              :class="getActionStyle(action.variant)"
+              @click.stop="handleActionClick(n.id, action)"
+            >
+              {{ action.label }}
+            </button>
+          </div>
         </div>
 
         <button
