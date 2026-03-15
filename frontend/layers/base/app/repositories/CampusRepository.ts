@@ -17,6 +17,14 @@ export class CampusRepository extends GenericRepository<
     super('/campuses')
   }
   /**
+   * Récupère tous les campus sans pagination (liste globale super admin).
+   */
+  async getAllCampuses(): Promise<CampusRead[]> {
+    const { data } = await this.apiRequest<CampusRead[]>('/campuses/all')
+    return (data as unknown as { data: CampusRead[] }).data
+  }
+
+  /**
    * Récupère la liste enrichie des ministères pour un campus donné.
    * Typage strict basé sur MinistereReadWithRelations[].
    */

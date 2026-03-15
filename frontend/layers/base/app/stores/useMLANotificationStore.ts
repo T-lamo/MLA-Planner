@@ -2,6 +2,12 @@ import { defineStore } from 'pinia'
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info'
 
+export interface NotificationAction {
+  label: string
+  variant?: 'primary' | 'danger' | 'ghost'
+  onClick: () => void
+}
+
 export interface MLANotification {
   id: string
   title: string
@@ -10,7 +16,9 @@ export interface MLANotification {
   duration: number
   persistent: boolean
   isPaused?: boolean
+  actions?: NotificationAction[]
   _timer?: ReturnType<typeof setTimeout>
+  _onRemove?: () => void
 }
 
 export const useMLANotificationStore = defineStore('mla-notifications', () => {
@@ -50,15 +58,13 @@ export const useMLANotificationStore = defineStore('mla-notifications', () => {
 
   const remove = (id: string) => {
     const index = notifications.value.findIndex((n) => n.id === id)
-
-    // 1. On récupère la référence
     const notification = notifications.value[index]
-
-    // 2. On vérifie explicitement que la notification existe
-    // Cela rassure TypeScript sur le fait que 'notification' n'est pas undefined
     if (notification) {
       if (notification._timer) {
         clearTimeout(notification._timer)
+      }
+      if (notification._onRemove) {
+        notification._onRemove()
       }
       notifications.value.splice(index, 1)
     }

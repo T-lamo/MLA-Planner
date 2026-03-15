@@ -35,7 +35,7 @@
 
       <nav class="custom-scrollbar flex-1 overflow-y-auto px-3 py-4">
         <div class="space-y-4">
-          <div class="relative">
+          <div v-if="!authStore.isSuperAdmin" class="relative">
             <button
               ref="triggerRef"
               class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
@@ -123,8 +123,94 @@
           </div>
         </div>
 
+        <!-- Section Super Admin (SUPER_ADMIN uniquement) -->
+        <div v-if="authStore.isSuperAdmin" class="relative mt-4">
+          <button
+            ref="superAdminTriggerRef"
+            class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
+            :class="[
+              isSuperAdminOpen && !ui.isSidebarCollapsed
+                ? 'bg-slate-50 text-(--color-primary-700)'
+                : 'text-slate-600',
+            ]"
+            @click="handleSuperAdminMenuClick"
+            @mouseenter="handleSuperAdminMouseEnter"
+            @mouseleave="handleSuperAdminMouseLeave"
+          >
+            <Building2 class="size-5 shrink-0" />
+            <span
+              v-if="!ui.isSidebarCollapsed"
+              class="flex-1 text-left text-[10px] font-bold tracking-wider uppercase"
+              >Super Admin</span
+            >
+            <ChevronDown
+              v-if="!ui.isSidebarCollapsed"
+              :class="[
+                'size-3.5 transition-transform duration-200',
+                isSuperAdminOpen ? 'rotate-180' : '',
+              ]"
+            />
+          </button>
+
+          <transition name="expand">
+            <ul
+              v-if="isSuperAdminOpen && !ui.isSidebarCollapsed"
+              class="mt-1 space-y-1 overflow-hidden"
+            >
+              <SidebarLink
+                to="/admin/campuses"
+                :icon="Building2"
+                label="Campuses"
+                :collapsed="false"
+                class="pl-9"
+              />
+              <SidebarLink
+                to="/admin/campus-config"
+                :icon="Settings2"
+                label="Config. Campus"
+                :collapsed="false"
+                class="pl-9"
+              />
+            </ul>
+          </transition>
+
+          <Teleport to="body">
+            <transition name="fade-in">
+              <div
+                v-if="ui.isSidebarCollapsed && isSuperAdminPopupVisible"
+                :style="superAdminPopupStyle"
+                class="fixed z-[9999] w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl"
+                @mouseenter="cancelSuperAdminClose"
+                @mouseleave="handleSuperAdminMouseLeave"
+              >
+                <div
+                  class="mb-2 border-b border-slate-50 px-3 py-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase"
+                >
+                  Super Admin
+                </div>
+                <ul class="space-y-1">
+                  <SidebarLink
+                    to="/admin/campuses"
+                    :icon="Building2"
+                    label="Campuses"
+                    :collapsed="false"
+                    @click="closeSuperAdminPopup"
+                  />
+                  <SidebarLink
+                    to="/admin/campus-config"
+                    :icon="Settings2"
+                    label="Config. Campus"
+                    :collapsed="false"
+                    @click="closeSuperAdminPopup"
+                  />
+                </ul>
+              </div>
+            </transition>
+          </Teleport>
+        </div>
+
         <!-- Section Administration (ADMIN et SUPER ADMIN uniquement) -->
-        <div v-if="authStore.hasAdminAccess" class="relative">
+        <div v-if="authStore.hasAdminAccess" class="relative mt-4">
           <button
             ref="adminTriggerRef"
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
@@ -214,11 +300,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import {
+  Building2,
   ChevronLeft,
   ChevronRight,
   CalendarDays,
   ListTodo,
   ChevronDown,
+  Settings2,
   Users,
 } from 'lucide-vue-next'
 import { useUIStore } from '../stores/useUiStore'
@@ -236,6 +324,62 @@ const popupTop = ref(0)
 const planningStore = { draftCount: 5 }
 
 let closeTimer: ReturnType<typeof setTimeout> | null = null
+
+// --- Super Admin menu state ---
+const isSuperAdminOpen = ref(true)
+const isSuperAdminPopupVisible = ref(false)
+const superAdminTriggerRef = ref<HTMLElement | null>(null)
+const superAdminPopupTop = ref(0)
+let superAdminCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+const superAdminPopupStyle = computed(() => ({
+  top: `${superAdminPopupTop.value}px`,
+  left: '76px',
+}))
+
+const updateSuperAdminPopupPosition = () => {
+  if (superAdminTriggerRef.value) {
+    const rect = superAdminTriggerRef.value.getBoundingClientRect()
+    superAdminPopupTop.value = rect.top
+  }
+}
+
+const handleSuperAdminMenuClick = () => {
+  if (ui.isSidebarCollapsed) {
+    updateSuperAdminPopupPosition()
+    isSuperAdminPopupVisible.value = !isSuperAdminPopupVisible.value
+  } else {
+    isSuperAdminOpen.value = !isSuperAdminOpen.value
+  }
+}
+
+const handleSuperAdminMouseEnter = () => {
+  if (ui.isSidebarCollapsed) {
+    cancelSuperAdminClose()
+    updateSuperAdminPopupPosition()
+    isSuperAdminPopupVisible.value = true
+  }
+}
+
+const handleSuperAdminMouseLeave = () => {
+  if (ui.isSidebarCollapsed) {
+    superAdminCloseTimer = setTimeout(() => {
+      isSuperAdminPopupVisible.value = false
+    }, 150)
+  }
+}
+
+const cancelSuperAdminClose = () => {
+  if (superAdminCloseTimer) {
+    clearTimeout(superAdminCloseTimer)
+    superAdminCloseTimer = null
+  }
+}
+
+const closeSuperAdminPopup = () => {
+  cancelSuperAdminClose()
+  isSuperAdminPopupVisible.value = false
+}
 
 // --- Administration menu state ---
 const isAdminOpen = ref(true)

@@ -9,6 +9,7 @@ from .activite_router import router as activite  # Doit être après planning po
 from .affectation_router import (
     router as affectation,  # Doit être après planning pour les FK
 )
+from .campus_config_router import router as campus_config
 from .campus_router import router as campus
 from .categorie_role_router import router as category_role
 from .equipe_router import router as equipe
@@ -47,5 +48,6 @@ router.include_router(activite)  # Doit être après planning pour les FK
 router.include_router(profile)
 router.include_router(team)
 router.include_router(notification)
+router.include_router(campus_config)  # Campus Configuration (Super Admin)
 
 __all__ = ["router"]

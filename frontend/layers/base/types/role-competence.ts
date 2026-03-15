@@ -2,6 +2,7 @@ export interface RoleCompetenceRead {
   code: string
   libelle: string
   categorie_code: string
+  description?: string
 }
 
 export interface RolesByCategoryItem {

@@ -42,7 +42,7 @@ class PaysBase(SQLModel):
 # -------------------------
 class PaysCreate(PaysBase):
     organisation_id: str = Field(
-        max_length=36, description="UUID de l'organisation ICC parente"
+        max_length=36, description="UUID de l'organisation parente"
     )
 
 

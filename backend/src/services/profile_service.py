@@ -22,6 +22,7 @@ from models import (
 from models.base_pagination import PaginatedResponse
 from models.ministere_model import MinistereSimple
 from models.schema_db_model import AffectationRole, CampusMinistereLink
+from repositories.membre_repository import _exclude_superadmin_clause
 from services.membre_service import MembreService
 
 from .base_service import BaseService
@@ -276,8 +277,8 @@ class ProfileService(
     def list_all(self, campus_id: Optional[str] = None) -> List[ProfilReadFull]:
         try:
             statement = select(Membre).where(
-                col(cast(Any, Membre.deleted_at))
-                == None  # Noqa E711 # pylint: disable=singleton-comparison
+                col(cast(Any, Membre.deleted_at)) == None,  # noqa: E711
+                _exclude_superadmin_clause(),
             )
 
             if campus_id:

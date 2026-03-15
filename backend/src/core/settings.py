@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # --- SUPERADMIN BOOTSTRAP ---
+    SUPERADMIN_USERNAME: str = "superadmin"
+    SUPERADMIN_PASSWORD: Optional[str] = None  # Obligatoire en production
+
     # --- MAIL CONFIG (Nouveautés) ---
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
