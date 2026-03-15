@@ -9,6 +9,8 @@ from .affectation_model import __all__ as affectation
 from .affectation_role_model import *  # noqa: F401,F403
 from .affectation_role_model import __all__ as affectation_role
 from .base_pagination import *  # noqa: F401,F403
+from .campus_config_model import *  # noqa: F401,F403
+from .campus_config_model import __all__ as campus_config
 from .campus_model import *  # noqa: F401,F403
 from .campus_model import __all__ as campus
 from .categorie_role_model import *  # noqa: F401,F403
@@ -27,8 +29,8 @@ from .ministere_model import *  # noqa: F401,F403
 from .ministere_model import __all__ as ministere
 from .model_base import *  # noqa: F401,F403
 from .model_base import __all__ as response
-from .organisationicc_model import *  # noqa: F401,F403
-from .organisationicc_model import __all__ as organisation
+from .organisation_model import *  # noqa: F401,F403
+from .organisation_model import __all__ as organisation
 from .pays_model import *  # noqa: F401,F403
 from .pays_model import __all__ as pays
 from .permission_model import *  # noqa: F401,F403
@@ -85,4 +87,5 @@ __all__: List[str] = (
     + list(profile)
     + list(team_model)
     + list(response)
+    + list(campus_config)
 )

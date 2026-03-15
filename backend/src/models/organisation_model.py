@@ -10,7 +10,7 @@ from models.pays_model import PaysRead
 # -------------------------
 # BASE
 # -------------------------
-class OrganisationICCBase(SQLModel):
+class OrganisationBase(SQLModel):
     nom: str = Field(
         index=True,
         unique=True,
@@ -33,7 +33,7 @@ class OrganisationICCBase(SQLModel):
 # -------------------------
 # CREATE
 # -------------------------
-class OrganisationICCCreate(OrganisationICCBase):
+class OrganisationCreate(OrganisationBase):
     """
     Schéma pour la création : l'ID est généré automatiquement.
     """
@@ -42,7 +42,7 @@ class OrganisationICCCreate(OrganisationICCBase):
 # -------------------------
 # UPDATE
 # -------------------------
-class OrganisationICCUpdate(SQLModel):
+class OrganisationUpdate(SQLModel):
     nom: Optional[str] = None
     dateCreation: Optional[str] = None
 
@@ -50,7 +50,7 @@ class OrganisationICCUpdate(SQLModel):
 # -------------------------
 # READ
 # -------------------------
-class OrganisationICCRead(OrganisationICCBase):
+class OrganisationRead(OrganisationBase):
     id: str
     date_creation: date  # Permet
     # Optionnel: on peut inclure le nombre de pays rattachés
@@ -58,8 +58,8 @@ class OrganisationICCRead(OrganisationICCBase):
 
 
 __all__ = [
-    "OrganisationICCBase",
-    "OrganisationICCUpdate",
-    "OrganisationICCRead",
-    "OrganisationICCCreate",
+    "OrganisationBase",
+    "OrganisationUpdate",
+    "OrganisationRead",
+    "OrganisationCreate",
 ]

@@ -24,7 +24,7 @@ from models import (
     MembrePoleLink,
     MembreRole,
     Ministere,
-    OrganisationICC,
+    Organisation,
     Pays,
     Permission,
     PlanningService,
@@ -87,6 +87,15 @@ class SeedService:
                 self._seed_role_permissions(role_map, PERMISSIONS, perm_map)
                 user_list = self._seed_users_for_roles(role_map)
 
+                # Lier le superadmin à tous les campus (fix chicken-and-egg)
+                sa_user = self.db.exec(
+                    select(Utilisateur).where(
+                        Utilisateur.username == SUPERADMIN_USERNAME
+                    )
+                ).first()
+                if sa_user:
+                    self._seed_superadmin_membre(str(sa_user.id), campus_map)
+
                 # 3. RÉFÉRENTIELS MÉTIER
                 self._seed_categories_et_roles()
                 self._seed_referentiels_fixes()
@@ -147,7 +156,7 @@ class SeedService:
     def _seed_organisations(self):
         return {
             d["nom"]: self._get_or_create(
-                OrganisationICC,
+                Organisation,
                 nom=d["nom"],
                 defaults={"date_creation": d["date_creation"]},
             )[0]
@@ -652,20 +661,45 @@ class SeedService:
                     RolePermission, role_id=rm[rn].id, permission_id=pm[c].id
                 )
 
+    def _seed_superadmin_membre(self, utilisateur_id: str, campus_map: dict) -> None:
+        """
+        Crée un Membre minimal pour le superadmin et le lie à tous les campus.
+        Idempotent — ne fait rien si le lien Utilisateur→Membre existe déjà.
+        """
+        user = self.db.get(Utilisateur, utilisateur_id)
+        if not user or user.membre_id:
+            return
+        membre, _ = self._get_or_create(
+            Membre,
+            email="superadmin@mla-planner.com",
+            defaults={"nom": "Admin", "prenom": "Super", "actif": True},
+        )
+        user.membre_id = membre.id
+        self.db.add(user)
+        self.db.flush()
+        campuses = list(campus_map.values())
+        for campus in campuses:
+            self._get_or_create(
+                MembreCampusLink, membre_id=membre.id, campus_id=campus.id
+            )
+        if campuses and not membre.campus_principal_id:
+            membre.campus_principal_id = campuses[0].id
+            self.db.add(membre)
+            self.db.flush()
+
     def _seed_users_for_roles(self, rm):
         """
         Crée les utilisateurs techniques pour chaque rôle.
-        Le SUPER_ADMIN a un compte fixe sans lien membre.
+        Le SUPER_ADMIN a un compte fixe. Son Membre est créé via
+        _seed_superadmin_membre (appelé après la construction de campus_map).
         Les autres rôles : username = prenom.lower() du membre associé
-        (MEMBRES_INFOS[i]),
-        password = USER_PASSWORD pour tous.
+        (MEMBRES_INFOS[i]), password = USER_PASSWORD pour tous.
         Retourne uniquement les utilisateurs non-superadmin (pour le seed membres).
         """
         users = []
         membre_idx = 0
         for rn, role in rm.items():
             if rn == RoleName.SUPER_ADMIN:
-                # Compte superadmin fixe — pas de lien membre
                 u, _ = self._get_or_create(
                     Utilisateur,
                     username=SUPERADMIN_USERNAME,

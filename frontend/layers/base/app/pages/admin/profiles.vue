@@ -13,6 +13,9 @@ import type {
 } from '~~/layers/base/types/profiles'
 import type { CampusRead } from '~~/layers/base/types/campus'
 import { ProfileRepository } from '~~/layers/base/app/repositories/ProfileRepository'
+import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
+
+const authStore = useAuthStore()
 
 const { profiles, isFetching, totalProfiles, activeCampusId, campuses, create, update, remove } =
   useProfiles()
@@ -132,6 +135,19 @@ const handleDelete = async (id: string) => {
       v-model:activeCampusId="activeCampusId"
       :campuses="campuses"
     />
+
+    <div
+      v-if="campuses.length === 0 && !isFetching"
+      class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700"
+    >
+      Aucun campus disponible.
+      <template v-if="authStore.isSuperAdmin">
+        <RouterLink to="/admin/campuses" class="font-medium underline">
+          Créer le premier campus
+        </RouterLink>
+      </template>
+      <template v-else> Contactez un Super Admin pour créer un campus. </template>
+    </div>
 
     <div v-if="isFetching" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <div v-for="n in 6" :key="n" class="h-20 animate-pulse rounded-xl bg-slate-100"></div>

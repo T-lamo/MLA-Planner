@@ -1,6 +1,6 @@
 from models import PaysCreate, PaysRead
 from models.pays_model import PaysUpdate
-from routes.deps import STANDARD_ADMIN_ONLY_DEPS
+from routes.deps import SUPER_ADMIN_ONLY_DEPS
 from services.pays_service import PaysService
 
 from .base_route_factory import CRUDRouterFactory
@@ -13,7 +13,7 @@ pays_factory = CRUDRouterFactory(
     update_schema=PaysUpdate,
     path="/pays",
     tag="Pays",
-    dependencies=STANDARD_ADMIN_ONLY_DEPS,
+    dependencies=SUPER_ADMIN_ONLY_DEPS,
 )
 
 # 4. Export du router pour main.py

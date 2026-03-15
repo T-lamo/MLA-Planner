@@ -11,7 +11,7 @@ from models import (
     Campus,
     Membre,
     Ministere,
-    OrganisationICC,
+    Organisation,
     Pays,
     Permission,
     StatutAffectation,
@@ -83,7 +83,7 @@ class SeedReferentials:
 
             # --- GROUPE C : Hiérarchie (Correction E501: split des lignes) ---
             org = self.get_or_create_upsert(
-                OrganisationICC,
+                Organisation,
                 {"id": "ICC_WORLD"},
                 {"nom": "ICC World", "date_creation": date(2020, 1, 1)},
             )

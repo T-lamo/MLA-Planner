@@ -3,8 +3,8 @@ from sqlmodel import Session
 
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
-from models import OrganisationICC, OrganisationICCCreate
-from models.organisationicc_model import OrganisationICCRead, OrganisationICCUpdate
+from models import Organisation, OrganisationCreate
+from models.organisation_model import OrganisationRead, OrganisationUpdate
 from repositories.organisation_repository import OrganisationRepository
 
 from .base_service import BaseService
@@ -12,27 +12,27 @@ from .base_service import BaseService
 
 class OrganisationService(
     BaseService[
-        OrganisationICCCreate,
-        OrganisationICCRead,
-        OrganisationICCUpdate,
-        OrganisationICC,
+        OrganisationCreate,
+        OrganisationRead,
+        OrganisationUpdate,
+        Organisation,
     ]
 ):
     def __init__(self, db: Session):
         super().__init__(repo=OrganisationRepository(db), resource_name="Organisation")
 
-    def create(self, data: OrganisationICCCreate) -> OrganisationICC:
+    def create(self, data: OrganisationCreate) -> Organisation:
         # Logique spécifique : vérification du nom unique
         if self.repo.get_by_nom(data.nom):
             raise AppException(ErrorRegistry.ORG_DUPLICATE, nom=data.nom)
 
-        org = OrganisationICC(**data.model_dump())
+        org = Organisation(**data.model_dump())
         try:
             return self.repo.create(org)
         except IntegrityError as exc:
             raise AppException(ErrorRegistry.CORE_INTEGRITY_ERROR) from exc
 
-    def update(self, identifiant: str, data: OrganisationICCUpdate) -> OrganisationICC:
+    def update(self, identifiant: str, data: OrganisationUpdate) -> Organisation:
         obj = self.get_one(identifiant)
         update_data = data.model_dump(exclude_unset=True)
 

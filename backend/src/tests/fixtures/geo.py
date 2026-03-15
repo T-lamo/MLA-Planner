@@ -3,14 +3,14 @@ from uuid import uuid4
 import pytest
 from sqlmodel import Session
 
-from models import Campus, Membre, Ministere, OrganisationICC, Pays, Pole
+from models import Campus, Membre, Ministere, Organisation, Pays, Pole
 
 
 # pylint: disable=redefined-outer-name
 @pytest.fixture
-def test_org(session: Session) -> OrganisationICC:
+def test_org(session: Session) -> Organisation:
     """Fixture globale pour créer une organisation."""
-    org = OrganisationICC(
+    org = Organisation(
         nom=f"Org Test {uuid4()}", code=str(uuid4())[:5], date_creation="2024-01-01"
     )
     session.add(org)
@@ -20,7 +20,7 @@ def test_org(session: Session) -> OrganisationICC:
 
 
 @pytest.fixture
-def test_pays(session: Session, test_org: OrganisationICC) -> Pays:
+def test_pays(session: Session, test_org: Organisation) -> Pays:
     """Fixture globale pour créer un pays."""
     pays = Pays(
         nom=f"Pays {uuid4()}",

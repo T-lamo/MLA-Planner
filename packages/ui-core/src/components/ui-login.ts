@@ -46,11 +46,13 @@ export class UiLogin extends CoreElement {
         transition: all 0.3s ease;
       }
 
-      .logo-slot ::slotted(*) {
-        max-height: 60px;
+      .logo-slot {
         margin-bottom: 1.5rem;
-        display: block;
         text-align: center;
+      }
+
+      .logo-slot ::slotted(*) {
+        display: block;
       }
 
       .form-group { margin-bottom: 1.25rem; }
@@ -155,36 +157,36 @@ export class UiLogin extends CoreElement {
           <slot name="logo"></slot>
         </div>
 
-        ${this.errorMessage 
-          ? html`<div class="error-banner">${this.errorMessage}</div>` 
-          : ''
-        }
-        
         <form @submit=${this._handleSubmit}>
           <div class="form-group">
             <label>${this.identifierLabel}</label>
-            <input 
+            <input
               name="identifier"
-              type="text" 
+              type="text"
               placeholder=${this.identifierPlaceholder}
-              required 
+              required
               ?disabled=${this.isLoading}
               autocomplete="username"
             >
           </div>
-          
+
           <div class="form-group">
             <label>${this.passwordLabel}</label>
-            <input 
+            <input
               name="password"
-              type="password" 
+              type="password"
               placeholder=${this.passwordPlaceholder}
-              required 
+              required
               ?disabled=${this.isLoading}
               autocomplete="current-password"
             >
           </div>
-          
+
+          ${this.errorMessage
+            ? html`<div class="error-banner">${this.errorMessage}</div>`
+            : ''
+          }
+
           <button type="submit" ?disabled=${this.isLoading}>
             ${this.isLoading ? this.loadingLabel : this.submitLabel}
           </button>
