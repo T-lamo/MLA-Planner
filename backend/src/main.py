@@ -4,8 +4,10 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # Import indispensable
+from sqlmodel import Session
 
 from conf.db.database import Database
+from core.bootstrap import bootstrap_superadmin
 from core.exceptions.exceptions_handlers import register_exception_handlers
 from core.settings import settings
 from routes import router
@@ -13,9 +15,9 @@ from routes import router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Initialisation de la base de données au démarrage
-    if settings.ENV != "production":
-        Database.init_db()
+    Database.init_db()
+    with Session(Database.get_engine()) as db:
+        bootstrap_superadmin(db)
     yield
     Database.disconnect()
 

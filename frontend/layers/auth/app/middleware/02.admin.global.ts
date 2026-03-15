@@ -8,4 +8,11 @@ export default defineNuxtRouteMiddleware((to) => {
   if (!authStore.hasAdminAccess) {
     return navigateTo('/', { replace: true })
   }
+
+  const superAdminOnlyPaths = ['/admin/campuses', '/admin/campus-config']
+  if (superAdminOnlyPaths.some((p) => to.path.startsWith(p))) {
+    if (!authStore.isSuperAdmin) {
+      return navigateTo('/admin/profiles', { replace: true })
+    }
+  }
 })

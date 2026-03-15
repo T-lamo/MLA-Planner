@@ -103,6 +103,7 @@ export const useProfileStore = defineStore('profile', () => {
       pagination.offset = 0
       fetchProfiles()
     },
+    { immediate: true },
   )
 
   return {

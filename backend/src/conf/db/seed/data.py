@@ -24,6 +24,11 @@ class ActiviteData(TypedDict):
     heure_fin: int
 
 
+class OrganisationData(TypedDict):
+    nom: str
+    date_creation: datetime
+
+
 # --- RBAC ---
 ROLES = [
     RoleName.SUPER_ADMIN,
@@ -71,7 +76,9 @@ USER_PASSWORD = "plan123!"
 
 # --- GEOGRAPHIE ---
 # Ajout des dates de création et codes pays pour éviter les NotNullViolation
-SEED_ORGANISATIONS = [{"nom": "ICC Europe", "date_creation": datetime(2010, 1, 1)}]
+SEED_ORGANISATIONS: List[OrganisationData] = [
+    OrganisationData(nom="ICC Europe", date_creation=datetime(2010, 1, 1))
+]
 SEED_PAYS = [{"nom": "France", "code": "FR", "org_nom": "ICC Europe"}]
 SEED_CAMPUS = [
     {

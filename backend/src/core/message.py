@@ -462,3 +462,35 @@ class ErrorRegistry:
         message="Erreur de contrainte lors de la mise à jour.",
         http_status=status.HTTP_409_CONFLICT,
     )
+
+    # --- DOMAINE CONFIGURATION CAMPUS (CONF) ---
+    CONF_CAMPUS_NOT_FOUND = ErrorDetail(
+        code="CONF_001",
+        message="Campus introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    CONF_MINISTERE_LINK_EXISTS = ErrorDetail(
+        code="CONF_002",
+        message="Ce ministère est déjà lié à ce campus.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    CONF_MINISTERE_LINK_NOT_FOUND = ErrorDetail(
+        code="CONF_003",
+        message="Lien campus-ministère introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    CONF_ROLE_CODE_CONFLICT = ErrorDetail(
+        code="CONF_004",
+        message="Le code {code} existe déjà dans une autre catégorie.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    CONF_ROLE_IN_USE = ErrorDetail(
+        code="CONF_005",
+        message="Ce rôle est utilisé par {count} membre(s), suppression impossible.",
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+    CONF_CATEGORIE_HAS_ROLES = ErrorDetail(
+        code="CONF_006",
+        message=("Cette catégorie contient {count} rôle(s), suppression impossible."),
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )

@@ -10,19 +10,21 @@ from models.schema_db_model import Pays
 
 
 @pytest.fixture
-def test_org(client, admin_headers):
+def test_org(client, superadmin_headers):
+    """Crée une organisation via l'API avec des droits superadmin."""
     payload = {"nom": f"Org For Pays {uuid4()}", "date_creation": "2024-01-01"}
-    response = client.post("/organisations/", json=payload, headers=admin_headers)
+    response = client.post("/organisations/", json=payload, headers=superadmin_headers)
+    assert response.status_code == status.HTTP_201_CREATED, response.text
     return response.json()
 
 
-def test_create_pays_success_and_uppercase_logic(client, admin_headers, test_org):
+def test_create_pays_success_and_uppercase_logic(client, superadmin_headers, test_org):
     payload = {
         "nom": "Côte d'Ivoire",
         "code": "ci ",  # Note l'espace et les minuscules
         "organisation_id": test_org["id"],
     }
-    response = client.post("/pays/", json=payload, headers=admin_headers)
+    response = client.post("/pays/", json=payload, headers=superadmin_headers)
 
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
@@ -31,13 +33,13 @@ def test_create_pays_success_and_uppercase_logic(client, admin_headers, test_org
     assert data["nom"] == "Côte d'Ivoire"
 
 
-def test_create_pays_invalid_org(client, admin_headers):
+def test_create_pays_invalid_org(client, superadmin_headers):
     payload = {
         "nom": "Pays Imaginaire",
         "code": "PI",
-        "organisation_id": str(uuid4()),  # ID inexistant
+        "organisation_id": str(uuid4()),
     }
-    response = client.post("/pays/", json=payload, headers=admin_headers)
+    response = client.post("/pays/", json=payload, headers=superadmin_headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert "introuvable" in response.json()["error"]["message"]
@@ -51,14 +53,11 @@ def test_list_pays_contains_org_data(client, test_org, session):
     response = client.get("/pays/")
     data = response.json()
 
-    # Vérifications
     assert len(data["data"]) > 0, "La liste des pays est vide"
 
-    # Vérifie qu'au moins un pays contient organisation_id correct
     assert any(
         p.get("organisation_id") == test_org["id"] for p in data["data"]
     ), f"Aucun pays retourné n'a organisation_id = {test_org['id']}"
 
-    # Optionnel : vérifier que tous les pays ont un organisation_id
     for p in data["data"]:
         assert "organisation_id" in p, f"organisation_id manquant pour le pays {p}"
