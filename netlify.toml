@@ -1,6 +1,6 @@
 [build]
   base = ""
-  command = "npm install -g pnpm && pnpm install --filter @shared/ui-core && pnpm --filter @shared/ui-core run build && cd frontend && pnpm install && pnpm run generate"
+  command = "npm install -g pnpm && pnpm install --filter @shared/ui-core && pnpm --filter @shared/ui-core run build && cd frontend && pnpm install && NUXT_PUBLIC_API_BASE=https://mla-backend-ewds.onrender.com pnpm run generate"
   publish = "frontend/dist"
 
 [build.environment]
