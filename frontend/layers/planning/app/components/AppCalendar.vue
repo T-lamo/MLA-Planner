@@ -134,8 +134,8 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   },
 
   allDaySlot: true,
-  slotMinTime: '07:00:00',
-  slotMaxTime: '22:00:00',
+  slotMinTime: '00:00:00',
+  slotMaxTime: '24:00:00',
   slotLabelFormat: {
     hour: 'numeric',
     minute: '2-digit',
