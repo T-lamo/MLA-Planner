@@ -27,7 +27,11 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const emit = defineEmits(['close', 'submit'])
+const emit = defineEmits<{
+  close: []
+  submit: [payload: ProfilCreateFull]
+  'campus-changed': [campusId: string]
+}>()
 
 const { mapProfileToForm, toggleMinistere, togglePole } = useProfileFormLogic()
 const { saveDraft, restoreDraft, clearDraft, hasDraft } = useDraftProfile()
@@ -152,6 +156,13 @@ watch(
 const onSetPrincipal = (id: string) => {
   form.value.campus_principal_id = id
 }
+
+watch(
+  () => form.value.campus_principal_id,
+  (campusId) => {
+    if (campusId) emit('campus-changed', campusId)
+  },
+)
 
 const campusBadge = computed<string | number | undefined>(() => {
   if (form.value.campus_ids.length === 0) return undefined
