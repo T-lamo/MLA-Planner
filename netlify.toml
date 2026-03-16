@@ -1,10 +1,10 @@
 [build]
-  base = "frontend"
-  command = "pnpm install && pnpm run build"
-  publish = "dist"
+  base = ""
+  command = "npm install -g pnpm && pnpm install --filter @shared/ui-core && pnpm --filter @shared/ui-core run build && cd frontend && pnpm install && pnpm run generate"
+  publish = "frontend/dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
   NUXT_PUBLIC_API_BASE = "https://mla-backend-ewds.onrender.com"
 
 [[redirects]]
