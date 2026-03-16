@@ -20,7 +20,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/useAuthStore'
 import type { EnhancedApiError } from '~~/layers/base/types/api'
 definePageMeta({
@@ -36,7 +36,6 @@ interface LoginEvent {
 }
 
 const authStore = useAuthStore()
-const router = useRouter()
 const route = useRoute()
 
 const { notifyError } = useErrorHandler()
@@ -62,7 +61,7 @@ const onLogin = async (event: LoginEvent) => {
     })
 
     const redirectPath = (route.query.redirect as string) || '/planning/calendar'
-    await router.push(redirectPath)
+    await navigateTo(redirectPath)
   } catch (error: unknown) {
     // On caste en EnhancedApiError pour le traitement
     const err = error as EnhancedApiError
