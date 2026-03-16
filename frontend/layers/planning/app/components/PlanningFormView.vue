@@ -446,6 +446,14 @@
                         <span class="font-medium text-slate-700">
                           {{ membre.prenom }} {{ membre.nom }}
                         </span>
+                        <!-- Badge indisponibilité (soft warning) -->
+                        <span
+                          v-if="isMemberUnavailable(membre.id)"
+                          class="ml-auto shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700"
+                          :title="getWarningTooltip(membre.id)"
+                        >
+                          ⚠ Indisponible
+                        </span>
                       </button>
                       <p
                         v-if="pickerMembers(si).length === 0"
@@ -518,7 +526,7 @@
 </template>
 
 <script setup lang="ts">
-import { inject } from 'vue'
+import { inject, watch } from 'vue'
 import {
   X,
   Plus,
@@ -532,6 +540,7 @@ import {
 import FormSection from '~~/layers/base/app/components/FormSection.vue'
 import { planningFormKey } from '../composables/usePlanningForm'
 import { ACTIVITE_TYPES } from '../types/planning.types'
+import { useIndisponibiliteWarning } from '../composables/useIndisponibiliteWarning'
 
 // Destructurer pour bénéficier de l'auto-unwrap des refs dans le template
 const {
@@ -567,4 +576,21 @@ const {
 // mais userCampuses vient du shell via un prop ou inject supplémentaire.
 // Pour l'instant on l'injecte depuis le shell (voir PlanningDetailDrawer.vue).
 const userCampuses = inject<Array<{ id: string; nom: string }>>('userCampuses')!
+
+// --- Indisponibilités (soft warning) ---
+const { isMemberUnavailable, getWarningTooltip, loadForPeriod } = useIndisponibiliteWarning()
+
+watch(
+  () => [activiteForm.campus_id, activiteForm.date_debut, activiteForm.date_fin],
+  ([campusId, dateDebut, dateFin]) => {
+    if (campusId && dateDebut && dateFin) {
+      loadForPeriod(
+        campusId as string,
+        (dateDebut as string).slice(0, 10),
+        (dateFin as string).slice(0, 10),
+      )
+    }
+  },
+  { immediate: true },
+)
 </script>
