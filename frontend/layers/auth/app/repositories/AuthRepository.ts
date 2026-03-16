@@ -75,10 +75,7 @@ export class AuthRepository extends BaseRepository {
   async login(credentials: Record<'username' | 'password', string>): Promise<AuthResponse> {
     const { data } = await this.apiRequest<LoginSchema, AuthResponse>('/auth/token', {
       method: 'POST',
-      body: credentials,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      body: new URLSearchParams(credentials),
       transform: transformLoginSchema,
     })
 
