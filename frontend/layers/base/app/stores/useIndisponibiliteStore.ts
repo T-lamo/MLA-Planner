@@ -87,12 +87,10 @@ export const useIndisponibiliteStore = defineStore('indisponibilite', () => {
 
   async function valider(id: string): Promise<void> {
     const idx = adminIndisponibilites.value.findIndex((i) => i.id === id)
-    const backup = idx !== -1 ? { ...adminIndisponibilites.value[idx] } : null
-    if (idx !== -1) {
-      adminIndisponibilites.value[idx] = {
-        ...adminIndisponibilites.value[idx],
-        validee: true,
-      }
+    const item = idx !== -1 ? adminIndisponibilites.value[idx] : undefined
+    const backup = item ? { ...item } : null
+    if (idx !== -1 && item) {
+      adminIndisponibilites.value[idx] = { ...item, validee: true }
     }
     try {
       const updated = await repo.valider(id)

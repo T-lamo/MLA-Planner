@@ -5,6 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  NUXT_PUBLIC_API_BASE = "https://mla-backend-ewds.onrender.com"
 
 [[redirects]]
   # Important pour Nuxt en mode SPA/Statique sur Netlify
