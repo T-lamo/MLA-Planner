@@ -115,7 +115,7 @@ jobs:
         env:
           NUXT_PUBLIC_API_BASE: ${{ secrets.NUXT_PUBLIC_API_BASE }}
         run: |
-          npm install -g pnpm
+          pnpm install -g pnpm
           # On build l'UI d'abord sinon Nuxt ne trouvera pas les composants
           make -C packages/ui-core install
           make -C packages/ui-core build
