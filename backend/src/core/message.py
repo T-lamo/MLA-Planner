@@ -168,8 +168,28 @@ class ErrorRegistry:
     )
     INDISP_INVALID_CHRONOLOGY = ErrorDetail(
         code="INDISP_002",
-        message="La date de fin doit être postérieure ou égale à la date de début.",
+        message=("La date de fin doit être postérieure ou égale à la date de début."),
         http_status=status.HTTP_422_UNPROCESSABLE_CONTENT,
+    )
+    INDISP_ALREADY_VALIDATED = ErrorDetail(
+        code="INDISP_003",
+        message="Cette indisponibilité est déjà validée.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    INDISP_OVERLAP = ErrorDetail(
+        code="INDISP_004",
+        message="Une indisponibilité existe déjà pour cette période.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    INDISP_NOT_OWNER = ErrorDetail(
+        code="INDISP_005",
+        message="Vous ne pouvez pas modifier cette indisponibilité.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
+    INDISP_NOT_FOUND = ErrorDetail(
+        code="INDISP_006",
+        message="Indisponibilité introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
     )
 
     # --- DOMAINE CORE / GÉNÉRIQUE (CORE) ---

@@ -83,6 +83,14 @@
                   :badge="planningStore.draftCount"
                   class="pl-9"
                 />
+                <SidebarLink
+                  v-if="authStore.hasAdminAccess"
+                  to="/planning/indisponibilites"
+                  :icon="CalendarOff"
+                  label="Indisponibilités"
+                  :collapsed="false"
+                  class="pl-9"
+                />
               </ul>
             </transition>
 
@@ -114,6 +122,14 @@
                       label="Liste des Plannings"
                       :collapsed="false"
                       :badge="planningStore.draftCount"
+                      @click="closePopup"
+                    />
+                    <SidebarLink
+                      v-if="authStore.hasAdminAccess"
+                      to="/planning/indisponibilites"
+                      :icon="CalendarOff"
+                      label="Indisponibilités"
+                      :collapsed="false"
                       @click="closePopup"
                     />
                   </ul>
@@ -301,11 +317,12 @@
 import { ref, computed } from 'vue'
 import {
   Building2,
+  CalendarDays,
+  CalendarOff,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  CalendarDays,
   ListTodo,
-  ChevronDown,
   Settings2,
   Users,
 } from 'lucide-vue-next'

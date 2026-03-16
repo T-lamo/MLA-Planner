@@ -50,6 +50,12 @@ app.add_middleware(
 app.include_router(router)
 register_exception_handlers(app)
 
+
+@app.get("/health", tags=["Health"])
+def health_check() -> dict:
+    return {"status": "ok"}
+
+
 if __name__ == "__main__":
     # Note : uvicorn.run utilise 8000 ici, mais Render utilisera $PORT via le Dockerfile
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
