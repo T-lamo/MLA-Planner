@@ -21,7 +21,8 @@ class AuthRepository:
             .options(
                 selectinload(cast(Any, Utilisateur.affectations)).selectinload(
                     cast(Any, AffectationRole.role)
-                )
+                ),
+                selectinload(cast(Any, Utilisateur.membre)),
             )
         )
         return self.db.exec(statement).first()

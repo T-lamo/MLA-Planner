@@ -22,8 +22,10 @@ def linked_membre(
     session: Session, test_user: Utilisateur, test_campus: Campus
 ) -> Membre:
     """Membre lié à test_user (Get-or-Create)."""
-    if test_user.membre:
-        return test_user.membre
+    if test_user.membre_id:
+        existing = session.get(Membre, test_user.membre_id)
+        if existing:
+            return existing
     membre = Membre(
         nom="Dupont",
         prenom="Alice",
@@ -37,6 +39,8 @@ def linked_membre(
     test_user.membre_id = membre.id
     session.add(test_user)
     session.flush()
+    # Expire pour forcer le rechargement de la relation membre depuis la DB
+    session.expire(test_user)
     session.refresh(membre)
     return membre
 
@@ -46,8 +50,10 @@ def linked_admin(
     session: Session, test_admin: Utilisateur, test_campus: Campus
 ) -> Membre:
     """Membre lié à test_admin (Get-or-Create)."""
-    if test_admin.membre:
-        return test_admin.membre
+    if test_admin.membre_id:
+        existing = session.get(Membre, test_admin.membre_id)
+        if existing:
+            return existing
     membre = Membre(
         nom="Admin",
         prenom="Bob",
@@ -60,6 +66,8 @@ def linked_admin(
     test_admin.membre_id = membre.id
     session.add(test_admin)
     session.flush()
+    # Expire pour forcer le rechargement de la relation membre depuis la DB
+    session.expire(test_admin)
     session.refresh(membre)
     return membre
 
