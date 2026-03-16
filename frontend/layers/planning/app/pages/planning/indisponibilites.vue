@@ -53,7 +53,7 @@ async function handleDelete(id: string) {
 // ----- Helpers -----
 function formatDate(d: string | null) {
   if (!d) return '—'
-  const [y, m, day] = d.split('-')
+  const [y = '', m = '', day = ''] = d.split('-')
   const months = [
     'jan',
     'fév',
