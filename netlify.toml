@@ -1,14 +1,16 @@
 [build]
   base = ""
-  command = "npm install -g pnpm && pnpm install --filter @shared/ui-core && pnpm --filter @shared/ui-core run build && cd frontend && pnpm install && NUXT_PUBLIC_API_BASE=https://mla-backend-ewds.onrender.com pnpm run generate"
+  # On simplifie la commande : Netlify gère déjà l'installation de pnpm si NODE_VERSION est définie.
+  # On utilise 'pnpm install' à la racine si c'est un monorepo, sinon on cible les dossiers.
+  command = "pnpm install --filter @shared/ui-core && pnpm --filter @shared/ui-core run build && cd frontend && pnpm install && pnpm run generate"
   publish = "frontend/dist"
 
 [build.environment]
   NODE_VERSION = "22"
+  # La variable est déjà ici, pas besoin de la répéter dans la ligne 'command'
   NUXT_PUBLIC_API_BASE = "https://mla-backend-ewds.onrender.com"
 
 [[redirects]]
-  # Important pour Nuxt en mode SPA/Statique sur Netlify
   from = "/*"
   to = "/index.html"
   status = 200
