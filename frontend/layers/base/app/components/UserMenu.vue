@@ -40,6 +40,14 @@
         <User class="size-4" />
         <span>Mon Profil</span>
       </button>
+      <button
+        v-if="!authStore.isSuperAdmin"
+        class="menu-item"
+        @click="navigate('/settings/indisponibilites')"
+      >
+        <CalendarOff class="size-4" />
+        <span>Mes indisponibilités</span>
+      </button>
 
       <div class="my-1 border-t border-slate-100" />
 
@@ -59,7 +67,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ChevronUp, User, LogOut } from 'lucide-vue-next'
+import { CalendarOff, ChevronUp, LogOut, User } from 'lucide-vue-next'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 
 defineProps<{ collapsed: boolean }>()

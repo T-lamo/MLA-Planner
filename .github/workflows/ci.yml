@@ -131,8 +131,27 @@ jobs:
     needs: build-frontend
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render
+      - name: Trigger Render deployment
         run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      # Render rebuild + alembic upgrade head prend 2-4 min sur le plan free.
+      # On poll /health toutes les 15s jusqu'à ce que le backend réponde 200
+      # (max 10 tentatives = ~2.5 min), évitant que le frontend soit livré
+      # pendant que les migrations tournent encore.
+      - name: Wait for backend health
+        run: |
+          echo "Attente de la disponibilité du backend..."
+          for i in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.BACKEND_URL }}/health" || echo "000")
+            echo "Tentative $i — HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Backend opérationnel."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Timeout : le backend n'a pas répondu dans les temps."
+          exit 1
 
   # --- JOB 4 : DEPLOY FRONT ---
   deploy-frontend:

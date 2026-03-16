@@ -176,6 +176,7 @@ class Ministere(MinistereBase, table=True):  # type: ignore
     equipes: List["Equipe"] = Relationship(back_populates="ministere")
     # Relation inverse des catégories (Campus Configuration)
     categories_roles: List["CategorieRole"] = Relationship(back_populates="ministere")
+    indisponibilites: List["Indisponibilite"] = Relationship(back_populates="ministere")
 
 
 class Pole(PoleBase, table=True):  # type: ignore
@@ -324,7 +325,13 @@ class Indisponibilite(IndisponibiliteBase, table=True):  # type: ignore
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     membre_id: str = Field(foreign_key="t_membre.id", ondelete="CASCADE")
+    ministere_id: Optional[str] = Field(
+        default=None,
+        foreign_key="t_ministere.id",
+        ondelete="SET NULL",
+    )
     membre: Optional["Membre"] = Relationship(back_populates="indisponibilites")
+    ministere: Optional["Ministere"] = Relationship(back_populates="indisponibilites")
 
 
 class Utilisateur(UtilisateurBase, table=True):  # type: ignore
