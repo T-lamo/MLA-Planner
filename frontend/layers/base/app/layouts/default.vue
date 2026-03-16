@@ -187,6 +187,13 @@
                 :collapsed="false"
                 class="pl-9"
               />
+              <SidebarLink
+                to="/admin/super/profiles"
+                :icon="Users"
+                label="Tous les profils"
+                :collapsed="false"
+                class="pl-9"
+              />
             </ul>
           </transition>
 
@@ -219,14 +226,21 @@
                     :collapsed="false"
                     @click="closeSuperAdminPopup"
                   />
+                  <SidebarLink
+                    to="/admin/super/profiles"
+                    :icon="Users"
+                    label="Tous les profils"
+                    :collapsed="false"
+                    @click="closeSuperAdminPopup"
+                  />
                 </ul>
               </div>
             </transition>
           </Teleport>
         </div>
 
-        <!-- Section Administration (ADMIN et SUPER ADMIN uniquement) -->
-        <div v-if="authStore.hasAdminAccess" class="relative mt-4">
+        <!-- Section Administration (ADMIN uniquement — SuperAdmin a sa propre section) -->
+        <div v-if="authStore.hasAdminAccess && !authStore.isSuperAdmin" class="relative mt-4">
           <button
             ref="adminTriggerRef"
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"

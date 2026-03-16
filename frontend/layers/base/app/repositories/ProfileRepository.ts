@@ -67,4 +67,11 @@ export class ProfileRepository extends GenericRepository<
     )
     return data
   }
+
+  async getAllByCampusFull(campusId: string): Promise<ProfilReadFull[]> {
+    const { data } = await this.apiRequest<{ data: ProfilReadFull[] }>(
+      `${this.endpoint}/campus/${campusId}/all`,
+    )
+    return (data as unknown as { data: ProfilReadFull[] }).data
+  }
 }
