@@ -15,7 +15,7 @@ export default defineNuxtConfig({
   // Configuration des variables d'environnement
   runtimeConfig: {
     public: {
-      // Cette valeur sera remplacée par NUXT_PUBLIC_API_URL lors du build sur Netlify.
+      // Cette valeur sera remplacée par NUXT_PUBLIC_API_BASE lors du build sur Netlify.
       // En local, elle utilisera l'adresse par défaut de ton FastAPI.
       apiBase: '',
     },
