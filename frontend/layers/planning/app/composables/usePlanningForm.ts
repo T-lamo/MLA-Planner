@@ -11,6 +11,7 @@ import {
 } from 'vue'
 import { PlanningRepository } from '../repositories/PlanningRepository'
 import type {
+  AffectationStatus,
   ActiviteFormState,
   CampusTeamRead,
   MinistereColor,
@@ -447,6 +448,7 @@ export function usePlanningForm(
             membre_nom: a.membre!.nom,
             role_code: a.role_code,
             ministere_id: findMinistreForMembreInTeam(campusTeam.value, a.membre!.id),
+            statut_affectation_code: a.statut_affectation_code as AffectationStatus | undefined,
           })),
       }))
     } else {

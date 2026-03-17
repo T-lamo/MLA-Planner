@@ -26,15 +26,18 @@
         <span class="hidden md:inline">Créer Planning</span>
       </button>
 
-      <button
+      <NuxtLink
+        to="/planning/mes-affectations"
         class="relative rounded-full p-2 text-slate-500 hover:bg-slate-50"
-        aria-label="Notifications"
+        aria-label="Mes affectations en attente"
       >
         <Bell class="size-5" />
         <span
-          class="absolute top-1.5 right-1.5 size-2 rounded-full border-2 border-white bg-red-500"
-        ></span>
-      </button>
+          v-if="pendingCount > 0"
+          class="absolute top-0.5 right-0.5 flex size-4 items-center justify-center rounded-full border border-white bg-red-500 text-[9px] font-bold text-white"
+          >{{ pendingCount > 9 ? '9+' : pendingCount }}</span
+        >
+      </NuxtLink>
     </div>
   </header>
 </template>
@@ -43,14 +46,19 @@
 import { computed, onMounted } from 'vue'
 import { ChevronRight, Plus, Menu, Bell } from 'lucide-vue-next'
 import { useUIStore } from '../stores/useUiStore'
+import { useMyAffectationsStore } from '~~/layers/planning/app/stores/useMyAffectationsStore'
 
 const ui = useUIStore()
+const myAffectationsStore = useMyAffectationsStore()
 const route = useRoute()
+
+const pendingCount = computed(() => myAffectationsStore.pendingCount)
 
 // Initialisation au montage du parent pour garantir la disponibilité des données
 onMounted(async () => {
   try {
     await ui.initializeUI()
+    await myAffectationsStore.refreshPendingCount()
   } catch {
     // silently ignore init errors
   }

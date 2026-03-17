@@ -84,6 +84,14 @@
                   class="pl-9"
                 />
                 <SidebarLink
+                  to="/planning/mes-affectations"
+                  :icon="Bell"
+                  label="Mes affectations"
+                  :collapsed="false"
+                  :badge="pendingAffectationsCount || undefined"
+                  class="pl-9"
+                />
+                <SidebarLink
                   v-if="authStore.hasAdminAccess"
                   to="/planning/indisponibilites"
                   :icon="CalendarOff"
@@ -122,6 +130,14 @@
                       label="Liste des Plannings"
                       :collapsed="false"
                       :badge="planningStore.draftCount"
+                      @click="closePopup"
+                    />
+                    <SidebarLink
+                      to="/planning/mes-affectations"
+                      :icon="Bell"
+                      label="Mes affectations"
+                      :collapsed="false"
+                      :badge="pendingAffectationsCount || undefined"
                       @click="closePopup"
                     />
                     <SidebarLink
@@ -330,6 +346,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import {
+  Bell,
   Building2,
   CalendarDays,
   CalendarOff,
@@ -343,9 +360,11 @@ import {
 import { useUIStore } from '../stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import { useSessionManager } from '~~/layers/auth/app/composables/useSessionManager'
+import { useMyAffectationsStore } from '~~/layers/planning/app/stores/useMyAffectationsStore'
 
 const ui = useUIStore()
 const authStore = useAuthStore()
+const myAffectationsStore = useMyAffectationsStore()
 useSessionManager()
 
 const isPlanningOpen = ref(true)
@@ -353,6 +372,8 @@ const isPopupVisible = ref(false)
 const triggerRef = ref<HTMLElement | null>(null)
 const popupTop = ref(0)
 const planningStore = { draftCount: 5 }
+
+const pendingAffectationsCount = computed(() => myAffectationsStore.pendingCount)
 
 let closeTimer: ReturnType<typeof setTimeout> | null = null
 

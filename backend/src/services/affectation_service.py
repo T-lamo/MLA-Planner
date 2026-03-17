@@ -8,6 +8,7 @@ from core.message import ErrorRegistry
 from core.workflow_engine import WorkflowEngine, affectation_transitions
 from mla_enum.custom_enum import AffectationStatusCode, PlanningStatusCode
 from models import Affectation, PlanningService, Slot
+from models.affectation_model import AffectationMemberRead
 from repositories.planning_repository import PlanningRepository
 from services.validation_engine import ValidationEngine
 
@@ -34,7 +35,7 @@ class AffectationService:
     def _validate_pointing_status(self, planning: Optional[PlanningService]):
         """
         Mutualisation de la règle métier :
-        Le pointage (PRESENT/ABSENT) requiert un planning publié.
+        Le pointage (PRESENT/ABSENT/RETARD) requiert un planning publié.
         """
         if not planning:
             raise AppException(ErrorRegistry.Affectation_PLANNING_NOT_FOUND)
@@ -59,6 +60,7 @@ class AffectationService:
         if final_status in [
             AffectationStatusCode.PRESENT,
             AffectationStatusCode.ABSENT,
+            AffectationStatusCode.RETARD,
         ]:
             slot = self.db.get(Slot, slot_id)
             if not slot:
@@ -85,7 +87,12 @@ class AffectationService:
             raise AppException(ErrorRegistry.Affectation_NOT_FOUND)
 
         # Règle métier croisée : Pointage possible uniquement si planning PUBLIE
-        if new_status in [AffectationStatusCode.PRESENT, AffectationStatusCode.ABSENT]:
+        pointing = [
+            AffectationStatusCode.PRESENT,
+            AffectationStatusCode.ABSENT,
+            AffectationStatusCode.RETARD,
+        ]
+        if new_status in pointing:
             planning = self.db.get(PlanningService, affectation.slot.planning_id)
             # Utilisation de la méthode de validation mutualisée
             if not planning:
@@ -99,6 +106,50 @@ class AffectationService:
         self.db.add(affectation)
         self.db.flush()
         return affectation
+
+    def update_my_affectation_status(
+        self,
+        affectation_id: str,
+        new_status: AffectationStatusCode,
+        *,
+        membre_id: str,
+    ) -> Affectation:
+        """Transition autorisée uniquement par le membre (PROPOSE→CONFIRME/REFUSE)."""
+        affectation = self.db.get(Affectation, affectation_id)
+        if not affectation or not affectation.slot:
+            raise AppException(ErrorRegistry.Affectation_NOT_FOUND)
+
+        if affectation.membre_id != membre_id:
+            raise AppException(ErrorRegistry.AFFECTATION_NOT_OWNER)
+
+        allowed_for_member = [
+            AffectationStatusCode.CONFIRME,
+            AffectationStatusCode.REFUSE,
+        ]
+        if new_status not in allowed_for_member:
+            raise AppException(ErrorRegistry.AFFECTATION_TRANSITION_FORBIDDEN)
+
+        current_status = AffectationStatusCode(affectation.statut_affectation_code)
+        self.workflow.validate_transition(current_status, new_status)
+
+        affectation.statut_affectation_code = new_status.value
+        self.db.add(affectation)
+        self.db.flush()
+        return affectation
+
+    def get_my_affectations(self, membre_id: str) -> List[AffectationMemberRead]:
+        """Retourne les affectations enrichies du membre connecté."""
+        stmt = select(Affectation).where(Affectation.membre_id == membre_id)
+        affectations = self.db.exec(stmt).all()
+        return [AffectationMemberRead.model_validate(a) for a in affectations]
+
+    def get_pending_count(self, membre_id: str) -> int:
+        """Nombre d'affectations en statut PROPOSE pour le membre."""
+        stmt = select(Affectation).where(
+            Affectation.membre_id == membre_id,
+            Affectation.statut_affectation_code == AffectationStatusCode.PROPOSE.value,
+        )
+        return len(self.db.exec(stmt).all())
 
     def sync_affectations(self, slot_id: str, affectations_data: List[Any]):
         """Gère le delta (Add/Update/Delete) des affectations pour un slot."""
