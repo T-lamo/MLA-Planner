@@ -37,6 +37,7 @@ class AffectationStatusCode(str, Enum):
     REFUSE = "REFUSE"
     PRESENT = "PRESENT"
     ABSENT = "ABSENT"
+    RETARD = "RETARD"
 
 
 __all__ = [

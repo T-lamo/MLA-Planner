@@ -1,16 +1,49 @@
-# src/routes/planning_routes.py
-from fastapi import Depends
+# src/routes/affectation_router.py
+from typing import List
+
+from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
 from conf.db.database import Database
+from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from mla_enum.custom_enum import AffectationStatusCode
-from models import AffectationCreate, AffectationRead, AffectationUpdate
+from models import AffectationCreate, AffectationRead, AffectationUpdate, Utilisateur
+from models.affectation_model import AffectationMemberRead
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.affectation_service import AffectationService
 
 from .base_route_factory import CRUDRouterFactory
 
-# 2. Routes pour AFFECTATIONS
+# Routes spécifiques /me — doivent être déclarées AVANT le factory (qui a /{id})
+# pour éviter que FastAPI capture "/me" comme un item_id.
+me_router = APIRouter(prefix="/affectations", tags=["Affectations"])
+
+
+@me_router.get("/me", response_model=List[AffectationMemberRead])
+def get_my_affectations(
+    current_user: Utilisateur = Depends(get_current_active_user),
+    db: Session = Depends(Database.get_db_for_route),
+) -> List[AffectationMemberRead]:
+    """Retourne les affectations du membre connecté."""
+    if not current_user.membre_id:
+        return []
+    service = AffectationService(db)
+    return service.get_my_affectations(current_user.membre_id)
+
+
+@me_router.get("/me/pending-count", response_model=int)
+def get_pending_count(
+    current_user: Utilisateur = Depends(get_current_active_user),
+    db: Session = Depends(Database.get_db_for_route),
+) -> int:
+    """Nombre d'affectations en attente (PROPOSE) pour le membre connecté."""
+    if not current_user.membre_id:
+        return 0
+    service = AffectationService(db)
+    return service.get_pending_count(current_user.membre_id)
+
+
+# Factory CRUD — génère GET /, GET /all, GET /{id}, POST /, PATCH /{id}, DELETE /{id}
 factory = CRUDRouterFactory(
     service_class=AffectationService,
     create_schema=AffectationCreate,
@@ -23,23 +56,33 @@ factory = CRUDRouterFactory(
 
 router = factory.router
 
-
-# 3. Extension spécifique pour les validations métiers (Affectation)
-# @router.post("/confirm/{aff_id}", tags=["Affectations"])
-# def confirm_presence(aff_id: str, db: Session = Depends(Database.get_session)):
-#     svc = AffectationService(db)
-#     return svc.update(aff_id, {"presence_confirmee": True})
+admin_or_resp = Depends(RoleChecker(["ADMIN", "RESPONSABLE_MLA"]))
 
 
-# Router spécifique pour Affectation (logique de création surchargée)
+@router.patch("/{affectation_id}/my-status")
+def change_my_affectation_status(
+    affectation_id: str,
+    new_status: AffectationStatusCode,
+    current_user: Utilisateur = Depends(get_current_active_user),
+    db: Session = Depends(Database.get_db_for_route),
+):
+    """Accepte ou refuse une affectation (PROPOSE→CONFIRME/REFUSE, membre seul)."""
+    membre_id = current_user.membre_id or ""
+    service = AffectationService(db)
+    return service.update_my_affectation_status(
+        affectation_id, new_status, membre_id=membre_id
+    )
 
 
-@router.patch("/{affectation_id}/status")
+@router.patch(
+    "/{affectation_id}/status",
+    dependencies=[admin_or_resp],
+)
 def change_affectation_status(
     affectation_id: str,
     new_status: AffectationStatusCode,
     db: Session = Depends(Database.get_db_for_route),
 ):
-    """Change le statut d'une affectation (PROPOSE -> CONFIRME, etc.)."""
+    """Change le statut d'une affectation (Admin/Responsable)."""
     service = AffectationService(db)
     return service.update_affectation_status(affectation_id, new_status)

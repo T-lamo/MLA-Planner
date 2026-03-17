@@ -355,6 +355,33 @@
                       {{ role.libelle }}
                     </option>
                   </select>
+                  <!-- Statut (lecture seule sauf planning PUBLIE) -->
+                  <span
+                    v-if="aff.statut_affectation_code && formTargetStatus !== 'PUBLIE'"
+                    class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                    :class="{
+                      'bg-amber-100 text-amber-700': aff.statut_affectation_code === 'PROPOSE',
+                      'bg-emerald-100 text-emerald-700': aff.statut_affectation_code === 'CONFIRME',
+                      'bg-rose-100 text-rose-700': aff.statut_affectation_code === 'REFUSE',
+                      'bg-blue-100 text-blue-700': aff.statut_affectation_code === 'PRESENT',
+                      'bg-slate-100 text-slate-500': aff.statut_affectation_code === 'ABSENT',
+                      'bg-orange-100 text-orange-700': aff.statut_affectation_code === 'RETARD',
+                    }"
+                    >{{ aff.statut_affectation_code }}</span
+                  >
+                  <select
+                    v-if="aff.id && formTargetStatus === 'PUBLIE'"
+                    v-model="aff.statut_affectation_code"
+                    class="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] text-slate-600 focus:border-blue-400 focus:outline-none"
+                    @change="handleStatusChange(aff.id!, aff.statut_affectation_code!)"
+                  >
+                    <option value="PROPOSE">En attente</option>
+                    <option value="CONFIRME">Confirmé</option>
+                    <option value="REFUSE">Refusé</option>
+                    <option value="PRESENT">Présent</option>
+                    <option value="ABSENT">Absent</option>
+                    <option value="RETARD">En retard</option>
+                  </select>
                   <button
                     type="button"
                     class="shrink-0 rounded-full p-1 text-slate-300 transition-colors hover:bg-red-50 hover:text-red-400"
@@ -540,7 +567,21 @@ import {
 import FormSection from '~~/layers/base/app/components/FormSection.vue'
 import { planningFormKey } from '../composables/usePlanningForm'
 import { ACTIVITE_TYPES } from '../types/planning.types'
+import type { AffectationStatus } from '../types/planning.types'
 import { useIndisponibiliteWarning } from '../composables/useIndisponibiliteWarning'
+import { AffectationRepository } from '../repositories/AffectationRepository'
+
+const affRepo = new AffectationRepository()
+const notify = useMLANotify()
+
+async function handleStatusChange(affId: string, newStatus: AffectationStatus) {
+  try {
+    await affRepo.updateStatus(affId, newStatus)
+    notify.success('Statut mis à jour')
+  } catch {
+    // handled by global fetch interceptor
+  }
+}
 
 // Destructurer pour bénéficier de l'auto-unwrap des refs dans le template
 const {
@@ -555,6 +596,7 @@ const {
   campusMinistereColorMap,
   isLoadingMinisteres,
   selectedMinistereColor,
+  formTargetStatus,
   toggleSection,
   selectMinistere,
   onDateDebutChange,

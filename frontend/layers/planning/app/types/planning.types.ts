@@ -45,6 +45,9 @@ export function getMinistereColor(ministereId: string, allMinistereIds: string[]
 /** Correspond aux valeurs de l'enum PlanningStatusCode côté backend */
 export type PlanningStatus = 'BROUILLON' | 'PUBLIE' | 'ANNULE' | 'TERMINE'
 
+/** Correspond aux valeurs de l'enum AffectationStatusCode côté backend */
+export type AffectationStatus = 'PROPOSE' | 'CONFIRME' | 'REFUSE' | 'PRESENT' | 'ABSENT' | 'RETARD'
+
 export type PlanningViewPerspective = 'PERSONAL' | 'MINISTERE' | 'CAMPUS'
 
 // ============================================================
@@ -116,6 +119,19 @@ export interface ActiviteUpdate {
   description?: string
   campus_id?: string
   ministere_organisateur_id?: string
+}
+
+// --- Vue membre de ses propres affectations ---
+
+export interface AffectationMemberRead {
+  id: string
+  statut_affectation_code: AffectationStatus
+  role_code: string
+  slot_nom: string
+  slot_debut: string
+  slot_fin: string
+  activite_type?: string | null
+  ministere_nom?: string | null
 }
 
 // --- Membre résumé (dans les affectations) ---
@@ -269,6 +285,7 @@ export interface AffectationFormItem {
   membre_nom: string
   role_code: string
   ministere_id: string
+  statut_affectation_code?: AffectationStatus
 }
 
 /** Slot dans le formulaire */
