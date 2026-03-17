@@ -130,6 +130,16 @@ class ErrorRegistry:
         message="Le membre ne possède pas le rôle requis : {role}.",
         http_status=status.HTTP_400_BAD_REQUEST,
     )
+    AFFECTATION_TRANSITION_FORBIDDEN = ErrorDetail(
+        code="ASGN_007",
+        message="Transition de statut non autorisée pour ce rôle.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
+    AFFECTATION_NOT_OWNER = ErrorDetail(
+        code="ASGN_008",
+        message="Vous n'êtes pas le membre concerné par cette affectation.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
 
     # --- DOMAINE WORKFLOW (WKFL) ---
     WORKFLOW_INVALID_TRANSITION = ErrorDetail(

@@ -72,7 +72,7 @@ class SeedReferentials:
             for c in ["BROUILLON", "PUBLIE", "ANNULE", "TERMINE"]:
                 self.get_or_create_upsert(StatutPlanning, {"code": c}, {})
 
-            for c in ["PROPOSE", "CONFIRME", "REFUSE", "PRESENT", "ABSENT"]:
+            for c in ["PROPOSE", "CONFIRME", "REFUSE", "PRESENT", "ABSENT", "RETARD"]:
                 self.get_or_create_upsert(StatutAffectation, {"code": c}, {})
 
             for c in ["RESPONSABLE", "ADJOINT", "MEMBRE_ACTIF"]:

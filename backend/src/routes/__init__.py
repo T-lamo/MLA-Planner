@@ -6,6 +6,7 @@ from core.auth.auth_route import router as auth_router
 from notification.notification_router import router as notification
 
 from .activite_router import router as activite  # Doit être après planning pour les FK
+from .affectation_router import me_router as affectation_me  # Routes /me — avant /{id}
 from .affectation_router import (
     router as affectation,  # Doit être après planning pour les FK
 )
@@ -43,6 +44,7 @@ router.include_router(indisponibilite)
 router.include_router(equipe)  # Doit être après membre et ministre pour les FK
 router.include_router(slot)  # Doit être après membre_role pour les FK
 router.include_router(planning)  # Doit être après slot pour les FK
+router.include_router(affectation_me)  # Routes /me — avant /{id} pour éviter le conflit
 router.include_router(affectation)  # Doit être après planning pour les FK
 router.include_router(activite)  # Doit être après planning pour les FK
 router.include_router(profile)
