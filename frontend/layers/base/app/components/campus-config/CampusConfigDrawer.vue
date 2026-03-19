@@ -37,6 +37,20 @@
           placeholder="Description optionnelle"
         />
       </div>
+
+      <div v-if="conflictingMinistere" class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+        <p class="text-sm font-medium text-amber-800">
+          Ce ministère existe déjà — {{ conflictingMinistere.nom }}
+        </p>
+        <button
+          type="button"
+          class="mt-2 text-xs font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-900"
+          :disabled="isLinkingMinistere"
+          @click="handleLinkMinistere"
+        >
+          {{ isLinkingMinistere ? 'Rattachement…' : 'Rattacher au campus' }}
+        </button>
+      </div>
     </form>
 
     <!-- Formulaire Catégorie -->
@@ -160,7 +174,7 @@
         <button
           type="submit"
           :form="activeFormId"
-          :disabled="isSubmitting || (!isEditMode && !!conflictingRole)"
+          :disabled="isSubmitting || (!isEditMode && (!!conflictingRole || !!conflictingMinistere))"
           class="cc-btn-primary flex items-center gap-2"
         >
           <Loader2 v-if="isSubmitting" class="size-4 animate-spin" />
@@ -189,6 +203,16 @@ const {
 } = useCampusConfigForm()
 
 const isLinking = ref(false)
+const isLinkingMinistere = ref(false)
+
+const conflictingMinistere = computed(() => {
+  if (drawerContext.value.mode !== 'add-ministere') return null
+  const nom = ministereForm.nom.trim().toLowerCase()
+  if (!nom) return null
+  const alreadyLinked = campusConfig.ministeres.value.some((m) => m.nom.toLowerCase() === nom)
+  if (alreadyLinked) return null
+  return campusConfig.allMinisteres.value.find((m) => m.nom.toLowerCase() === nom) ?? null
+})
 
 const conflictingRole = computed(() => {
   if (drawerContext.value.mode !== 'add-role') return null
@@ -234,6 +258,20 @@ async function handleLinkExisting(): Promise<void> {
     // Erreur déjà notifiée par l'intercepteur
   } finally {
     isLinking.value = false
+  }
+}
+
+async function handleLinkMinistere(): Promise<void> {
+  const min = conflictingMinistere.value
+  if (!min) return
+  isLinkingMinistere.value = true
+  try {
+    await campusConfig.linkMinistere(min.nom)
+    closeDrawer()
+  } catch {
+    // Erreur déjà notifiée par l'intercepteur
+  } finally {
+    isLinkingMinistere.value = false
   }
 }
 </script>

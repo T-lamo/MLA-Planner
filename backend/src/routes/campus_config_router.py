@@ -173,6 +173,18 @@ def list_ministeres_of_campus(
     return svc.list_ministeres_of_campus(campus_id)
 
 
+@router.get(
+    "/ministeres",
+    response_model=List[MinistereRead],
+    status_code=status.HTTP_200_OK,
+    summary="Lister tous les ministères du système",
+)
+def list_all_ministeres(
+    svc: CampusConfigService = Depends(_get_svc),
+) -> Any:
+    return svc.list_all_ministeres()
+
+
 # ------------------------------------------------------------------ #
 #  CATÉGORIES DE RÔLES
 # ------------------------------------------------------------------ #

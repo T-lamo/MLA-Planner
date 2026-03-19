@@ -3,6 +3,7 @@
     v-if="authStore.isAuthenticated"
     class="flex h-screen overflow-hidden bg-[var(--color-slate-50)] text-slate-900"
   >
+    <AppLoader />
     <div
       v-if="!ui.isSidebarCollapsed"
       class="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm md:hidden"
@@ -344,7 +345,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import {
   Bell,
   Building2,
@@ -366,6 +368,20 @@ const ui = useUIStore()
 const authStore = useAuthStore()
 const myAffectationsStore = useMyAffectationsStore()
 useSessionManager()
+
+const route = useRoute()
+
+// Option A — ferme le sidebar en mode overlay mobile après chaque navigation.
+// Un seul watcher couvre tous les liens (sidebar + popups) sans toucher SidebarLink.vue.
+// Sur desktop (md+, ≥768px), le sidebar n'est jamais un overlay : on ne le ferme pas.
+watch(
+  () => route.path,
+  () => {
+    if (import.meta.client && window.innerWidth < 768 && !ui.isSidebarCollapsed) {
+      ui.toggleSidebar()
+    }
+  },
+)
 
 const isPlanningOpen = ref(true)
 const isPopupVisible = ref(false)

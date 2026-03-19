@@ -101,7 +101,13 @@ class CampusConfigService:
         existing = self.db.exec(stmt).first()
         if existing:
             return existing, False
-        code = re.sub(r"[^A-Z0-9_]", "_", nom.strip().upper())[:20]
+        base = re.sub(r"[^A-Z0-9_]", "_", nom.strip().upper())[:20]
+        code = base
+        i = 1
+        while self.db.get(CategorieRole, code) is not None:
+            suffix = f"_{i}"
+            code = base[: 20 - len(suffix)] + suffix
+            i += 1
         new_cat = CategorieRole(
             code=code,
             libelle=nom,
@@ -122,19 +128,16 @@ class CampusConfigService:
         description: Optional[str] = None,
     ) -> Tuple[RoleCompetence, bool]:
         """
-        Cherche un rôle compétence par code dans la même catégorie.
-        Lève CONF_ROLE_CODE_CONFLICT si le code existe dans une autre catégorie.
+        Cherche un rôle compétence par code + catégorie.
+        Lève CONF_ROLE_CODE_CONFLICT si le code existe dans une autre
+        catégorie (les codes sont globalement uniques).
         """
         normalized = code.strip().upper()
-        stmt = select(RoleCompetence).where(RoleCompetence.code == normalized)
-        existing = self.db.exec(stmt).first()
-        if existing:
-            if existing.categorie_code != categorie_id:
-                raise AppException(
-                    ErrorRegistry.CONF_ROLE_CODE_CONFLICT,
-                    code=normalized,
-                )
-            return existing, False
+        existing_global = self.db.get(RoleCompetence, normalized)
+        if existing_global:
+            if existing_global.categorie_code == categorie_id:
+                return existing_global, False
+            raise AppException(ErrorRegistry.CONF_ROLE_CODE_CONFLICT)
         new_role = RoleCompetence(
             code=normalized,
             libelle=libelle,
@@ -278,6 +281,11 @@ class CampusConfigService:
         self.db.delete(link)
         self.db.flush()
 
+    def list_all_ministeres(self) -> List[Ministere]:
+        """Liste tous les ministères actifs du système (tous campus)."""
+        stmt = select(Ministere).where(Ministere.deleted_at == None)  # noqa: E711
+        return list(self.db.exec(stmt).all())
+
     def list_ministeres_of_campus(
         self,
         campus_id: str,
@@ -404,18 +412,17 @@ class CampusConfigService:
         categorie_id: str,
         role_code: str,
     ) -> RoleCompetence:
-        """Réattache un rôle compétence existant à une autre catégorie."""
+        """
+        Rattache un rôle compétence existant (autre catégorie) à cette
+        catégorie en modifiant son categorie_code.
+        """
+        normalized = role_code.strip().upper()
         cat = self.db.get(CategorieRole, categorie_id)
         if not cat:
             raise AppException(ErrorRegistry.ROLE_CAT_NOT_FOUND)
-        normalized = role_code.strip().upper()
-        stmt = select(RoleCompetence).where(RoleCompetence.code == normalized)
-        role = self.db.exec(stmt).first()
+        role = self.db.get(RoleCompetence, normalized)
         if not role:
-            raise AppException(
-                ErrorRegistry.ROLE_NOT_FOUND,
-                missing=normalized,
-            )
+            raise AppException(ErrorRegistry.ROLE_NOT_FOUND, missing=normalized)
         role.categorie_code = categorie_id
         self.db.add(role)
         self.db.flush()
