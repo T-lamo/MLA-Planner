@@ -10,6 +10,7 @@ import type {
   CategorieConfigUpdate,
   MinistereConfigCreate,
   MinistereConfigUpdate,
+  MinistereRead,
   RoleCompetenceConfigCreate,
   RoleCompetenceConfigUpdate,
 } from '~~/layers/base/types/campus-config'
@@ -25,6 +26,7 @@ const campuses = ref<CampusRead[]>([])
 const selectedCampusId = ref<string>('')
 const summary = ref<CampusConfigSummary | null>(null)
 const allRoleCompetences = ref<RoleCompetenceRead[]>([])
+const allMinisteres = ref<MinistereRead[]>([])
 const isLoading = ref(false)
 
 const repo = new CampusConfigRepository()
@@ -77,6 +79,14 @@ export const useCampusConfig = () => {
     }
   }
 
+  async function refreshAllMinisteres(): Promise<void> {
+    try {
+      allMinisteres.value = await repo.getAllMinisteres()
+    } catch {
+      // Non bloquant
+    }
+  }
+
   // -----------------------------------------------------------------------
   // Actions publiques
   // -----------------------------------------------------------------------
@@ -88,7 +98,7 @@ export const useCampusConfig = () => {
       if (campuses.value.length > 0 && !selectedCampusId.value) {
         selectedCampusId.value = campuses.value[0]!.id
       }
-      await Promise.all([refreshSummary(), refreshRoleCompetences()])
+      await Promise.all([refreshSummary(), refreshRoleCompetences(), refreshAllMinisteres()])
     } catch {
       // Erreur déjà notifiée par l'intercepteur useApiFetch
     } finally {
@@ -128,6 +138,12 @@ export const useCampusConfig = () => {
     await repo.deleteCategorie(ministereId, categorieId)
     notify.success('Catégorie supprimée')
     await refreshSummary()
+  }
+
+  async function linkMinistere(ministereNom: string): Promise<void> {
+    await repo.addMinistere(selectedCampusId.value, { nom: ministereNom })
+    notify.success('Ministère rattaché au campus')
+    await Promise.all([refreshSummary(), refreshAllMinisteres()])
   }
 
   async function addRoleCompetence(
@@ -209,6 +225,7 @@ export const useCampusConfig = () => {
     selectedCampusId,
     summary,
     allRoleCompetences,
+    allMinisteres,
     isLoading,
 
     // Computed
@@ -223,6 +240,7 @@ export const useCampusConfig = () => {
     loadCampuses,
     selectCampus,
     addMinistere,
+    linkMinistere,
     removeMinistere,
     addCategorie,
     deleteCategorie,
