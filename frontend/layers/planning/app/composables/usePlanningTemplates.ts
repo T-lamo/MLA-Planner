@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { PlanningRepository } from '../repositories/PlanningRepository'
 import type { PlanningTemplateRead, SaveAsTemplateRequest } from '../types/planning.types'
 
@@ -14,7 +14,16 @@ export function usePlanningTemplates() {
   const isSaving = ref(false)
   const isDeleting = ref(false)
   const templates = ref<PlanningTemplateRead[]>([])
+  const templatesByMinistere = ref<PlanningTemplateRead[]>([])
   const templateError = ref<string | null>(null)
+
+  const allAvailableTemplates = computed<PlanningTemplateRead[]>(() => {
+    const map = new Map<string, PlanningTemplateRead>()
+    for (const t of [...templates.value, ...templatesByMinistere.value]) {
+      map.set(t.id, t)
+    }
+    return [...map.values()].sort((a, b) => b.used_count - a.used_count)
+  })
 
   /**
    * Sauvegarde un planning existant comme template réutilisable.
@@ -51,6 +60,17 @@ export function usePlanningTemplates() {
   }
 
   /**
+   * Charge la liste des templates d'un ministère dans `templatesByMinistere`.
+   */
+  async function loadByMinistere(ministereId: string): Promise<void> {
+    try {
+      templatesByMinistere.value = await repo.listTemplatesByMinistere(ministereId)
+    } catch {
+      templatesByMinistere.value = []
+    }
+  }
+
+  /**
    * Supprime un template et retire-le de la liste locale.
    */
   async function deleteTemplate(templateId: string): Promise<boolean> {
@@ -73,9 +93,12 @@ export function usePlanningTemplates() {
     isSaving,
     isDeleting,
     templates,
+    templatesByMinistere,
+    allAvailableTemplates,
     templateError,
     saveAsTemplate,
     loadByCampus,
+    loadByMinistere,
     deleteTemplate,
   }
 }

@@ -126,6 +126,10 @@ export class PlanningRepository extends BaseRepository {
     return this.unwrap<PlanningTemplateRead[]>(`/planning-templates/by-campus/${campusId}`)
   }
 
+  async listTemplatesByMinistere(ministereId: string): Promise<PlanningTemplateRead[]> {
+    return this.unwrap<PlanningTemplateRead[]>(`/planning-templates/by-ministere/${ministereId}`)
+  }
+
   async deleteTemplate(templateId: string): Promise<void> {
     await this.apiRequest(`/planning-templates/${templateId}`, {
       method: 'DELETE',

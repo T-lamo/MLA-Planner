@@ -26,6 +26,45 @@
       </div>
     </div>
 
+    <!-- ── Sélecteur de template ────────────────────────────────────── -->
+    <div
+      v-if="form.internalMode === 'create' && allAvailableTemplates.length > 0"
+      class="border-primary-200 bg-primary-50 rounded-xl border p-4"
+    >
+      <div class="mb-2 flex items-center gap-2">
+        <BookmarkPlus class="text-primary-600 h-4 w-4" />
+        <p class="text-primary-700 text-sm font-semibold">Utiliser un template</p>
+        <span
+          v-if="templateApplied"
+          class="bg-primary-100 text-primary-700 ml-auto rounded-full px-2 py-0.5 text-xs font-medium"
+        >
+          ✓ Appliqué
+        </span>
+      </div>
+
+      <select
+        class="border-primary-300 focus:border-primary-500 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none"
+        :value="selectedTemplateId ?? ''"
+        @change="
+          (e) => {
+            const id = (e.target as HTMLSelectElement).value
+            if (!id) return
+            const tpl = allAvailableTemplates.find((t) => t.id === id)
+            if (tpl) applyTemplate(tpl)
+          }
+        "
+      >
+        <option value="">Choisir un template…</option>
+        <option v-for="tpl in allAvailableTemplates" :key="tpl.id" :value="tpl.id">
+          {{ tpl.nom }}{{ tpl.used_count > 0 ? ` (utilisé ${tpl.used_count}×)` : '' }}
+        </option>
+      </select>
+
+      <p class="text-primary-600 mt-1.5 text-xs">
+        Le type d'activité et les créneaux seront pré-remplis. Tous les champs restent modifiables.
+      </p>
+    </div>
+
     <!-- SECTION 1 — ACTIVITÉ -->
     <FormSection
       title="Activité"
@@ -563,9 +602,11 @@ import {
   Calendar,
   Clock,
   Users as UsersIcon,
+  BookmarkPlus,
 } from 'lucide-vue-next'
 import FormSection from '~~/layers/base/app/components/FormSection.vue'
 import { planningFormKey } from '../composables/usePlanningForm'
+import { usePlanningTemplates } from '../composables/usePlanningTemplates'
 import { ACTIVITE_TYPES } from '../types/planning.types'
 import type { AffectationStatus } from '../types/planning.types'
 import { useIndisponibiliteWarning } from '../composables/useIndisponibiliteWarning'
@@ -584,6 +625,7 @@ async function handleStatusChange(affId: string, newStatus: AffectationStatus) {
 }
 
 // Destructurer pour bénéficier de l'auto-unwrap des refs dans le template
+const form = inject(planningFormKey)!
 const {
   activeSections,
   activiteForm,
@@ -597,6 +639,8 @@ const {
   isLoadingMinisteres,
   selectedMinistereColor,
   formTargetStatus,
+  selectedTemplateId,
+  templateApplied,
   toggleSection,
   selectMinistere,
   onDateDebutChange,
@@ -611,7 +655,23 @@ const {
   resetPicker,
   rolesForMembre,
   loadMinistreresForCampus,
-} = inject(planningFormKey)!
+  applyTemplate,
+} = form
+
+const { allAvailableTemplates, loadByCampus, loadByMinistere } = usePlanningTemplates()
+
+watch(
+  () => activiteForm.campus_id,
+  (campusId) => {
+    if (campusId) loadByCampus(campusId)
+  },
+)
+watch(
+  () => activiteForm.ministere_organisateur_id,
+  (ministereId) => {
+    if (ministereId) loadByMinistere(ministereId)
+  },
+)
 
 // userCampuses est dans le shell (props) — le form a besoin de la liste pour le template.
 // On re-expose via le form composable qui expose campusMinisteres pour les ministères,
