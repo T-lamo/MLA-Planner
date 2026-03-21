@@ -27,13 +27,14 @@ from models.planning_model import (
     PlanningFullUpdate,
     ViewContext,
 )
-from models.schema_db_model import Activite, Campus, Ministere
+from models.schema_db_model import Activite, Campus, Ministere, PlanningTemplate
 from notification.notification_schemas import (
     PlanningCancelledNotification,
     PlanningPublishedNotification,
 )
 from notification.notification_service import EmailService
 from repositories.planning_repository import PlanningRepository
+from repositories.planning_template_repository import PlanningTemplateRepository
 from services.activite_service import ActiviteService
 from services.slot_service import SlotService
 from utils.utils_func import extract_field
@@ -271,6 +272,10 @@ class PlanningServiceSvc(
         """Délégué au SlotService."""
         return self.slot_svc.add_slot_to_planning(slot_data.planning_id, slot_data)
 
+    def _increment_template_usage(self, template_id: str) -> None:
+        """Incrémente used_count du template utilisé lors de la création."""
+        PlanningTemplateRepository(self.db).increment_used_count(template_id)
+
     def create_full_planning(self, data: PlanningFullCreate) -> PlanningService:
         """Crée un planning complet (Activité + Planning
         + Slots + Affectations) de façon atomique."""
@@ -293,6 +298,16 @@ class PlanningServiceSvc(
             self.slot_svc.sync_planning_slots(planning_db.id, data.slots)
 
             self.db.flush()
+
+            # 4. Liaison template et incrément du compteur
+            if data.template_id:
+                tpl = self.db.get(PlanningTemplate, data.template_id)
+                if tpl:
+                    planning_db.template_id = data.template_id
+                    self.db.add(planning_db)
+                    self.db.flush()
+                    self._increment_template_usage(data.template_id)
+
             self.db.refresh(planning_db)
             return planning_db
 
