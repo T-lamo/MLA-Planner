@@ -76,6 +76,25 @@ class ErrorRegistry:
         http_status=status.HTTP_400_BAD_REQUEST,
     )
 
+    PLAN_013 = ErrorDetail(
+        code="PLAN_013",
+        message="Template de planning introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    PLAN_014 = ErrorDetail(
+        code="PLAN_014",
+        message=(
+            "Impossible de créer un template : "
+            "planning introuvable ou sans créneaux."
+        ),
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+    PLAN_015 = ErrorDetail(
+        code="PLAN_015",
+        message="Échec de la création du template de planning.",
+        http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
     # --- DOMAINE SLOT ---
     SLOT_OUT_OF_BOUNDS = ErrorDetail(
         code="SLOT_002",

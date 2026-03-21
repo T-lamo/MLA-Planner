@@ -22,6 +22,7 @@ from .ministere_router import router as ministre
 from .organisation_router import router as organisation
 from .pays_router import router as pays
 from .planning_router import router as planning  # Doit être après slot pour les FK
+from .planning_template_router import router as planning_template
 from .pole_router import router as pole
 from .profil_router import router as profile
 from .role_competence_router import router as role_competence
@@ -45,6 +46,7 @@ router.include_router(indisponibilite)
 router.include_router(equipe)  # Doit être après membre et ministre pour les FK
 router.include_router(slot)  # Doit être après membre_role pour les FK
 router.include_router(planning)  # Doit être après slot pour les FK
+router.include_router(planning_template)
 router.include_router(affectation_me)  # Routes /me — avant /{id} pour éviter le conflit
 router.include_router(affectation)  # Doit être après planning pour les FK
 router.include_router(activite)  # Doit être après planning pour les FK
