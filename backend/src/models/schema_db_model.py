@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
+from uuid import uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -448,6 +449,56 @@ class AffectationContexte(AffectationContexteBase, table=True):  # type: ignore
     affectation: Optional["AffectationRole"] = Relationship(back_populates="contextes")
 
 
+class PlanningTemplate(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_planningtemplate"
+    __table_args__ = {"extend_existing": True}
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    nom: str = Field(max_length=150)
+    description: Optional[str] = Field(default=None, max_length=500)
+    activite_type: str = Field(max_length=100)
+    duree_minutes: int = Field(ge=1)
+    campus_id: str = Field(foreign_key="t_campus.id", ondelete="CASCADE")
+    ministere_id: str = Field(foreign_key="t_ministere.id", ondelete="CASCADE")
+    created_by_id: str = Field(foreign_key="t_membre.id", ondelete="CASCADE")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    used_count: int = Field(default=0, ge=0)
+
+    slots: List["PlanningTemplateSlot"] = Relationship(
+        back_populates="template",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
+
+class PlanningTemplateSlot(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_planningtemplateslot"
+    __table_args__ = {"extend_existing": True}
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    template_id: str = Field(foreign_key="t_planningtemplate.id", ondelete="CASCADE")
+    nom_creneau: str = Field(max_length=100)
+    offset_debut_minutes: int = Field(ge=0)
+    offset_fin_minutes: int = Field(ge=1)
+    nb_personnes_requis: int = Field(default=2, ge=1)
+
+    template: Optional["PlanningTemplate"] = Relationship(back_populates="slots")
+    roles: List["PlanningTemplateRole"] = Relationship(
+        back_populates="slot",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
+
+class PlanningTemplateRole(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_planningtemplaterole"
+    __table_args__ = {"extend_existing": True}
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    slot_id: str = Field(foreign_key="t_planningtemplateslot.id", ondelete="CASCADE")
+    role_code: str = Field(max_length=50)
+
+    slot: Optional["PlanningTemplateSlot"] = Relationship(back_populates="roles")
+
+
 __all__ = [
     "CampusMinistereLink",
     "MembreCampusLink",
@@ -486,4 +537,8 @@ __all__ = [
     "ChantContenu",
     "ChantArtisteLink",
     "ChantTag",
+    # Planning Templates
+    "PlanningTemplate",
+    "PlanningTemplateSlot",
+    "PlanningTemplateRole",
 ]

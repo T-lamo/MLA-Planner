@@ -276,6 +276,48 @@ export interface CampusTeamRead {
   ministeres: TeamMinistereRead[]
 }
 
+// ============================================================
+// 7. PLANNING TEMPLATES — US-01
+// ============================================================
+
+export interface PlanningTemplateRoleRead {
+  id: string
+  role_code: string
+}
+
+export interface PlanningTemplateSlotRead {
+  id: string
+  nom_creneau: string
+  offset_debut_minutes: number
+  offset_fin_minutes: number
+  nb_personnes_requis: number
+  roles: PlanningTemplateRoleRead[]
+}
+
+export interface PlanningTemplateRead {
+  id: string
+  nom: string
+  description?: string | null
+  activite_type: string
+  duree_minutes: number
+  campus_id: string
+  ministere_id: string
+  created_by_id: string
+  created_at: string
+  used_count: number
+  slots: PlanningTemplateSlotRead[]
+}
+
+export interface SaveAsTemplateRequest {
+  nom: string
+  description?: string | null
+}
+
+export interface PlanningTemplateUpdate {
+  nom?: string | null
+  description?: string | null
+}
+
 /** Item affectation dans le formulaire */
 export interface AffectationFormItem {
   _tempId: string

@@ -103,6 +103,17 @@
             Fermer
           </button>
         </div>
+
+        <!-- Bouton Save as Template (write uniquement) -->
+        <button
+          v-if="canWrite && planning?.id"
+          type="button"
+          class="flex w-full items-center justify-center gap-2 rounded-xl border border-indigo-100 px-4 py-2 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50"
+          @click="showTemplateModal = true"
+        >
+          <BookmarkPlus class="size-4" />
+          Sauvegarder comme template
+        </button>
       </div>
     </template>
 
@@ -172,11 +183,20 @@
       </div>
     </template>
   </AppDrawer>
+
+  <!-- Modal Save as Template (en dehors du drawer pour éviter les conflits de slot) -->
+  <SaveAsTemplateModal
+    v-if="planning?.id"
+    :isOpen="showTemplateModal"
+    :planningId="planning.id"
+    @close="showTemplateModal = false"
+    @saved="showTemplateModal = false"
+  />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, provide } from 'vue'
-import { Loader2, ChevronDown, Save } from 'lucide-vue-next'
+import { BookmarkPlus, ChevronDown, Loader2, Save } from 'lucide-vue-next'
 import AppDrawer from '~~/layers/base/app/components/AppDrawer.vue'
 import { usePlanning } from '../composables/usePlanning'
 import { usePlanningPermissions } from '../composables/usePlanningPermissions'
@@ -188,6 +208,7 @@ import {
 import { usePlanningForm, planningFormKey } from '../composables/usePlanningForm'
 import PlanningDetailView from './PlanningDetailView.vue'
 import PlanningFormView from './PlanningFormView.vue'
+import SaveAsTemplateModal from './SaveAsTemplateModal.vue'
 import type { PlanningEvent, PlanningFullRead } from '../types/planning.types'
 import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 
@@ -342,6 +363,11 @@ watch(
     }
   },
 )
+
+// -----------------------------------------------------------------------
+// Template modal
+// -----------------------------------------------------------------------
+const showTemplateModal = ref(false)
 
 // -----------------------------------------------------------------------
 // Actions du shell
