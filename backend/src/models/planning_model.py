@@ -99,6 +99,7 @@ class PlanningFullCreate(BaseModel):
     activite: ActiviteCreate
     planning: Optional[PlanningServiceCreate] = None
     slots: List[SlotFullNested]
+    template_id: Optional[str] = None
 
 
 class AffectationFullUpdate(BaseModel):
@@ -188,6 +189,7 @@ class ViewContext(BaseModel):
 
 class PlanningFullRead(PlanningServiceBase):
     id: str
+    template_id: Optional[str] = None
     activite: Optional[ActiviteFullRead] = None
     slots: List[SlotFullRead] = []
     view_context: Optional[ViewContext] = None

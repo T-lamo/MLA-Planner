@@ -268,6 +268,11 @@ class PlanningService(PlanningServiceBase, table=True):  # type: ignore
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
+    template_id: Optional[str] = Field(
+        default=None,
+        foreign_key="t_planningtemplate.id",
+        ondelete="SET NULL",
+    )
     activite: Optional["Activite"] = Relationship(back_populates="planning_services")
     statut: Optional[StatutPlanning] = Relationship(back_populates="plannings")
     slots: List["Slot"] = Relationship(

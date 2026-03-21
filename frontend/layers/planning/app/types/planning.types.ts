@@ -211,6 +211,7 @@ export interface PlanningFullRead {
   id: string
   statut_code: PlanningStatus
   activite_id?: string | null
+  template_id?: string | null
   activite?: ActiviteFullRead | null
   slots: SlotFullRead[]
   view_context?: ViewContext | null
@@ -219,6 +220,7 @@ export interface PlanningFullRead {
 export interface PlanningFullCreate {
   activite: ActiviteCreate
   slots: SlotFullNested[]
+  template_id?: string | null
 }
 
 export interface PlanningFullUpdate {
