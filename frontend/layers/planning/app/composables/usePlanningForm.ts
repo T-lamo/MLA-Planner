@@ -16,6 +16,7 @@ import type {
   CampusTeamRead,
   MinistereColor,
   PlanningFullRead,
+  PlanningTemplateRead,
   RoleCompetenceRead,
   SlotFormItem,
   TeamMemberRead,
@@ -48,6 +49,18 @@ function defaultPicker(): SlotPickerState {
     roleCode: '',
     showMemberList: false,
   }
+}
+
+/** Calcule HH:MM à partir d'une date ISO et d'un offset en minutes. */
+function offsetToHHMM(baseDateStr: string, offsetMinutes: number): string {
+  if (!baseDateStr) return ''
+  const base = new Date(baseDateStr)
+  if (isNaN(base.getTime())) return ''
+  const total = new Date(base.getTime() + offsetMinutes * 60_000)
+  return `${String(total.getHours()).padStart(2, '0')}:${String(total.getMinutes()).padStart(
+    2,
+    '0',
+  )}`
 }
 
 export type PlanningForm = ReturnType<typeof usePlanningForm>
@@ -146,6 +159,8 @@ export function usePlanningForm(
 
   const slotsForm = ref<SlotFormItem[]>([])
   const slotPickers = ref<SlotPickerState[]>([])
+  const selectedTemplateId = ref<string | null>(null)
+  const templateApplied = ref(false)
   const isSaving = ref(false)
   const apiError = ref<string | null>(null)
   const formTargetStatus = ref<string>('BROUILLON')
@@ -393,6 +408,35 @@ export function usePlanningForm(
     return roles.value
   }
 
+  function applyTemplate(template: PlanningTemplateRead): void {
+    // 1. Pré-remplir le type d'activité
+    activiteForm.type = template.activite_type
+
+    // 2. Calculer date_fin depuis date_debut + duree_minutes
+    if (activiteForm.date_debut) {
+      const debut = new Date(activiteForm.date_debut)
+      const fin = new Date(debut.getTime() + template.duree_minutes * 60_000)
+      activiteForm.date_fin = fin.toISOString().slice(0, 16)
+    }
+
+    // 3. Construire les slots depuis les créneaux du template
+    const newSlots: SlotFormItem[] = template.slots.map((tplSlot) => ({
+      _tempId: newTempId(),
+      nom_creneau: tplSlot.nom_creneau,
+      heure_debut: offsetToHHMM(activiteForm.date_debut, tplSlot.offset_debut_minutes),
+      heure_fin: offsetToHHMM(activiteForm.date_debut, tplSlot.offset_fin_minutes),
+      nb_personnes_requis: tplSlot.nb_personnes_requis,
+      affectations: [],
+    }))
+
+    slotsForm.value = newSlots
+    slotPickers.value = newSlots.map(() => defaultPicker())
+
+    // 4. Mémoriser la sélection
+    selectedTemplateId.value = template.id
+    templateApplied.value = true
+  }
+
   // -----------------------------------------------------------------------
   // initForm — réinitialise ou pré-remplit pour create / edit
   // -----------------------------------------------------------------------
@@ -452,6 +496,8 @@ export function usePlanningForm(
           })),
       }))
     } else {
+      selectedTemplateId.value = null
+      templateApplied.value = false
       if (prefillDate.value) {
         activiteForm.date_debut = prefillDate.value.substring(0, 16)
       }
@@ -513,6 +559,7 @@ export function usePlanningForm(
             ministere_organisateur_id: activiteForm.ministere_organisateur_id,
           },
           slots: slotsPayload as never,
+          template_id: selectedTemplateId.value ?? undefined,
         })
       }
 
@@ -532,6 +579,8 @@ export function usePlanningForm(
   }
 
   return {
+    // Mode courant — exposé pour que PlanningFormView puisse conditionner l'affichage
+    internalMode,
     // Campus / rôles — exposés pour le shell (partagés avec le mode détail)
     campusTeam,
     campusMinisteres,
@@ -545,6 +594,8 @@ export function usePlanningForm(
     activiteForm,
     slotsForm,
     slotPickers,
+    selectedTemplateId,
+    templateApplied,
     isSaving,
     apiError,
     formTargetStatus,
@@ -572,6 +623,7 @@ export function usePlanningForm(
     confirmAffectation,
     resetPicker,
     rolesForMembre,
+    applyTemplate,
     initForm,
     save,
   }
