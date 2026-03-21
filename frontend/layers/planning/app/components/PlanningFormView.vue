@@ -28,7 +28,7 @@
 
     <!-- ── Sélecteur de template ────────────────────────────────────── -->
     <div
-      v-if="form.internalMode === 'create' && allAvailableTemplates.length > 0"
+      v-if="internalMode === 'create' && allAvailableTemplates.length > 0"
       class="border-primary-200 bg-primary-50 rounded-xl border p-4"
     >
       <div class="mb-2 flex items-center gap-2">
@@ -656,6 +656,7 @@ const {
   rolesForMembre,
   loadMinistreresForCampus,
   applyTemplate,
+  internalMode,
 } = form
 
 const { allAvailableTemplates, loadByCampus, loadByMinistere } = usePlanningTemplates()
