@@ -103,6 +103,8 @@ class PlanningServiceSvc(
                         ministere_nom=ministere_nom or "",
                         nom_creneau=slot.nom_creneau,
                         role_code=aff.role_code,
+                        date_debut_dt=slot.date_debut,
+                        date_fin_dt=slot.date_fin,
                     )
                 )
         return notifications

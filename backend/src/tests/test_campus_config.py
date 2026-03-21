@@ -340,3 +340,58 @@ def test_campus_config_summary_keys(
     assert isinstance(summary["ministeres"], list)
     assert isinstance(summary["statuts_planning"], list)
     assert isinstance(summary["statuts_affectation"], list)
+
+
+# ------------------------------------------------------------------ #
+#  Listing global ministères / catégories
+# ------------------------------------------------------------------ #
+
+
+def test_list_all_ministeres_returns_all(
+    session: Session,
+    config_svc: CampusConfigService,
+    test_campus: Campus,
+) -> None:
+    """list_all_ministeres retourne tous les ministères actifs."""
+    nom1 = f"MinA-{uuid4()}"
+    nom2 = f"MinB-{uuid4()}"
+    config_svc.add_ministere_to_campus(str(test_campus.id), nom1)
+    config_svc.add_ministere_to_campus(str(test_campus.id), nom2)
+
+    result = config_svc.list_all_ministeres()
+    noms = [m.nom for m in result]
+    assert nom1 in noms
+    assert nom2 in noms
+
+
+# ------------------------------------------------------------------ #
+#  Même nom de catégorie dans deux ministères différents
+# ------------------------------------------------------------------ #
+
+
+def test_same_category_name_in_two_ministeres(
+    session: Session,
+    config_svc: CampusConfigService,
+    test_campus: Campus,
+) -> None:
+    """
+    Même libellé dans deux ministères différents → deux instances
+    indépendantes avec codes distincts (pas de collision PK).
+    """
+    nom_commun = "Chantres"
+    min_a, _, _ = config_svc.add_ministere_to_campus(
+        str(test_campus.id), f"MLA-{uuid4()}"
+    )
+    min_b, _, _ = config_svc.add_ministere_to_campus(
+        str(test_campus.id), f"Jeunes-{uuid4()}"
+    )
+
+    cat_a, created_a = config_svc.add_categorie_to_ministere(str(min_a.id), nom_commun)
+    cat_b, created_b = config_svc.add_categorie_to_ministere(str(min_b.id), nom_commun)
+
+    assert created_a is True
+    assert created_b is True
+    assert cat_a.code != cat_b.code
+    assert cat_a.libelle == cat_b.libelle == nom_commun
+    assert cat_a.ministere_id == str(min_a.id)
+    assert cat_b.ministere_id == str(min_b.id)
