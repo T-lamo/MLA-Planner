@@ -666,12 +666,14 @@ watch(
   (campusId) => {
     if (campusId) loadByCampus(campusId)
   },
+  { immediate: true },
 )
 watch(
   () => activiteForm.ministere_organisateur_id,
   (ministereId) => {
     if (ministereId) loadByMinistere(ministereId)
   },
+  { immediate: true },
 )
 
 // userCampuses est dans le shell (props) — le form a besoin de la liste pour le template.
