@@ -29,7 +29,12 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isSuperAdmin = computed(() => user.value?.roles?.includes('Super Admin') ?? false)
   const isAdmin = computed(() => user.value?.roles?.includes('Admin') ?? false)
+  const isResponsableMLA = computed(() => user.value?.roles?.includes('Responsable MLA') ?? false)
   const hasAdminAccess = computed(() => isSuperAdmin.value || isAdmin.value)
+  // Accès gestion des chants : Super Admin + Admin + Responsable MLA
+  const canManageChants = computed(
+    () => isSuperAdmin.value || isAdmin.value || isResponsableMLA.value,
+  )
 
   // --- ACTIONS ---
 
@@ -135,7 +140,9 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isSuperAdmin,
     isAdmin,
+    isResponsableMLA,
     hasAdminAccess,
+    canManageChants,
     currentUser,
     login,
     logout,

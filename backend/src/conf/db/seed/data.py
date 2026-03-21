@@ -282,3 +282,167 @@ RESPONSABILITES_DATA = [
         "pole": "Son et Lumière",
     }
 ]
+
+# --- SONGBOOK ---
+
+
+class ChantCategorieData(TypedDict):
+    """Catégorie de chant à insérer en seed."""
+
+    code: str
+    libelle: str
+    ordre: int
+
+
+class ChantSeedData(TypedDict):
+    """Chant + contenu ChordPro à insérer en seed."""
+
+    titre: str
+    artiste: str
+    categorie_code: str
+    tonalite: str
+    paroles_chords: str
+
+
+SONGBOOK_CATEGORIES: List[ChantCategorieData] = [
+    {"code": "LOUANGE", "libelle": "Louange & Adoration", "ordre": 1},
+    {"code": "CANTIQUES", "libelle": "Cantiques", "ordre": 2},
+    {"code": "CONTEMPORAIN", "libelle": "Contemporain", "ordre": 3},
+    {"code": "GOSPEL", "libelle": "Gospel", "ordre": 4},
+    {"code": "TRADITIONNEL", "libelle": "Traditionnel", "ordre": 5},
+]
+
+SONGBOOK_CHANTS: List[ChantSeedData] = [
+    {
+        "titre": "Ma Source",
+        "artiste": "ICC Worship",
+        "categorie_code": "LOUANGE",
+        "tonalite": "D",
+        "paroles_chords": (
+            "[D]Tu es ma sour-[A]ce, ma [Bm]force,\n"
+            "[G]Tu es ma [D]vie. [A]\n"
+            "[D]Je m'ap-pro-[A]che de [Bm]toi,\n"
+            "[G]Mon [D]Dieu. [A] [D]\n"
+            "\n"
+            "[G]Dans ta pré-[D]sence, [A]je trouve la [D]paix.\n"
+            "[G]Dans ton a-[Bm]mour, je suis [A]libé-[D]ré.\n"
+            "[G]Je t'ho-[D]nore, [A]je te [D]loue,\n"
+            "[G]Pour tou-[A]jours et à [D]jamais."
+        ),
+    },
+    {
+        "titre": "Je louerai l'Éternel",
+        "artiste": "ICC Worship",
+        "categorie_code": "LOUANGE",
+        "tonalite": "C",
+        "paroles_chords": (
+            "[C]Je louerai l'É-[G]ternel de [Am]tout mon cœur,\n"
+            "[F]Je raconterai [C]toutes tes [G]merveilles.\n"
+            "[C]Je chanterai ton [G]nom, Dieu [Am]Très-Haut,\n"
+            "[F]Car tu es [G]bon et miséri-[C]cordieux.\n"
+            "\n"
+            "[Am]Que toute [F]la terre [C]chante,\n"
+            "[Am]Que toute [F]la terre [G]loue ton nom !\n"
+            "[Am]Que toute [F]la terre [C]chante,\n"
+            "[F]Gloire à [G]Dieu ! [C]"
+        ),
+    },
+    {
+        "titre": "Tu mérites",
+        "artiste": "Hillsong FR",
+        "categorie_code": "CONTEMPORAIN",
+        "tonalite": "E",
+        "paroles_chords": (
+            "[E]Tu mérites tout l'hon-[B]neur,\n"
+            "[C#m]Tout l'honneur qui t'appar-[A]tient,\n"
+            "[E]Tu mérites toute la [B]gloire,\n"
+            "[C#m]Seigneur [A]Jésus. [E]\n"
+            "\n"
+            "[A]Hosan-[E]na ! Hosan-[B]na !\n"
+            "[C#m]Hosanna au [A]Seigneur !\n"
+            "[A]Hosan-[E]na ! Hosan-[B]na !\n"
+            "[C#m]Seigneur [A]Jésus [B]Christ. [E]"
+        ),
+    },
+    {
+        "titre": "Splendeur de la Croix",
+        "artiste": "Hillsong FR",
+        "categorie_code": "CONTEMPORAIN",
+        "tonalite": "A",
+        "paroles_chords": (
+            "[A]Tu as été [E]percé pour [F#m]moi,\n"
+            "[D]Tu as porté [A]ma [E]honte.\n"
+            "[A]Sur la [E]croix, mon [F#m]Dieu, tu es [D]mort\n"
+            "[A]Pour me donner la [E]vie. [A]\n"
+            "\n"
+            "[D]Splendeur de la [A]croix,\n"
+            "[E]Grâce infi-[F#m]nie,\n"
+            "[D]Ton sacri-[A]fice [E]m'a sau-[D]vé. [A]"
+        ),
+    },
+    {
+        "titre": "Alléluia",
+        "artiste": "Gospel Chorale",
+        "categorie_code": "GOSPEL",
+        "tonalite": "F",
+        "paroles_chords": (
+            "[F]Al-lé-lu-[Bb]ia, al-lé-lu-[C]ia,\n"
+            "[F]Al-lé-lu-[Bb]ia, al-lé-lu-[C]ia. [F]\n"
+            "\n"
+            "[F]Gloire à [Bb]Dieu au plus haut des [C]cieux !\n"
+            "[F]Il est vi-[Bb]vant, il est ressus-[C]ci-[F]té.\n"
+            "[Dm]Son amour dure [Bb]à jamais,\n"
+            "[C]Sa fidélité est éternel-[F]le."
+        ),
+    },
+    {
+        "titre": "Saint, Saint, Saint",
+        "artiste": "Traditionnel",
+        "categorie_code": "CANTIQUES",
+        "tonalite": "G",
+        "paroles_chords": (
+            "[G]Saint, [D]Saint, [Em]Saint !"
+            " [C]Seigneur [G]Dieu [D]tout-puis-[G]sant !\n"
+            "[Em]Toi qui é-[C]tais, qui [G]es\n"
+            "[D]Et qui [G]viens.\n"
+            "[C]Gloire et hon-[G]neur t'appar-[D]tiennent,\n"
+            "[Em]Toi qui sièges [Am]sur le [C]trô-[D]ne.\n"
+            "[C]À toi seul appar-[G]tient\n"
+            "[D]La [C]gloire [G]éter-[D]nelle. [G]"
+        ),
+    },
+    {
+        "titre": "Quelle Grâce Étonnante",
+        "artiste": "Traditionnel",
+        "categorie_code": "TRADITIONNEL",
+        "tonalite": "G",
+        "paroles_chords": (
+            "[G]Quelle [C]grâce éton-[G]nante !\n"
+            "[G]Quelle [D]merveille à mes [G]yeux !\n"
+            "[G]Que l'a-[C]mour de Dieu, tendre et [G]grand,\n"
+            "[D]M'ait sauvé du [G]gouffre.\n"
+            "\n"
+            "[G]J'étais per-[C]du, j'étais a-[G]veugle,\n"
+            "[G]Mais mainte-[D]nant je [G]vois.\n"
+            "[G]Sa grâce m'a [C]trouvé, et la-[G]vé,\n"
+            "[D]Dans son précieux [G]sang."
+        ),
+    },
+    {
+        "titre": "Tu es Dieu",
+        "artiste": "ICC Worship",
+        "categorie_code": "LOUANGE",
+        "tonalite": "Bb",
+        "paroles_chords": (
+            "[Bb]Tu es [F]Dieu, tu es [Gm]Roi,\n"
+            "[Eb]Tu règnes sur [Bb]tout. [F]\n"
+            "[Bb]Tu es [F]saint, tu es [Gm]grand,\n"
+            "[Eb]Seigneur de [F]seigneurs. [Bb]\n"
+            "\n"
+            "[Gm]Ton a-[Eb]mour est [Bb]éternel,\n"
+            "[F]Ta parole est [Bb]vérité.\n"
+            "[Gm]Nous t'a-[Eb]dorons, [Bb]ô [F]Dieu,\n"
+            "[Eb]Nous t'hono-[F]rons. [Bb]"
+        ),
+    },
+]

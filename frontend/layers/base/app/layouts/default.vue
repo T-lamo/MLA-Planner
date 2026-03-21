@@ -156,6 +156,124 @@
           </div>
         </div>
 
+        <!-- Section Répertoire (tous les rôles connectés) -->
+        <div class="relative mt-4">
+          <button
+            ref="repertoireTriggerRef"
+            class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
+            :class="[
+              isRepertoireOpen && !ui.isSidebarCollapsed
+                ? 'bg-slate-50 text-(--color-primary-700)'
+                : 'text-slate-600',
+            ]"
+            @click="handleRepertoireMenuClick"
+            @mouseenter="handleRepertoireMouseEnter"
+            @mouseleave="handleRepertoireMouseLeave"
+          >
+            <Music class="size-5 shrink-0" />
+            <span
+              v-if="!ui.isSidebarCollapsed"
+              class="flex-1 text-left text-[10px] font-bold tracking-wider uppercase"
+              >Répertoire</span
+            >
+            <ChevronDown
+              v-if="!ui.isSidebarCollapsed"
+              :class="[
+                'size-3.5 transition-transform duration-200',
+                isRepertoireOpen ? 'rotate-180' : '',
+              ]"
+            />
+          </button>
+
+          <transition name="expand">
+            <ul
+              v-if="isRepertoireOpen && !ui.isSidebarCollapsed"
+              class="mt-1 space-y-1 overflow-hidden"
+            >
+              <SidebarLink
+                to="/songbook"
+                :icon="Music"
+                label="Accueil"
+                :collapsed="false"
+                class="pl-9"
+              />
+              <SidebarLink
+                to="/songbook/browse"
+                :icon="Library"
+                label="Tous les chants"
+                :collapsed="false"
+                class="pl-9"
+              />
+              <SidebarLink
+                v-if="authStore.canManageChants"
+                to="/songbook/categories"
+                :icon="Tag"
+                label="Catégories"
+                :collapsed="false"
+                class="pl-9"
+              />
+              <SidebarLink
+                v-if="authStore.canManageChants"
+                to="/songbook/new"
+                :icon="Plus"
+                label="Nouveau chant"
+                :collapsed="false"
+                class="pl-9"
+              />
+            </ul>
+          </transition>
+
+          <Teleport to="body">
+            <transition name="fade-in">
+              <div
+                v-if="ui.isSidebarCollapsed && isRepertoirePopupVisible"
+                :style="repertoirePopupStyle"
+                class="fixed z-[9999] w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl"
+                @mouseenter="cancelRepertoireClose"
+                @mouseleave="handleRepertoireMouseLeave"
+              >
+                <div
+                  class="mb-2 border-b border-slate-50 px-3 py-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase"
+                >
+                  Répertoire
+                </div>
+                <ul class="space-y-1">
+                  <SidebarLink
+                    to="/songbook"
+                    :icon="Music"
+                    label="Accueil"
+                    :collapsed="false"
+                    @click="closeRepertoirePopup"
+                  />
+                  <SidebarLink
+                    to="/songbook/browse"
+                    :icon="Library"
+                    label="Tous les chants"
+                    :collapsed="false"
+                    @click="closeRepertoirePopup"
+                  />
+                  <SidebarLink
+                    v-if="authStore.canManageChants"
+                    to="/songbook/categories"
+                    :icon="Tag"
+                    label="Catégories"
+                    :collapsed="false"
+                    @click="closeRepertoirePopup"
+                  />
+                  <SidebarLink
+                    v-if="authStore.canManageChants"
+                    to="/songbook/new"
+                    :icon="Plus"
+                    label="Nouveau chant"
+                    :collapsed="false"
+                    @click="closeRepertoirePopup"
+                  />
+                </ul>
+              </div>
+            </transition>
+          </Teleport>
+        </div>
+
         <!-- Section Super Admin (SUPER_ADMIN uniquement) -->
         <div v-if="authStore.isSuperAdmin" class="relative mt-4">
           <button
@@ -355,8 +473,12 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Library,
   ListTodo,
+  Music,
+  Plus,
   Settings2,
+  Tag,
   Users,
 } from 'lucide-vue-next'
 import { useUIStore } from '../stores/useUiStore'
@@ -503,6 +625,62 @@ const cancelAdminClose = () => {
 const closeAdminPopup = () => {
   cancelAdminClose()
   isAdminPopupVisible.value = false
+}
+
+// --- Répertoire menu state ---
+const isRepertoireOpen = ref(true)
+const isRepertoirePopupVisible = ref(false)
+const repertoireTriggerRef = ref<HTMLElement | null>(null)
+const repertoirePopupTop = ref(0)
+let repertoireCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+const repertoirePopupStyle = computed(() => ({
+  top: `${repertoirePopupTop.value}px`,
+  left: '76px',
+}))
+
+const updateRepertoirePopupPosition = () => {
+  if (repertoireTriggerRef.value) {
+    const rect = repertoireTriggerRef.value.getBoundingClientRect()
+    repertoirePopupTop.value = rect.top
+  }
+}
+
+const handleRepertoireMenuClick = () => {
+  if (ui.isSidebarCollapsed) {
+    updateRepertoirePopupPosition()
+    isRepertoirePopupVisible.value = !isRepertoirePopupVisible.value
+  } else {
+    isRepertoireOpen.value = !isRepertoireOpen.value
+  }
+}
+
+const handleRepertoireMouseEnter = () => {
+  if (ui.isSidebarCollapsed) {
+    cancelRepertoireClose()
+    updateRepertoirePopupPosition()
+    isRepertoirePopupVisible.value = true
+  }
+}
+
+const handleRepertoireMouseLeave = () => {
+  if (ui.isSidebarCollapsed) {
+    repertoireCloseTimer = setTimeout(() => {
+      isRepertoirePopupVisible.value = false
+    }, 150)
+  }
+}
+
+const cancelRepertoireClose = () => {
+  if (repertoireCloseTimer) {
+    clearTimeout(repertoireCloseTimer)
+    repertoireCloseTimer = null
+  }
+}
+
+const closeRepertoirePopup = () => {
+  cancelRepertoireClose()
+  isRepertoirePopupVisible.value = false
 }
 
 const popupStyle = computed(() => ({

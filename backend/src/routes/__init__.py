@@ -13,6 +13,7 @@ from .affectation_router import (
 from .campus_config_router import router as campus_config
 from .campus_router import router as campus
 from .categorie_role_router import router as category_role
+from .chant_router import router as chant
 from .equipe_router import router as equipe
 from .indisponibilite_router import router as indisponibilite
 from .membre_role_router import router as membre_role
@@ -51,5 +52,6 @@ router.include_router(profile)
 router.include_router(team)
 router.include_router(notification)
 router.include_router(campus_config)  # Campus Configuration (Super Admin)
+router.include_router(chant)  # Songbook
 
 __all__ = ["router"]

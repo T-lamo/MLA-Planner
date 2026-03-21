@@ -524,3 +524,40 @@ class ErrorRegistry:
         message=("Cette catégorie contient {count} rôle(s), suppression impossible."),
         http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
     )
+
+    # --- DOMAINE CHANTS / SONGBOOK (SONG) ---
+    SONG_CAT_NOT_FOUND = ErrorDetail(
+        code="SONG_001",
+        message="Catégorie de chant introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    SONG_CAT_DUPLICATE = ErrorDetail(
+        code="SONG_002",
+        message="Une catégorie avec ce code existe déjà.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    SONG_CAT_HAS_CHANTS = ErrorDetail(
+        code="SONG_003",
+        message=("Cette catégorie contient {count} chant(s), suppression impossible."),
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+    SONG_NOT_FOUND = ErrorDetail(
+        code="SONG_004",
+        message="Chant introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    SONG_DELETED = ErrorDetail(
+        code="SONG_005",
+        message="Impossible de modifier un chant supprimé.",
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    SONG_CONTENT_VERSION_CONFLICT = ErrorDetail(
+        code="SONG_006",
+        message=("Conflit de version : version attendue {expected}, reçue {received}."),
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    SONG_INVALID_SEMITONES = ErrorDetail(
+        code="SONG_007",
+        message="Les demi-tons doivent être compris entre -12 et 12.",
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )

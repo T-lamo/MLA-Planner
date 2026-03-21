@@ -16,6 +16,9 @@ from models import (
     Campus,
     CampusMinistereLink,
     CategorieRole,
+    Chant,
+    ChantCategorie,
+    ChantContenu,
     Equipe,
     EquipeMembre,
     Membre,
@@ -53,6 +56,8 @@ from .data import (
     SEED_CAMPUS,
     SEED_ORGANISATIONS,
     SEED_PAYS,
+    SONGBOOK_CATEGORIES,
+    SONGBOOK_CHANTS,
     STATUTS_PLANNING,
     SUPERADMIN_PASSWORD,
     SUPERADMIN_USERNAME,
@@ -119,6 +124,9 @@ class SeedService:
                 self._seed_equipe_membres(eq_map, user_list)
                 self._seed_responsabilites(user_list, min_map, pole_map)
                 self._seed_planning_complet(act_map, user_list, today)
+
+                # 6. SONGBOOK
+                self._seed_songbook(campus_paris.id)
 
             self.logger.info("✅ Seed terminé avec succès !")
         except SQLAlchemyError as e:
@@ -772,3 +780,45 @@ class SeedService:
                         "pole_id": pole_map[res["pole"]].id,
                     },
                 )
+
+    # --- SONGBOOK ---
+
+    def _seed_songbook(self, campus_id: str) -> None:
+        """Seed categories et chants ChordPro pour le module Songbook."""
+        self._seed_chant_categories()
+        self._seed_chants(campus_id)
+
+    def _seed_chant_categories(self) -> None:
+        """Crée les catégories de chants (idempotent via code PK)."""
+        for cat in SONGBOOK_CATEGORIES:
+            self._get_or_create(
+                ChantCategorie,
+                code=cat["code"],
+                defaults={
+                    "libelle": cat["libelle"],
+                    "ordre": cat["ordre"],
+                },
+            )
+
+    def _seed_chants(self, campus_id: str) -> None:
+        """Crée les chants avec leur contenu ChordPro."""
+        for data in SONGBOOK_CHANTS:
+            chant, _ = self._get_or_create(
+                Chant,
+                titre=data["titre"],
+                campus_id=campus_id,
+                defaults={
+                    "artiste": data["artiste"],
+                    "categorie_code": data["categorie_code"],
+                    "actif": True,
+                },
+            )
+            self._get_or_create(
+                ChantContenu,
+                chant_id=chant.id,
+                defaults={
+                    "tonalite": data["tonalite"],
+                    "paroles_chords": data["paroles_chords"],
+                    "version": 1,
+                },
+            )
