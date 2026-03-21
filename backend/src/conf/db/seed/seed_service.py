@@ -31,6 +31,9 @@ from models import (
     Pays,
     Permission,
     PlanningService,
+    PlanningTemplate,
+    PlanningTemplateRole,
+    PlanningTemplateSlot,
     Pole,
     Responsabilite,
     Role,
@@ -49,6 +52,7 @@ from .data import (
     MEMBRES_INFOS,
     MINISTERES_DATA,
     PERMISSIONS,
+    PLANNING_TEMPLATES_SEED,
     POLES_DATA,
     RESPONSABILITES_DATA,
     ROLES,
@@ -127,6 +131,9 @@ class SeedService:
 
                 # 6. SONGBOOK
                 self._seed_songbook(campus_paris.id)
+
+                # 7. PLANNING TEMPLATES
+                self._seed_planning_templates(campus_paris.id, min_map, user_list)
 
             self.logger.info("✅ Seed terminé avec succès !")
         except SQLAlchemyError as e:
@@ -779,6 +786,66 @@ class SeedService:
                         "ministere_id": min_map[res["ministere"]].id,
                         "pole_id": pole_map[res["pole"]].id,
                     },
+                )
+
+    # --- PLANNING TEMPLATES ---
+
+    def _seed_planning_templates(
+        self,
+        campus_id: str,
+        min_map: dict,
+        users: list,
+    ) -> None:
+        """Seed des templates de planning réutilisables (idempotent)."""
+        creator_id: str = users[0].membre_id if users else ""
+        if not creator_id:
+            self.logger.warning("Aucun créateur pour les templates — ignoré.")
+            return
+        for tpl_data in PLANNING_TEMPLATES_SEED:
+            ministere = min_map.get(tpl_data["ministere_nom"])
+            if not ministere:
+                self.logger.warning(
+                    "Ministère '%s' introuvable — template ignoré.",
+                    tpl_data["ministere_nom"],
+                )
+                continue
+            tpl, created = self._get_or_create(
+                PlanningTemplate,
+                nom=tpl_data["nom"],
+                campus_id=campus_id,
+                defaults={
+                    "description": tpl_data["description"],
+                    "activite_type": tpl_data["activite_type"],
+                    "duree_minutes": tpl_data["duree_minutes"],
+                    "ministere_id": ministere.id,
+                    "created_by_id": creator_id,
+                },
+            )
+            if created:
+                self._seed_template_slots(tpl.id, tpl_data["slots"])
+
+    def _seed_template_slots(
+        self,
+        template_id: str,
+        slots_data: list,
+    ) -> None:
+        """Crée les slots d'un template avec leurs rôles (idempotent)."""
+        for s in slots_data:
+            slot, _ = self._get_or_create(
+                PlanningTemplateSlot,
+                template_id=template_id,
+                nom_creneau=s["nom_creneau"],
+                defaults={
+                    "offset_debut_minutes": s["offset_debut_minutes"],
+                    "offset_fin_minutes": s["offset_fin_minutes"],
+                    "nb_personnes_requis": s["nb_personnes_requis"],
+                },
+            )
+            for role_code in s["roles"]:
+                self._get_or_create(
+                    PlanningTemplateRole,
+                    slot_id=slot.id,
+                    role_code=role_code,
                 )
 
     # --- SONGBOOK ---

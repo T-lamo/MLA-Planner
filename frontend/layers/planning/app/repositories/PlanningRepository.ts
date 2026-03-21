@@ -7,7 +7,9 @@ import type {
   PlanningFullCreate,
   PlanningFullRead,
   PlanningFullUpdate,
+  PlanningTemplateRead,
   RoleCompetenceRead,
+  SaveAsTemplateRequest,
 } from '../types/planning.types'
 
 export class PlanningRepository extends BaseRepository {
@@ -104,5 +106,29 @@ export class PlanningRepository extends BaseRepository {
   async getCampusTeam(campusId: string): Promise<CampusTeamRead> {
     const { data } = await this.apiRequest<CampusTeamRead>(`/campus/${campusId}/team`)
     return data
+  }
+
+  // -----------------------------------------------------------------------
+  // Planning Templates — US-01
+  // -----------------------------------------------------------------------
+
+  async saveAsTemplate(
+    planningId: string,
+    payload: SaveAsTemplateRequest,
+  ): Promise<PlanningTemplateRead> {
+    return this.unwrap<PlanningTemplateRead>(`/planning-templates/from-planning/${planningId}`, {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async listTemplatesByCampus(campusId: string): Promise<PlanningTemplateRead[]> {
+    return this.unwrap<PlanningTemplateRead[]>(`/planning-templates/by-campus/${campusId}`)
+  }
+
+  async deleteTemplate(templateId: string): Promise<void> {
+    await this.apiRequest(`/planning-templates/${templateId}`, {
+      method: 'DELETE',
+    })
   }
 }
