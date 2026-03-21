@@ -29,6 +29,69 @@ class OrganisationData(TypedDict):
     date_creation: datetime
 
 
+class PlanningTemplateSlotSeedData(TypedDict):
+    nom_creneau: str
+    offset_debut_minutes: int
+    offset_fin_minutes: int
+    nb_personnes_requis: int
+    roles: List[str]
+
+
+class PlanningTemplateSeedData(TypedDict):
+    nom: str
+    description: str
+    activite_type: str
+    duree_minutes: int
+    ministere_nom: str
+    slots: List[PlanningTemplateSlotSeedData]
+
+
+# --- PLANNING TEMPLATES ---
+PLANNING_TEMPLATES_SEED: List[PlanningTemplateSeedData] = [
+    {
+        "nom": "Culte Dominical Standard",
+        "description": (
+            "Template type pour un culte dominical " "avec louange matin et soir."
+        ),
+        "activite_type": "Culte Dominical",
+        "duree_minutes": 720,
+        "ministere_nom": "Louange et Adoration",
+        "slots": [
+            {
+                "nom_creneau": "Équipe Louange Matin",
+                "offset_debut_minutes": 0,
+                "offset_fin_minutes": 180,
+                "nb_personnes_requis": 2,
+                "roles": ["TENOR", "SON"],
+            },
+            {
+                "nom_creneau": "Équipe Louange Soir",
+                "offset_debut_minutes": 540,
+                "offset_fin_minutes": 720,
+                "nb_personnes_requis": 2,
+                "roles": ["TENOR", "SON"],
+            },
+        ],
+    },
+    {
+        "nom": "Accueil Culte Standard",
+        "description": "Template pour l'équipe d'accueil du culte.",
+        "activite_type": "Culte Dominical",
+        "duree_minutes": 720,
+        "ministere_nom": "Accueil",
+        "slots": [
+            {
+                "nom_creneau": "Accueil Entrée",
+                "offset_debut_minutes": 0,
+                "offset_fin_minutes": 60,
+                "nb_personnes_requis": 3,
+                "roles": ["HOTE_ACCUEIL"],
+            },
+        ],
+    },
+]
+
+
 # --- RBAC ---
 ROLES = [
     RoleName.SUPER_ADMIN,
