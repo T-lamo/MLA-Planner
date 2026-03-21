@@ -15,6 +15,8 @@ from .campus_model import *  # noqa: F401,F403
 from .campus_model import __all__ as campus
 from .categorie_role_model import *  # noqa: F401,F403
 from .categorie_role_model import __all__ as category_role
+from .chant_model import *  # noqa: F401,F403
+from .chant_model import __all__ as chant_model
 from .equipe_membre import *  # noqa: F401,F403
 from .equipe_membre import __all__ as equipe_membre
 from .equipe_model import *  # noqa: F401,F403
@@ -88,4 +90,5 @@ __all__: List[str] = (
     + list(team_model)
     + list(response)
     + list(campus_config)
+    + list(chant_model)
 )

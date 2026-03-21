@@ -13,10 +13,16 @@
 
       <CampusSelector />
 
-      <nav class="hidden items-center text-sm text-slate-500 lg:flex" aria-label="Breadcrumb">
-        <span>Planning</span>
-        <ChevronRight class="mx-2 size-4" />
-        <span class="font-semibold text-slate-900 capitalize">{{ currentRouteName }}</span>
+      <nav
+        v-if="breadcrumb.section"
+        class="hidden items-center text-sm text-slate-500 lg:flex"
+        aria-label="Breadcrumb"
+      >
+        <span>{{ breadcrumb.section }}</span>
+        <template v-if="breadcrumb.page">
+          <ChevronRight class="mx-2 size-4" />
+          <span class="font-semibold text-slate-900">{{ breadcrumb.page }}</span>
+        </template>
       </nav>
     </div>
 
@@ -64,9 +70,44 @@ onMounted(async () => {
   }
 })
 
-const currentRouteName = computed(() => {
+const SECTION_LABELS: Record<string, string> = {
+  planning: 'Planning',
+  songbook: 'Répertoire',
+  admin: 'Administration',
+}
+
+const PAGE_LABELS: Record<string, string> = {
+  calendar: 'Calendrier',
+  list: 'Liste',
+  'mes-affectations': 'Mes affectations',
+  browse: 'Tous les chants',
+  new: 'Nouveau chant',
+  categories: 'Catégories',
+  edit: 'Modifier',
+  profiles: 'Profils',
+  campuses: 'Campus',
+  'campus-config': 'Config campus',
+  super: 'Super admin',
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const breadcrumb = computed(() => {
   const segments = route.path.split('/').filter(Boolean)
-  return segments[segments.length - 1] || 'Dashboard'
+  const section = segments[0] ?? ''
+  const sectionLabel = SECTION_LABELS[section] ?? ''
+
+  const rest = segments.slice(1)
+  const namedSegment = [...rest].reverse().find((s) => !UUID_RE.test(s))
+
+  let page = ''
+  if (namedSegment) {
+    page = PAGE_LABELS[namedSegment] ?? namedSegment
+  } else if (rest.some((s) => UUID_RE.test(s))) {
+    page = 'Détail'
+  }
+
+  return { section: sectionLabel, page }
 })
 </script>
 

@@ -14,6 +14,13 @@ from .affectation_context_model import AffectationContexteBase
 from .affectation_role_model import AffectationRoleBase
 from .campus_model import CampusBase
 from .categorie_role_model import CategorieRoleBase
+from .chant_model import (
+    Chant,
+    ChantArtisteLink,
+    ChantCategorie,
+    ChantContenu,
+    ChantTag,
+)
 from .indisponibilite_model import IndisponibiliteBase
 from .membre_model import MembreBase
 from .membre_role_model import MembreRoleBase
@@ -473,4 +480,10 @@ __all__ = [
     "RolePermission",
     "AffectationRole",
     "AffectationContexte",
+    # Songbook
+    "ChantCategorie",
+    "Chant",
+    "ChantContenu",
+    "ChantArtisteLink",
+    "ChantTag",
 ]

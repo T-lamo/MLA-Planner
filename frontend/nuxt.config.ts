@@ -32,7 +32,7 @@ export default defineNuxtConfig({
     compatibilityVersion: 4,
   },
 
-  extends: ['./layers/base', './layers/auth', './layers/planning'],
+  extends: ['./layers/base', './layers/auth', './layers/planning', './layers/songbook'],
 
   vite: {
     plugins: [
