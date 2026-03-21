@@ -29,6 +29,9 @@ class PlanningPublishedNotification(BaseModel):
     ministere_nom: str
     nom_creneau: str
     role_code: str
+    # Champs datetime pour la génération du lien Google Calendar et du .ics
+    date_debut_dt: datetime
+    date_fin_dt: datetime
 
 
 class PlanningCancelledNotification(BaseModel):

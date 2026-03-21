@@ -101,6 +101,11 @@ export class CampusConfigRepository extends BaseRepository {
     )
   }
 
+  async getAllMinisteres(): Promise<MinistereRead[]> {
+    const { data } = await this.apiRequest<MinistereRead[]>('/config/ministeres')
+    return data
+  }
+
   async linkRoleCompetence(categorieId: string, roleCode: string): Promise<void> {
     await this.apiRequest<RoleCompetenceConfigApiResponse>(
       `/config/categories/${categorieId}/roles-competence/${encodeURIComponent(roleCode)}/link`,
