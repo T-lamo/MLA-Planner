@@ -47,6 +47,7 @@ const form = reactive({
   titre: '',
   artiste: '',
   categorie_code: '',
+  youtube_url: '',
   tonalite: '',
   paroles_chords: '',
 })
@@ -67,6 +68,7 @@ watch(
     form.titre = chant.titre
     form.artiste = chant.artiste ?? ''
     form.categorie_code = chant.categorie_code ?? ''
+    form.youtube_url = chant.youtube_url ?? ''
     form.tonalite = chant.contenu?.tonalite ?? ''
     form.paroles_chords = chant.contenu?.paroles_chords ?? ''
     // Sync preview immédiat
@@ -82,6 +84,7 @@ const isDirty = computed(
     form.titre !== (selectedChant.value?.titre ?? '') ||
     form.artiste !== (selectedChant.value?.artiste ?? '') ||
     form.categorie_code !== (selectedChant.value?.categorie_code ?? '') ||
+    form.youtube_url !== (selectedChant.value?.youtube_url ?? '') ||
     form.paroles_chords !== (selectedChant.value?.contenu?.paroles_chords ?? '') ||
     form.tonalite !== (selectedChant.value?.contenu?.tonalite ?? ''),
 )
@@ -118,6 +121,7 @@ async function handleSave(contenu: ChantContenuCreate) {
     titre: form.titre.trim(),
     artiste: form.artiste.trim() || undefined,
     categorie_code: form.categorie_code || undefined,
+    youtube_url: form.youtube_url.trim() || undefined,
   })
   const existing = selectedChant.value?.contenu
   if (existing) {
@@ -245,6 +249,17 @@ onMounted(async () => {
                 Catégorie
               </label>
               <ChantCategorieSelect v-model="form.categorie_code" :categories="categories" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="mb-1 block text-sm font-medium text-(--color-neutral-700)">
+                Lien YouTube
+              </label>
+              <input
+                v-model="form.youtube_url"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=…"
+                class="w-full rounded-lg border border-(--color-neutral-300) px-3 py-2 text-sm focus:border-(--color-primary-400) focus:outline-none"
+              />
             </div>
           </div>
 

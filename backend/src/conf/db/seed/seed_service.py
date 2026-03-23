@@ -877,6 +877,7 @@ class SeedService:
                 defaults={
                     "artiste": data["artiste"],
                     "categorie_code": data["categorie_code"],
+                    "youtube_url": data["youtube_url"],
                     "actif": True,
                 },
             )
