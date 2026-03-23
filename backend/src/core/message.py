@@ -580,3 +580,8 @@ class ErrorRegistry:
         message="Les demi-tons doivent être compris entre -12 et 12.",
         http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
     )
+    SONG_008 = ErrorDetail(
+        code="SONG_008",
+        message="campus_id obligatoire pour ce rôle",
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
