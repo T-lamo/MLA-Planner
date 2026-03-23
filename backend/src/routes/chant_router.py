@@ -10,7 +10,11 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
 from conf.db.database import Database
-from core.auth.auth_dependencies import RoleChecker
+from core.auth.auth_dependencies import RoleChecker, get_current_active_user
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
+from mla_enum import RoleName
+from models import Utilisateur
 from models.base_pagination import PaginatedResponse
 from models.chant_model import (
     ChantCategorieCreate,
@@ -111,22 +115,33 @@ def delete_categorie(
 # ------------------------------------------------------------------ #
 
 
+_ADMIN_ROLES = {RoleName.SUPER_ADMIN, RoleName.ADMIN}
+
+
 @router.get(
     "",
     response_model=PaginatedResponse[ChantRead],
     status_code=status.HTTP_200_OK,
     summary="Lister les chants (paginé, multi-tenant)",
-    dependencies=[_AUTH],
 )
 def list_chants(  # pylint: disable=too-many-positional-arguments
-    campus_id: str = Query(..., description="Filtre multi-tenant obligatoire"),
+    campus_id: Optional[str] = Query(None, description="Filtre multi-tenant"),
     categorie_code: Optional[str] = Query(None),
     artiste: Optional[str] = Query(None),
     q: Optional[str] = Query(None, description="Recherche sur le titre"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     svc: ChantService = Depends(_get_svc),
+    current_user: Utilisateur = Depends(get_current_active_user),
 ) -> PaginatedResponse[ChantRead]:
+    if campus_id is None:
+        user_roles = {
+            aff.role.libelle
+            for aff in current_user.affectations
+            if aff.role and aff.role.libelle is not None
+        }
+        if not user_roles.intersection(_ADMIN_ROLES):
+            raise AppException(ErrorRegistry.SONG_008)
     items, total = svc.list_chants(
         campus_id=campus_id,
         categorie_code=categorie_code,

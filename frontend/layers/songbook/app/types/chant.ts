@@ -18,12 +18,14 @@ export interface ChantCreate {
   artiste?: string
   campus_id: string
   categorie_code?: string
+  youtube_url?: string | null
 }
 
 export interface ChantUpdate {
   titre?: string
   artiste?: string
   categorie_code?: string
+  youtube_url?: string | null
 }
 
 export interface ChantContenuCreate {
@@ -58,6 +60,7 @@ export interface ChantRead {
   categorie_code?: string
   actif: boolean
   date_creation: string
+  youtube_url?: string | null
 }
 
 export interface ChantContenuRead {
@@ -81,7 +84,7 @@ export interface ChantTransposeResponse {
 }
 
 export interface ChantListParams {
-  campus_id: string
+  campus_id?: string
   categorie_code?: string
   artiste?: string
   q?: string

@@ -201,7 +201,7 @@ class ChantService:
     def list_chants(
         self,
         *,
-        campus_id: str,
+        campus_id: Optional[str] = None,
         categorie_code: Optional[str] = None,
         artiste: Optional[str] = None,
         q: Optional[str] = None,
@@ -210,10 +210,11 @@ class ChantService:
     ) -> Tuple[List[ChantRead], int]:
         """Liste paginée des chants — filtrée par campus (multi-tenant)."""
         stmt = select(Chant).where(
-            Chant.campus_id == campus_id,
             Chant.deleted_at == None,  # noqa: E711
             Chant.actif == True,  # noqa: E712
         )
+        if campus_id is not None:
+            stmt = stmt.where(Chant.campus_id == campus_id)
         if categorie_code:
             stmt = stmt.where(Chant.categorie_code == categorie_code)
         # pylint: disable=no-member
@@ -248,6 +249,7 @@ class ChantService:
             artiste=payload.artiste,
             campus_id=payload.campus_id,
             categorie_code=payload.categorie_code,
+            youtube_url=payload.youtube_url,
         )
         self.db.add(chant)
         self.db.flush()
@@ -263,6 +265,8 @@ class ChantService:
             chant.artiste = payload.artiste
         if payload.categorie_code is not None:
             chant.categorie_code = payload.categorie_code
+        if payload.youtube_url is not None:
+            chant.youtube_url = payload.youtube_url
         self.db.add(chant)
         self.db.flush()
         self.db.refresh(chant)
