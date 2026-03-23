@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, Music2, AlignLeft, Pencil, ChevronRight } from 'lucide-vue-next'
+import { ArrowLeft, Music2, AlignLeft, Pencil, ChevronRight, Youtube } from 'lucide-vue-next'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 import type { ChantTransposeResponse } from '../../../types/chant'
@@ -26,6 +26,9 @@ const {
   loadCategories,
   loadChants,
 } = useSongbook()
+
+// ── Lecteur YouTube ────────────────────────────────────────────────────────
+const showYoutubePlayer = ref(false)
 
 // ── Toggle accords/paroles ─────────────────────────────────────────────────
 const showChords = ref(true)
@@ -183,6 +186,40 @@ onMounted(async () => {
         </div>
       </div>
 
+      <!-- ── Lecteur YouTube ──────────────────────────────────────────── -->
+      <div
+        v-if="selectedChant.youtube_url"
+        class="flex items-center gap-3 rounded-2xl border border-(--color-red-100) bg-(--color-red-50) px-5 py-4"
+      >
+        <Youtube class="h-5 w-5 shrink-0 text-(--color-red-500)" />
+        <span class="flex-1 text-sm font-medium text-(--color-red-700)">
+          Une vidéo YouTube est disponible pour ce chant
+        </span>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-(--color-red-600) px-4 py-2 text-sm font-medium text-white hover:bg-(--color-red-700)"
+          @click="showYoutubePlayer = true"
+        >
+          <Youtube class="h-4 w-4" />
+          Regarder
+        </button>
+      </div>
+      <div
+        v-else-if="authStore.canManageChants"
+        class="flex items-center gap-3 rounded-2xl border border-(--color-neutral-200) bg-(--color-neutral-50) px-5 py-4"
+      >
+        <Youtube class="h-5 w-5 shrink-0 text-(--color-neutral-400)" />
+        <span class="flex-1 text-sm text-(--color-neutral-500)"
+          >Aucun lien YouTube pour ce chant</span
+        >
+        <NuxtLink
+          :to="`/songbook/${id}/edit`"
+          class="text-sm text-(--color-primary-600) hover:text-(--color-primary-700) hover:underline"
+        >
+          Ajouter
+        </NuxtLink>
+      </div>
+
       <!-- Contrôle transposition (accords uniquement) -->
       <ChantTransposeControl
         v-if="showChords && selectedChant.contenu"
@@ -215,5 +252,12 @@ onMounted(async () => {
         </template>
       </div>
     </div>
+
+    <!-- Lecteur YouTube intégré (Teleport to body) -->
+    <YoutubePlayerModal
+      v-if="showYoutubePlayer && selectedChant?.youtube_url"
+      :youtubeUrl="selectedChant.youtube_url"
+      @close="showYoutubePlayer = false"
+    />
   </div>
 </template>

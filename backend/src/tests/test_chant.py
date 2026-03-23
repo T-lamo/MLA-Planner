@@ -10,6 +10,7 @@ Fixtures utilisées :
 from uuid import uuid4
 
 import pytest
+from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from core.exceptions.app_exception import AppException
@@ -405,3 +406,79 @@ def test_transpose_does_not_save(
     reloaded = chant_svc.get_contenu(str(test_chant.id))
     assert reloaded.version == version_before
     assert reloaded.tonalite == "G"
+
+
+# ------------------------------------------------------------------ #
+#  US1 — Accès admin sans campus_id
+# ------------------------------------------------------------------ #
+
+
+def test_list_chants_superadmin_no_campus_id(
+    client: TestClient,
+    superadmin_headers: dict,
+    test_chant: Chant,
+) -> None:
+    """Super Admin obtient 200 sans campus_id."""
+    response = client.get("/chants", headers=superadmin_headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert "data" in body
+
+
+def test_list_chants_non_admin_requires_campus_id(
+    client: TestClient,
+    user_headers: dict,
+) -> None:
+    """Un membre sans campus_id reçoit 422 (SONG_008)."""
+    response = client.get("/chants", headers=user_headers)
+    assert response.status_code == 422
+
+
+# ------------------------------------------------------------------ #
+#  US2 — YouTube URL
+# ------------------------------------------------------------------ #
+
+
+def test_create_chant_with_valid_youtube_url(
+    chant_svc: ChantService,
+    test_campus: Campus,
+) -> None:
+    """Création avec youtube_url valide persiste l'URL."""
+    url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+    payload = ChantCreate(
+        titre="Chant YouTube Test",
+        campus_id=str(test_campus.id),
+        youtube_url=url,
+    )
+    read = chant_svc.create_chant(payload)
+    assert read.youtube_url == url
+
+
+def test_create_chant_with_invalid_youtube_url(
+    chant_svc: ChantService,
+    test_campus: Campus,
+) -> None:
+    """URL non-YouTube lève une ValueError de validation Pydantic."""
+    with pytest.raises(Exception):
+        ChantCreate(
+            titre="Chant URL Invalide",
+            campus_id=str(test_campus.id),
+            youtube_url="https://vimeo.com/123456789ab",
+        )
+
+
+def test_chant_full_returns_youtube_url(
+    chant_svc: ChantService,
+    session: Session,
+    test_campus: Campus,
+) -> None:
+    """get_chant_full retourne le champ youtube_url."""
+    url = "https://youtu.be/dQw4w9WgXcQ"
+    payload = ChantCreate(
+        titre="Chant Full YouTube",
+        campus_id=str(test_campus.id),
+        youtube_url=url,
+    )
+    created = chant_svc.create_chant(payload)
+    full = chant_svc.get_chant_full(created.id)
+    assert full.youtube_url == url

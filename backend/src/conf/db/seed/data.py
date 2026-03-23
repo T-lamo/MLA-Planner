@@ -365,6 +365,7 @@ class ChantSeedData(TypedDict):
     categorie_code: str
     tonalite: str
     paroles_chords: str
+    youtube_url: Optional[str]
 
 
 SONGBOOK_CATEGORIES: List[ChantCategorieData] = [
@@ -381,6 +382,7 @@ SONGBOOK_CHANTS: List[ChantSeedData] = [
         "artiste": "ICC Worship",
         "categorie_code": "LOUANGE",
         "tonalite": "D",
+        "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         "paroles_chords": (
             "[D]Tu es ma sour-[A]ce, ma [Bm]force,\n"
             "[G]Tu es ma [D]vie. [A]\n"
@@ -398,6 +400,7 @@ SONGBOOK_CHANTS: List[ChantSeedData] = [
         "artiste": "ICC Worship",
         "categorie_code": "LOUANGE",
         "tonalite": "C",
+        "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
         "paroles_chords": (
             "[C]Je louerai l'É-[G]ternel de [Am]tout mon cœur,\n"
             "[F]Je raconterai [C]toutes tes [G]merveilles.\n"
@@ -415,6 +418,7 @@ SONGBOOK_CHANTS: List[ChantSeedData] = [
         "artiste": "Hillsong FR",
         "categorie_code": "CONTEMPORAIN",
         "tonalite": "E",
+        "youtube_url": None,
         "paroles_chords": (
             "[E]Tu mérites tout l'hon-[B]neur,\n"
             "[C#m]Tout l'honneur qui t'appar-[A]tient,\n"
@@ -432,6 +436,7 @@ SONGBOOK_CHANTS: List[ChantSeedData] = [
         "artiste": "Hillsong FR",
         "categorie_code": "CONTEMPORAIN",
         "tonalite": "A",
+        "youtube_url": None,
         "paroles_chords": (
             "[A]Tu as été [E]percé pour [F#m]moi,\n"
             "[D]Tu as porté [A]ma [E]honte.\n"
@@ -448,6 +453,7 @@ SONGBOOK_CHANTS: List[ChantSeedData] = [
         "artiste": "Gospel Chorale",
         "categorie_code": "GOSPEL",
         "tonalite": "F",
+        "youtube_url": None,
         "paroles_chords": (
             "[F]Al-lé-lu-[Bb]ia, al-lé-lu-[C]ia,\n"
             "[F]Al-lé-lu-[Bb]ia, al-lé-lu-[C]ia. [F]\n"
@@ -463,6 +469,7 @@ SONGBOOK_CHANTS: List[ChantSeedData] = [
         "artiste": "Traditionnel",
         "categorie_code": "CANTIQUES",
         "tonalite": "G",
+        "youtube_url": None,
         "paroles_chords": (
             "[G]Saint, [D]Saint, [Em]Saint !"
             " [C]Seigneur [G]Dieu [D]tout-puis-[G]sant !\n"
@@ -479,6 +486,7 @@ SONGBOOK_CHANTS: List[ChantSeedData] = [
         "artiste": "Traditionnel",
         "categorie_code": "TRADITIONNEL",
         "tonalite": "G",
+        "youtube_url": None,
         "paroles_chords": (
             "[G]Quelle [C]grâce éton-[G]nante !\n"
             "[G]Quelle [D]merveille à mes [G]yeux !\n"
@@ -496,6 +504,7 @@ SONGBOOK_CHANTS: List[ChantSeedData] = [
         "artiste": "ICC Worship",
         "categorie_code": "LOUANGE",
         "tonalite": "Bb",
+        "youtube_url": None,
         "paroles_chords": (
             "[Bb]Tu es [F]Dieu, tu es [Gm]Roi,\n"
             "[Eb]Tu règnes sur [Bb]tout. [F]\n"

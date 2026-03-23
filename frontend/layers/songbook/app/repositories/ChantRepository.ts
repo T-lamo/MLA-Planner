@@ -49,7 +49,8 @@ export class ChantRepository extends BaseRepository {
   // ---- Chants ----
 
   async listChants(params: ChantListParams): Promise<PaginatedChants> {
-    const query = new URLSearchParams({ campus_id: params.campus_id })
+    const query = new URLSearchParams()
+    if (params.campus_id) query.set('campus_id', params.campus_id)
     if (params.categorie_code) query.set('categorie_code', params.categorie_code)
     if (params.artiste) query.set('artiste', params.artiste)
     if (params.q) query.set('q', params.q)

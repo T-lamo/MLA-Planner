@@ -9,13 +9,20 @@ Tables créées :
   t_chant_tag        — étiquettes libres
 """
 
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_validator
 from sqlalchemy import Column, Text
 from sqlmodel import Field, Relationship, SQLModel
+
+_YOUTUBE_RE = re.compile(
+    r"^https?://(?:www\.|m\.)?(?:youtube\.com/"
+    r"(?:watch\?[^&]*v=|embed/|shorts/)|youtu\.be/)"
+    r"[A-Za-z0-9_-]{11}"
+)
 
 # -------------------------
 # BASE MODELS
@@ -42,6 +49,7 @@ class ChantBase(SQLModel):
         ondelete="SET NULL",
     )
     actif: bool = Field(default=True)
+    youtube_url: Optional[str] = Field(default=None, max_length=500)
 
 
 class ChantContenuBase(SQLModel):
@@ -179,6 +187,7 @@ class ChantRead(SQLModel):
     categorie_code: Optional[str]
     actif: bool
     date_creation: datetime
+    youtube_url: Optional[str] = None
 
 
 class ChantCreate(SQLModel):
@@ -188,6 +197,18 @@ class ChantCreate(SQLModel):
     artiste: Optional[str] = Field(default=None, max_length=150)
     campus_id: str
     categorie_code: Optional[str] = None
+    youtube_url: Optional[str] = None
+
+    @field_validator("youtube_url")
+    @classmethod
+    def validate_youtube_url(cls, v: Optional[str]) -> Optional[str]:
+        """Valide que l'URL est bien une URL YouTube reconnue."""
+        if v is None:
+            return None
+        stripped = v.strip()
+        if not _YOUTUBE_RE.match(stripped):
+            raise ValueError("URL YouTube invalide")
+        return stripped
 
 
 class ChantUpdate(SQLModel):
@@ -196,6 +217,18 @@ class ChantUpdate(SQLModel):
     titre: Optional[str] = None
     artiste: Optional[str] = None
     categorie_code: Optional[str] = None
+    youtube_url: Optional[str] = None
+
+    @field_validator("youtube_url")
+    @classmethod
+    def validate_youtube_url(cls, v: Optional[str]) -> Optional[str]:
+        """Valide que l'URL est bien une URL YouTube reconnue."""
+        if v is None:
+            return None
+        stripped = v.strip()
+        if not _YOUTUBE_RE.match(stripped):
+            raise ValueError("URL YouTube invalide")
+        return stripped
 
 
 class ChantContenuRead(SQLModel):

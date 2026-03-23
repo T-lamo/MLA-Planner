@@ -56,13 +56,13 @@ export const useSongbook = () => {
   }
 
   async function loadChants(
-    campusId: string,
+    campusId?: string,
     opts: { q?: string; categorie?: string } = {},
   ): Promise<void> {
     isLoading.value = true
     try {
       const result: PaginatedChants = await repo.listChants({
-        campus_id: campusId,
+        campus_id: campusId || undefined,
         q: opts.q,
         categorie_code: opts.categorie,
         limit: 100,

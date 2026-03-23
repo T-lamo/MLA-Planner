@@ -28,6 +28,7 @@ const form = reactive({
   titre: '',
   artiste: '',
   categorie_code: '',
+  youtube_url: '',
   tonalite: '',
   paroles_chords: '',
 })
@@ -74,6 +75,7 @@ async function handleSave(contenu: ChantContenuCreate) {
     artiste: form.artiste.trim() || undefined,
     campus_id: campusId.value,
     categorie_code: form.categorie_code || undefined,
+    youtube_url: form.youtube_url.trim() || undefined,
   })
   if (created && contenu.paroles_chords.trim()) {
     await upsertContenu(created.id, {
@@ -157,6 +159,17 @@ onMounted(() => {
                 Catégorie
               </label>
               <ChantCategorieSelect v-model="form.categorie_code" :categories="categories" />
+            </div>
+            <div class="sm:col-span-2">
+              <label class="mb-1 block text-sm font-medium text-(--color-neutral-700)">
+                Lien YouTube
+              </label>
+              <input
+                v-model="form.youtube_url"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=…"
+                class="w-full rounded-lg border border-(--color-neutral-300) px-3 py-2 text-sm focus:border-(--color-primary-400) focus:outline-none"
+              />
             </div>
           </div>
 
