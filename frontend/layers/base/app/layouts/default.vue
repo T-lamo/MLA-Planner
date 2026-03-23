@@ -100,6 +100,14 @@
                   :collapsed="false"
                   class="pl-9"
                 />
+                <SidebarLink
+                  v-if="authStore.canManageChants"
+                  to="/planning/templates"
+                  :icon="LayoutTemplate"
+                  label="Templates"
+                  :collapsed="false"
+                  class="pl-9"
+                />
               </ul>
             </transition>
 
@@ -146,6 +154,14 @@
                       to="/planning/indisponibilites"
                       :icon="CalendarOff"
                       label="Indisponibilités"
+                      :collapsed="false"
+                      @click="closePopup"
+                    />
+                    <SidebarLink
+                      v-if="authStore.canManageChants"
+                      to="/planning/templates"
+                      :icon="LayoutTemplate"
+                      label="Templates"
                       :collapsed="false"
                       @click="closePopup"
                     />
@@ -473,6 +489,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  LayoutTemplate,
   Library,
   ListTodo,
   Music,

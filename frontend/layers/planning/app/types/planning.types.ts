@@ -279,7 +279,7 @@ export interface CampusTeamRead {
 }
 
 // ============================================================
-// 7. PLANNING TEMPLATES — US-01
+// 7. PLANNING TEMPLATES — US-01 / US-95
 // ============================================================
 
 export interface PlanningTemplateRoleRead {
@@ -310,6 +310,9 @@ export interface PlanningTemplateRead {
   slots: PlanningTemplateSlotRead[]
 }
 
+/** Alias pour clarté US-95 */
+export type PlanningTemplateReadFull = PlanningTemplateRead
+
 export interface SaveAsTemplateRequest {
   nom: string
   description?: string | null
@@ -318,6 +321,35 @@ export interface SaveAsTemplateRequest {
 export interface PlanningTemplateUpdate {
   nom?: string | null
   description?: string | null
+}
+
+// ── US-95 : bibliothèque de templates ─────────────────────────────────────
+
+export interface PlanningTemplateListItem {
+  id: string
+  nom: string
+  description?: string | null
+  ministere_id: string
+  campus_id: string
+  activite_type?: string | null
+  nb_creneaux: number
+  usage_count: number
+  last_used_at: string | null
+  created_at: string
+}
+
+export interface PlanningTemplateSlotWrite {
+  nom_creneau: string
+  offset_debut_minutes: number
+  offset_fin_minutes: number
+  nb_personnes_requis: number
+  roles: string[]
+}
+
+export interface PlanningTemplateFullUpdate {
+  nom: string
+  description?: string | null
+  slots: PlanningTemplateSlotWrite[]
 }
 
 /** Item affectation dans le formulaire */

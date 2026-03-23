@@ -271,4 +271,5 @@ def test_api_get_template_not_found(client, admin_headers):
         headers=admin_headers,
     )
     assert resp.status_code == status.HTTP_404_NOT_FOUND
-    assert resp.json()["error"]["code"] == ErrorRegistry.PLAN_013.code
+    # Route GET /{id} utilise get_template_full → TMPL_003
+    assert resp.json()["error"]["code"] == ErrorRegistry.TMPL_003.code

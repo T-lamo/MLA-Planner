@@ -94,6 +94,21 @@ class ErrorRegistry:
         message="Échec de la création du template de planning.",
         http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
+    TMPL_003 = ErrorDetail(
+        code="TMPL_003",
+        message="Template introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    TMPL_004 = ErrorDetail(
+        code="TMPL_004",
+        message="Accès refusé à ce template.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
+    TMPL_005 = ErrorDetail(
+        code="TMPL_005",
+        message="campus_id obligatoire pour ce rôle.",
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
 
     # --- DOMAINE SLOT ---
     SLOT_OUT_OF_BOUNDS = ErrorDetail(

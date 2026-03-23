@@ -7,7 +7,10 @@ import type {
   PlanningFullCreate,
   PlanningFullRead,
   PlanningFullUpdate,
+  PlanningTemplateFullUpdate,
+  PlanningTemplateListItem,
   PlanningTemplateRead,
+  PlanningTemplateReadFull,
   RoleCompetenceRead,
   SaveAsTemplateRequest,
 } from '../types/planning.types'
@@ -133,6 +136,34 @@ export class PlanningRepository extends BaseRepository {
   async deleteTemplate(templateId: string): Promise<void> {
     await this.apiRequest(`/planning-templates/${templateId}`, {
       method: 'DELETE',
+    })
+  }
+
+  // ── US-95 : bibliothèque de templates ───────────────────────────────────
+
+  async listTemplates(ministereId?: string): Promise<PlanningTemplateListItem[]> {
+    return this.unwrap<PlanningTemplateListItem[]>('/planning-templates', {
+      query: ministereId ? { ministere_id: ministereId } : undefined,
+    })
+  }
+
+  async getTemplateFull(id: string): Promise<PlanningTemplateReadFull> {
+    return this.unwrap<PlanningTemplateReadFull>(`/planning-templates/${id}`)
+  }
+
+  async updateTemplateFull(
+    id: string,
+    payload: PlanningTemplateFullUpdate,
+  ): Promise<PlanningTemplateReadFull> {
+    return this.unwrap<PlanningTemplateReadFull>(`/planning-templates/${id}`, {
+      method: 'PUT',
+      body: payload,
+    })
+  }
+
+  async duplicateTemplate(id: string): Promise<PlanningTemplateListItem> {
+    return this.unwrap<PlanningTemplateListItem>(`/planning-templates/${id}/duplicate`, {
+      method: 'POST',
     })
   }
 }
