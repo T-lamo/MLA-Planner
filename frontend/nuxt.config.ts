@@ -5,10 +5,17 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxt/eslint', '@pinia/nuxt'],
 
+  app: {
+    head: {
+      title: 'Planner',
+      link: [{ rel: 'icon', type: 'image/png', href: '/Logo.png' }],
+    },
+  },
+
   // Configuration des variables d'environnement
   runtimeConfig: {
     public: {
-      // Cette valeur sera remplacée par NUXT_PUBLIC_API_URL lors du build sur Netlify.
+      // Cette valeur sera remplacée par NUXT_PUBLIC_API_BASE lors du build sur Netlify.
       // En local, elle utilisera l'adresse par défaut de ton FastAPI.
       apiBase: '',
     },
@@ -25,7 +32,7 @@ export default defineNuxtConfig({
     compatibilityVersion: 4,
   },
 
-  extends: ['./layers/base', './layers/auth', './layers/planning'],
+  extends: ['./layers/base', './layers/auth', './layers/planning', './layers/songbook'],
 
   vite: {
     plugins: [

@@ -1,9 +1,10 @@
 import logging
 from datetime import datetime
-from typing import Any, cast
+from typing import Any, List, Optional, Sequence, cast
 
+from fastapi import BackgroundTasks
 from sqlalchemy.orm import selectinload
-from sqlmodel import Session, select
+from sqlmodel import Session, col, select
 
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
@@ -18,6 +19,7 @@ from models import (
     Slot,
     SlotCreate,
 )
+from models.activite_model import ActiviteFullRead
 from models.membre_model import MemberAgendaResponse
 from models.planning_model import (
     PlanningFullCreate,
@@ -25,8 +27,14 @@ from models.planning_model import (
     PlanningFullUpdate,
     ViewContext,
 )
-from models.schema_db_model import Activite
+from models.schema_db_model import Activite, Campus, Ministere, PlanningTemplate
+from notification.notification_schemas import (
+    PlanningCancelledNotification,
+    PlanningPublishedNotification,
+)
+from notification.notification_service import EmailService
 from repositories.planning_repository import PlanningRepository
+from repositories.planning_template_repository import PlanningTemplateRepository
 from services.activite_service import ActiviteService
 from services.slot_service import SlotService
 from utils.utils_func import extract_field
@@ -53,38 +61,220 @@ class PlanningServiceSvc(
         self.activite_svc = ActiviteService(self.db)
         self.slot_svc = SlotService(self.db)
 
-    def _on_publish_hook(self, planning: PlanningService):
-        logger.info(f"Déclenchement des notifications pour le planning {planning.id}")
-        # Logique d'envoi de mail/push ici
+    def _collect_notification_data_published(
+        self, planning_id: str
+    ) -> List[PlanningPublishedNotification]:
+        """Construit la liste des notifications de publication (1 par affectation)."""
+        query = (
+            select(PlanningService)
+            .where(PlanningService.id == planning_id)
+            .options(
+                selectinload(cast(Any, PlanningService.activite)),
+                selectinload(cast(Any, PlanningService.slots))
+                .selectinload(cast(Any, Slot.affectations))
+                .selectinload(cast(Any, Affectation.membre)),
+            )
+        )
+        planning = self.db.exec(query).first()
+        if not planning or not planning.activite:
+            return []
+        activite = planning.activite
+        campus_nom, ministere_nom = self._resolve_activite_names(
+            activite.campus_id, activite.ministere_organisateur_id
+        )
+        notifications: List[PlanningPublishedNotification] = []
+        for slot in planning.slots:
+            heure_debut = slot.date_debut.strftime("%H:%M")
+            heure_fin = slot.date_fin.strftime("%H:%M")
+            for aff in slot.affectations:
+                membre = aff.membre
+                if not membre or not membre.email:
+                    continue
+                notifications.append(
+                    PlanningPublishedNotification(
+                        email=membre.email,
+                        prenom=membre.prenom,
+                        nom=membre.nom,
+                        type_activite=activite.type,
+                        date_activite=activite.date_debut.date(),
+                        heure_debut=heure_debut,
+                        heure_fin=heure_fin,
+                        lieu=activite.lieu,
+                        campus_nom=campus_nom or "",
+                        ministere_nom=ministere_nom or "",
+                        nom_creneau=slot.nom_creneau,
+                        role_code=aff.role_code,
+                        date_debut_dt=slot.date_debut,
+                        date_fin_dt=slot.date_fin,
+                    )
+                )
+        return notifications
+
+    def _collect_notification_data_cancelled(
+        self, planning_id: str, motif: Optional[str] = None
+    ) -> List[PlanningCancelledNotification]:
+        """Construit la liste des notifications d'annulation (1 par membre unique)."""
+        query = (
+            select(PlanningService)
+            .where(PlanningService.id == planning_id)
+            .options(
+                selectinload(cast(Any, PlanningService.activite)),
+                selectinload(cast(Any, PlanningService.slots))
+                .selectinload(cast(Any, Slot.affectations))
+                .selectinload(cast(Any, Affectation.membre)),
+            )
+        )
+        planning = self.db.exec(query).first()
+        if not planning or not planning.activite:
+            return []
+        activite = planning.activite
+        campus_nom, ministere_nom = self._resolve_activite_names(
+            activite.campus_id, activite.ministere_organisateur_id
+        )
+        type_activite = activite.type
+        date_activite = activite.date_debut.date()
+        seen: set[str] = set()
+        notifications: List[PlanningCancelledNotification] = []
+        for slot in planning.slots:
+            for aff in slot.affectations:
+                membre = aff.membre
+                if not membre or not membre.email or membre.id in seen:
+                    continue
+                seen.add(membre.id)
+                notifications.append(
+                    PlanningCancelledNotification(
+                        email=membre.email,
+                        prenom=membre.prenom,
+                        nom=membre.nom,
+                        type_activite=type_activite,
+                        date_activite=date_activite,
+                        campus_nom=campus_nom or "",
+                        ministere_nom=ministere_nom or "",
+                        motif=motif,
+                    )
+                )
+        return notifications
+
+    def _dispatch_status_notifications(
+        self,
+        planning_id: str,
+        new_status: PlanningStatusCode,
+        background_tasks: BackgroundTasks,
+        email_service: EmailService,
+    ) -> None:
+        """Enqueue les emails de notification selon le nouveau statut."""
+        if new_status == PlanningStatusCode.PUBLIE:
+            notifs_p = self._collect_notification_data_published(planning_id)
+            for np in notifs_p:
+                background_tasks.add_task(email_service.notify_planning_published, np)
+        elif new_status == PlanningStatusCode.ANNULE:
+            notifs_a = self._collect_notification_data_cancelled(planning_id)
+            for na in notifs_a:
+                background_tasks.add_task(email_service.notify_planning_cancelled, na)
+
+    def _resolve_activite_names(
+        self, campus_id: str, ministere_id: str
+    ) -> tuple[Optional[str], Optional[str]]:
+        """Résout les noms du campus et du ministère organisateur."""
+        campus = self.db.get(Campus, campus_id)
+        ministere = self.db.get(Ministere, ministere_id)
+        return (
+            campus.nom if campus else None,
+            ministere.nom if ministere else None,
+        )
+
+    def _enrich_plannings_list(
+        self, plannings: Sequence[PlanningService]
+    ) -> List[PlanningFullRead]:
+        """Valide et enrichit chaque planning avec les noms résolus du campus
+        et du ministère organisateur (campus_nom, ministere_organisateur_nom)."""
+        result = []
+        for p in plannings:
+            dto = PlanningFullRead.model_validate(p)
+            if p.activite:
+                dto.activite = self._build_activite_full(p.activite)
+            result.append(dto)
+        return result
+
+    def _build_activite_full(self, activite: Activite) -> ActiviteFullRead:
+        """Construit un ActiviteFullRead avec noms résolus."""
+        campus_nom, ministere_nom = self._resolve_activite_names(
+            activite.campus_id, activite.ministere_organisateur_id
+        )
+        return ActiviteFullRead(
+            id=activite.id,
+            type=activite.type,
+            date_debut=activite.date_debut,
+            date_fin=activite.date_fin,
+            lieu=activite.lieu,
+            description=activite.description,
+            campus_id=activite.campus_id,
+            ministere_organisateur_id=activite.ministere_organisateur_id,
+            campus_nom=campus_nom,
+            ministere_organisateur_nom=ministere_nom,
+        )
+
+    def _has_affectations(self, planning_id: str) -> bool:
+        """Vérifie si au moins une affectation existe pour ce planning."""
+        query = (
+            select(Affectation)
+            .join(
+                Slot,
+                col(cast(Any, Slot.id)) == col(cast(Any, Affectation.slot_id)),
+            )
+            .where(Slot.planning_id == planning_id)
+        )
+        return self.db.exec(query).first() is not None
 
     def update_planning_status(
-        self, planning_id: str, new_status: PlanningStatusCode, auto_flush: bool = True
+        self,
+        planning_id: str,
+        new_status: PlanningStatusCode,
+        auto_flush: bool = True,
+        *,
+        background_tasks: Optional[BackgroundTasks] = None,
+        email_service: Optional[EmailService] = None,
     ) -> PlanningService:
-        """Met à jour le statut avec gestion du workflow."""
+        """Met à jour le statut avec gestion du workflow et notifications."""
         planning = self.get_one(planning_id)
         current_status = PlanningStatusCode(planning.statut_code)
 
-        self.workflow.execute_transition(
-            current_status,
-            new_status,
-            hook=lambda: (
-                self._on_publish_hook(planning)
-                if new_status == PlanningStatusCode.PUBLIE
-                else None
-            ),
-        )
+        if new_status == PlanningStatusCode.PUBLIE:
+            if not self._has_affectations(planning_id):
+                raise AppException(ErrorRegistry.PLANNING_CANT_PUBLISH)
 
+        self.workflow.execute_transition(current_status, new_status)
         planning.statut_code = new_status.value
         self.db.add(planning)
+
+        if new_status == PlanningStatusCode.PUBLIE:
+            self._on_publish_hook(planning)
 
         if auto_flush:
             self.db.flush()
 
+        if background_tasks and email_service:
+            self._dispatch_status_notifications(
+                planning_id, new_status, background_tasks, email_service
+            )
+
         return planning
+
+    def _on_publish_hook(self, planning: PlanningService) -> None:
+        """Hook appelé lors du passage au statut PUBLIE, avant le flush.
+
+        No-op par défaut. Peut être surchargé ou monkeypatché en test
+        pour simuler des effets de bord (ex : envoi email) et vérifier
+        l'atomicité du rollback.
+        """
 
     def create_slot(self, slot_data: SlotCreate) -> Slot:
         """Délégué au SlotService."""
         return self.slot_svc.add_slot_to_planning(slot_data.planning_id, slot_data)
+
+    def _increment_template_usage(self, template_id: str) -> None:
+        """Incrémente used_count du template utilisé lors de la création."""
+        PlanningTemplateRepository(self.db).increment_used_count(template_id)
 
     def create_full_planning(self, data: PlanningFullCreate) -> PlanningService:
         """Crée un planning complet (Activité + Planning
@@ -108,6 +298,16 @@ class PlanningServiceSvc(
             self.slot_svc.sync_planning_slots(planning_db.id, data.slots)
 
             self.db.flush()
+
+            # 4. Liaison template et incrément du compteur
+            if data.template_id:
+                tpl = self.db.get(PlanningTemplate, data.template_id)
+                if tpl:
+                    planning_db.template_id = data.template_id
+                    self.db.add(planning_db)
+                    self.db.flush()
+                    self._increment_template_usage(data.template_id)
+
             self.db.refresh(planning_db)
             return planning_db
 
@@ -145,9 +345,9 @@ class PlanningServiceSvc(
 
                 self.activite_svc.update(str(planning.activite_id), data.activite)
 
-            # 3. Synchronisation Slots
-            slots_payload = extract_field(data, "slots", [])
-            self.slot_svc.sync_planning_slots(planning.id, slots_payload)
+            # 3. Synchronisation Slots (ignoré si non fourni)
+            if data.slots is not None:
+                self.slot_svc.sync_planning_slots(planning.id, data.slots)
 
             self.db.flush()
             self.db.refresh(planning)
@@ -168,10 +368,7 @@ class PlanningServiceSvc(
         planning = self.get_one(planning_id)
         activite_id = planning.activite_id
 
-        if planning.statut_code in [
-            PlanningStatusCode.PUBLIE.value,
-            PlanningStatusCode.TERMINE.value,
-        ]:
+        if planning.statut_code == PlanningStatusCode.PUBLIE.value:
             raise AppException(
                 ErrorRegistry.PLANNING_DELETE_IMPOSSIBLE, status=planning.statut_code
             )
@@ -218,6 +415,9 @@ class PlanningServiceSvc(
                     selectinload(cast(Any, PlanningService.slots))
                     .selectinload(cast(Any, Slot.affectations))
                     .selectinload(cast(Any, Affectation.membre)),
+                    selectinload(cast(Any, PlanningService.slots))
+                    .selectinload(cast(Any, Slot.affectations))
+                    .selectinload(cast(Any, Affectation.ministere)),
                 )
             )
             planning_db = self.db.exec(query).first()
@@ -241,11 +441,111 @@ class PlanningServiceSvc(
 
             # 4. Assemblage final
             result_dto = PlanningFullRead.model_validate(planning_db)
+            if planning_db.activite:
+                result_dto.activite = self._build_activite_full(planning_db.activite)
             result_dto.view_context = context
             return result_dto
 
         except Exception as e:
             logger.error(f"Erreur get_full_planning ID {planning_id}: {str(e)}")
+            raise
+
+    def list_by_ministere(
+        self,
+        ministere_id: str,
+        campus_id: Optional[str] = None,
+    ) -> List[PlanningFullRead]:
+        """Retourne tous les plannings complets dont l'activité est organisée
+        par un ministère donné, avec activite + slots + affectations chargés."""
+        try:
+            query = (
+                select(PlanningService)
+                .join(Activite)
+                .where(Activite.ministere_organisateur_id == ministere_id)
+                .where(
+                    PlanningService.deleted_at == None  # noqa: E711
+                )  # pylint: disable=C0121
+                .options(
+                    selectinload(cast(Any, PlanningService.activite)),
+                    selectinload(cast(Any, PlanningService.slots))
+                    .selectinload(cast(Any, Slot.affectations))
+                    .selectinload(cast(Any, Affectation.membre)),
+                    selectinload(cast(Any, PlanningService.slots))
+                    .selectinload(cast(Any, Slot.affectations))
+                    .selectinload(cast(Any, Affectation.ministere)),
+                )
+            )
+            if campus_id:
+                query = query.where(Activite.campus_id == campus_id)
+            results = self.db.exec(query).unique().all()
+            return self._enrich_plannings_list(results)
+        except Exception as e:
+            logger.error(f"Erreur list_by_ministere {ministere_id}: {str(e)}")
+            raise
+
+    def list_my_plannings_full(
+        self,
+        membre_id: str,
+        campus_id: Optional[str] = None,
+    ) -> List[PlanningFullRead]:
+        """Retourne tous les plannings complets où l'utilisateur connecté
+        est affecté dans au moins un slot (vue calendrier personnelle)."""
+        try:
+            query = (
+                select(PlanningService)
+                .join(cast(Any, PlanningService.slots))
+                .join(cast(Any, Slot.affectations))
+                .where(Affectation.membre_id == membre_id)
+                .where(
+                    PlanningService.deleted_at == None  # noqa: E711
+                )  # pylint: disable=C0121
+                .options(
+                    selectinload(cast(Any, PlanningService.activite)),
+                    selectinload(cast(Any, PlanningService.slots))
+                    .selectinload(cast(Any, Slot.affectations))
+                    .selectinload(cast(Any, Affectation.membre)),
+                    selectinload(cast(Any, PlanningService.slots))
+                    .selectinload(cast(Any, Slot.affectations))
+                    .selectinload(cast(Any, Affectation.ministere)),
+                )
+            )
+            if campus_id:
+                query = query.join(
+                    Activite,
+                    col(cast(Any, PlanningService.activite_id))
+                    == col(cast(Any, Activite.id)),
+                ).where(Activite.campus_id == campus_id)
+            results = self.db.exec(query).unique().all()
+            return self._enrich_plannings_list(results)
+        except Exception as e:
+            logger.error(f"Erreur list_my_plannings_full {membre_id}: {str(e)}")
+            raise
+
+    def list_by_campus(self, campus_id: str) -> List[PlanningFullRead]:
+        """Retourne tous les plannings complets dont l'activité se déroule
+        sur un campus donné, avec activite + slots + affectations chargés."""
+        try:
+            query = (
+                select(PlanningService)
+                .join(Activite)
+                .where(Activite.campus_id == campus_id)
+                .where(
+                    PlanningService.deleted_at == None  # noqa: E711
+                )  # pylint: disable=C0121
+                .options(
+                    selectinload(cast(Any, PlanningService.activite)),
+                    selectinload(cast(Any, PlanningService.slots))
+                    .selectinload(cast(Any, Slot.affectations))
+                    .selectinload(cast(Any, Affectation.membre)),
+                    selectinload(cast(Any, PlanningService.slots))
+                    .selectinload(cast(Any, Slot.affectations))
+                    .selectinload(cast(Any, Affectation.ministere)),
+                )
+            )
+            results = self.db.exec(query).unique().all()
+            return self._enrich_plannings_list(results)
+        except Exception as e:
+            logger.error(f"Erreur list_by_campus {campus_id}: {str(e)}")
             raise
 
     def get_member_agenda_full(

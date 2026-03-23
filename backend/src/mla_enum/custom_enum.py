@@ -2,6 +2,7 @@ from enum import Enum
 
 
 class RoleName(str, Enum):
+    SUPER_ADMIN = "Super Admin"
     ADMIN = "Admin"
     RESPONSABLE_MLA = "Responsable MLA"
     MEMBRE_MLA = "Membre MLA"
@@ -36,6 +37,7 @@ class AffectationStatusCode(str, Enum):
     REFUSE = "REFUSE"
     PRESENT = "PRESENT"
     ABSENT = "ABSENT"
+    RETARD = "RETARD"
 
 
 __all__ = [

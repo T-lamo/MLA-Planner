@@ -22,7 +22,7 @@ class Database:
                 poolclass = StaticPool
 
             cls._engine = create_engine(
-                url, connect_args=connect_args, poolclass=poolclass, echo=True
+                url, connect_args=connect_args, poolclass=poolclass, echo=False
             )
         return cls._engine
 

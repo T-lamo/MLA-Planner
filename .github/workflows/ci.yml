@@ -44,6 +44,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install pnpm
+        if: matrix.component != 'backend'
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9 # Ou la version que vous utilisez localement
+
       - name: Setup Backend
         if: matrix.component == 'backend'
         uses: actions/setup-python@v5
@@ -56,6 +62,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'pnpm'
 
       - name: Install Tools
         run: |
@@ -63,7 +70,6 @@ jobs:
             make -C backend install
             pip install pytest pytest-cov psycopg2-binary black isort mypy pylint
           else
-            npm install -g pnpm
             # Pour le frontend, on a OBLIGATOIREMENT besoin de l'UI buildée
             if [ "${{ matrix.component }}" = "frontend" ]; then
               make -C packages/ui-core install
@@ -104,17 +110,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'pnpm'
+
       - name: Build UI & Frontend
+        env:
+          NUXT_PUBLIC_API_BASE: ${{ secrets.NUXT_PUBLIC_API_BASE }}
         run: |
-          npm install -g pnpm
-          # On build l'UI d'abord sinon Nuxt ne trouvera pas les composants
           make -C packages/ui-core install
           make -C packages/ui-core build
           cd frontend && pnpm install && pnpm nuxi generate
+          
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
@@ -126,8 +141,23 @@ jobs:
     needs: build-frontend
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Render
+      - name: Trigger Render deployment
         run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK }}"
+
+      - name: Wait for backend health
+        run: |
+          echo "Attente de la disponibilité du backend..."
+          for i in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.BACKEND_URL }}/health" || echo "000")
+            echo "Tentative $i — HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Backend opérationnel."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Timeout : le backend n'a pas répondu dans les temps."
+          exit 1
 
   # --- JOB 4 : DEPLOY FRONT ---
   deploy-frontend:

@@ -1,42 +1,33 @@
-import type { UseFetchOptions } from '#app'
-import type { EnhancedApiError } from '../../types/api'
+import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack'
+import { $api } from '../composables/useApiFetch'
 
 /**
- * BaseRepository - Classe abstraite pour centraliser la logique des services API
- * Gère le typage strict entre la réponse brute et la donnée transformée.
+ * Interface pour les options de requête étendant les types natifs de Nitro ($fetch)
  */
+interface ApiRequestOptions<ResT, TransformT> extends Omit<
+  NitroFetchOptions<NitroFetchRequest>,
+  'transform'
+> {
+  transform?: (data: ResT) => TransformT
+}
+
 export abstract class BaseRepository {
   /**
-   * Wrapper interne pour utiliser useApiFetch dans les classes héritées.
-   * * @template ResT - Type de la réponse brute (ex: LoginSchema)
-   * @template TransformT - Type final après transformation (ex: AuthResponse)
-   * * @param url - Endpoint de l'API
-   * @param options - Options de configuration Nuxt useFetch
+   * apiRequest utilise désormais $api ($fetch).
+   * Suppression du try/catch inutile car l'erreur est re-jetée sans traitement.
    */
   protected async apiRequest<ResT, TransformT = ResT>(
-    url: string | (() => string),
-    options?: UseFetchOptions<ResT, TransformT>,
-  ) {
-    // On propage les deux génériques à useApiFetch pour autoriser le 'transform'
-    const { data, error, refresh, pending } = await useApiFetch<ResT, TransformT>(url, options)
+    url: string,
+    options: ApiRequestOptions<ResT, TransformT> = {},
+  ): Promise<{ data: TransformT }> {
+    const response = await $api<ResT>(url, options)
 
-    if (error.value) {
-      /**
-       * CRITÈRE EXPERT : Normalisation de l'erreur
-       * On cast l'erreur Fetch en notre type EnhancedApiError.
-       * L'intercepteur dans useApiFetch a déjà déclenché le Toast,
-       * mais on "throw" pour permettre au composant de gérer sa logique locale (ex: stop loader).
-       */
-      const apiError = error.value as unknown as EnhancedApiError
+    // On applique manuellement le transform si fourni, sinon on cast
+    // Utilisation de unknown avant le cast final pour la sécurité TS
+    const data = options.transform
+      ? options.transform(response)
+      : (response as unknown as TransformT)
 
-      // On enrichit l'erreur si besoin avant de la lancer
-      throw apiError
-    }
-    return {
-      // On garantit que data.value est bien du type TransformT
-      data: data.value as TransformT,
-      refresh,
-      pending,
-    }
+    return { data }
   }
 }

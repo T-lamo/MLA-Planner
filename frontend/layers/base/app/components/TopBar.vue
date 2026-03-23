@@ -5,51 +5,24 @@
     <div class="flex items-center gap-2 md:gap-6">
       <button
         class="flex rounded-lg p-2 text-slate-600 hover:bg-slate-100 md:hidden"
+        aria-label="Ouvrir le menu"
         @click="ui.toggleSidebar"
       >
         <Menu class="size-6" />
       </button>
 
-      <div ref="dropdownRef" class="relative min-w-[140px] md:min-w-[200px]">
-        <button
-          class="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 py-2 pr-2 pl-3 text-xs font-semibold text-slate-900 transition-all focus:ring-2 focus:ring-(--color-accent) md:text-sm"
-          @click="isDropdownOpen = !isDropdownOpen"
-        >
-          <span class="truncate">{{ ui.selectedCampus }}</span>
-          <ChevronDown
-            :class="[
-              'size-4 text-slate-500 transition-transform',
-              isDropdownOpen ? 'rotate-180' : '',
-            ]"
-          />
-        </button>
+      <CampusSelector />
 
-        <Transition name="scale-fade">
-          <div
-            v-if="isDropdownOpen"
-            class="absolute top-full left-0 z-50 mt-1 w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl shadow-slate-200/50"
-          >
-            <button
-              v-for="campus in ui.campuses"
-              :key="campus"
-              :class="[
-                'flex w-full items-center rounded-lg px-3 py-2 text-left text-xs transition-colors md:text-sm',
-                ui.selectedCampus === campus
-                  ? 'bg-(--color-primary-600)/10 font-bold text-(--color-primary-700)'
-                  : 'text-slate-600 hover:bg-slate-50',
-              ]"
-              @click="selectCampus(campus)"
-            >
-              {{ campus }}
-            </button>
-          </div>
-        </Transition>
-      </div>
-
-      <nav class="hidden items-center text-sm text-slate-500 lg:flex">
-        <span>Planning</span>
-        <ChevronRight class="mx-2 size-4" />
-        <span class="font-semibold text-slate-900 capitalize">{{ currentRouteName }}</span>
+      <nav
+        v-if="breadcrumb.section"
+        class="hidden items-center text-sm text-slate-500 lg:flex"
+        aria-label="Breadcrumb"
+      >
+        <span>{{ breadcrumb.section }}</span>
+        <template v-if="breadcrumb.page">
+          <ChevronRight class="mx-2 size-4" />
+          <span class="font-semibold text-slate-900">{{ breadcrumb.page }}</span>
+        </template>
       </nav>
     </div>
 
@@ -58,50 +31,90 @@
         <Plus class="size-5 md:size-4" />
         <span class="hidden md:inline">Créer Planning</span>
       </button>
-      <button class="relative rounded-full p-2 text-slate-500 hover:bg-slate-50">
+
+      <NuxtLink
+        to="/planning/mes-affectations"
+        class="relative rounded-full p-2 text-slate-500 hover:bg-slate-50"
+        aria-label="Mes affectations en attente"
+      >
         <Bell class="size-5" />
         <span
-          class="absolute top-1.5 right-1.5 size-2 rounded-full border-2 border-white bg-red-500"
-        ></span>
-      </button>
+          v-if="pendingCount > 0"
+          class="absolute top-0.5 right-0.5 flex size-4 items-center justify-center rounded-full border border-white bg-red-500 text-[9px] font-bold text-white"
+          >{{ pendingCount > 9 ? '9+' : pendingCount }}</span
+        >
+      </NuxtLink>
     </div>
-
-    <div v-if="isDropdownOpen" class="fixed inset-0 z-40" @click="isDropdownOpen = false" />
   </header>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { ChevronDown, ChevronRight, Plus, Menu, Bell } from 'lucide-vue-next'
+import { computed, onMounted } from 'vue'
+import { ChevronRight, Plus, Menu, Bell } from 'lucide-vue-next'
 import { useUIStore } from '../stores/useUiStore'
+import { useMyAffectationsStore } from '~~/layers/planning/app/stores/useMyAffectationsStore'
 
 const ui = useUIStore()
+const myAffectationsStore = useMyAffectationsStore()
 const route = useRoute()
-const isDropdownOpen = ref(false)
 
-const currentRouteName = computed(() => route.path.split('/').pop() || 'Dashboard')
+const pendingCount = computed(() => myAffectationsStore.pendingCount)
 
-const selectCampus = (campus: string) => {
-  ui.selectedCampus = campus
-  isDropdownOpen.value = false
+// Initialisation au montage du parent pour garantir la disponibilité des données
+onMounted(async () => {
+  try {
+    await ui.initializeUI()
+    await myAffectationsStore.refreshPendingCount()
+  } catch {
+    // silently ignore init errors
+  }
+})
+
+const SECTION_LABELS: Record<string, string> = {
+  planning: 'Planning',
+  songbook: 'Répertoire',
+  admin: 'Administration',
 }
+
+const PAGE_LABELS: Record<string, string> = {
+  calendar: 'Calendrier',
+  list: 'Liste',
+  'mes-affectations': 'Mes affectations',
+  browse: 'Tous les chants',
+  new: 'Nouveau chant',
+  categories: 'Catégories',
+  edit: 'Modifier',
+  profiles: 'Profils',
+  campuses: 'Campus',
+  'campus-config': 'Config campus',
+  super: 'Super admin',
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const breadcrumb = computed(() => {
+  const segments = route.path.split('/').filter(Boolean)
+  const section = segments[0] ?? ''
+  const sectionLabel = SECTION_LABELS[section] ?? ''
+
+  const rest = segments.slice(1)
+  const namedSegment = [...rest].reverse().find((s) => !UUID_RE.test(s))
+
+  let page = ''
+  if (namedSegment) {
+    page = PAGE_LABELS[namedSegment] ?? namedSegment
+  } else if (rest.some((s) => UUID_RE.test(s))) {
+    page = 'Détail'
+  }
+
+  return { section: sectionLabel, page }
+})
 </script>
 
 <style scoped>
 @reference "../assets/css/main.css";
 
 .btn-primary {
-  @apply rounded-lg bg-(--color-primary-600) font-semibold text-white transition-all hover:bg-(--color-primary-700) active:scale-95;
-}
-
-/* Animation fluide pour le dropdown */
-.scale-fade-enter-active,
-.scale-fade-leave-active {
-  transition: all 0.15s ease-out;
-}
-.scale-fade-enter-from,
-.scale-fade-leave-to {
-  opacity: 0;
-  transform: scale(0.95) translateY(-10px);
+  @apply rounded-lg bg-(--color-primary-600) font-semibold text-white shadow-sm transition-all hover:bg-(--color-primary-700) active:scale-95;
 }
 </style>

@@ -103,7 +103,7 @@ planning_transitions: dict[PlanningStatusCode, list[PlanningStatusCode]] = {
     PlanningStatusCode.TERMINE: [],
 }
 
-# Affectation : PROPOSE, CONFIRME, REFUSE, PRESENT, ABSENT
+# Affectation : PROPOSE, CONFIRME, REFUSE, PRESENT, ABSENT, RETARD
 affectation_transitions: Dict[AffectationStatusCode, List[AffectationStatusCode]] = {
     AffectationStatusCode.PROPOSE: [
         AffectationStatusCode.CONFIRME,
@@ -112,9 +112,11 @@ affectation_transitions: Dict[AffectationStatusCode, List[AffectationStatusCode]
     AffectationStatusCode.CONFIRME: [
         AffectationStatusCode.PRESENT,
         AffectationStatusCode.ABSENT,
+        AffectationStatusCode.RETARD,
         AffectationStatusCode.REFUSE,
     ],
     AffectationStatusCode.REFUSE: [AffectationStatusCode.PROPOSE],
     AffectationStatusCode.PRESENT: [AffectationStatusCode.CONFIRME],
     AffectationStatusCode.ABSENT: [AffectationStatusCode.CONFIRME],
+    AffectationStatusCode.RETARD: [AffectationStatusCode.CONFIRME],
 }

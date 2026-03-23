@@ -17,8 +17,28 @@ services:
       - key: JWT_SECRET_KEY
         generateValue: true
       # Doit correspondre à os.getenv("ALLOWED_ORIGINS") dans main.py
+      # Remplacer par l'URL réelle de votre frontend Netlify
       - key: ALLOWED_ORIGINS
         value: "https://icctoulouseplanner.netlify.app,http://localhost:3000"
+      # Bootstrap du compte superadmin au démarrage
+      - key: SUPERADMIN_USERNAME
+        value: "superadmin"
+      - key: SUPERADMIN_PASSWORD
+        sync: false  # À définir manuellement dans le dashboard Render (secret)
+      # ── Configuration email (SMTP) ──
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: "587"
+      - key: EMAIL_FROM
+        value: "noreply@planning-mla.com"
+      - key: EMAIL_FROM_NAME
+        value: "Planning MLA"
+      # Secrets mail — à définir manuellement dans le dashboard Render
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
 
 databases:
   - name: mla-db

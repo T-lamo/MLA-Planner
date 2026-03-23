@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 from typing import List, Optional
+from uuid import uuid4
 
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -14,17 +15,60 @@ from .affectation_context_model import AffectationContexteBase
 from .affectation_role_model import AffectationRoleBase
 from .campus_model import CampusBase
 from .categorie_role_model import CategorieRoleBase
+from .chant_model import (
+    Chant,
+    ChantArtisteLink,
+    ChantCategorie,
+    ChantContenu,
+    ChantTag,
+)
 from .indisponibilite_model import IndisponibiliteBase
 from .membre_model import MembreBase
 from .membre_role_model import MembreRoleBase
 from .ministere_model import MinistereBase
-from .organisationicc_model import OrganisationICCBase
+from .organisation_model import OrganisationBase
 from .pays_model import PaysBase
 from .permission_model import PermissionBase
 from .pole_model import PoleBase
 from .role_competence_model import RoleCompetenceBase
 from .role_model import RoleBase
 from .utilisateur_model import UtilisateurBase
+
+# -------------------------
+# 0. TABLES DE LIAISON (N:N)
+# -------------------------
+
+
+class MembreCampusLink(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_membre_campus_link"
+    __table_args__ = {"extend_existing": True}
+    membre_id: str = Field(
+        foreign_key="t_membre.id", primary_key=True, ondelete="CASCADE"
+    )
+    campus_id: str = Field(
+        foreign_key="t_campus.id", primary_key=True, ondelete="CASCADE"
+    )
+
+
+class MembreMinistereLink(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_membre_ministere_link"
+    __table_args__ = {"extend_existing": True}
+    membre_id: str = Field(
+        foreign_key="t_membre.id", primary_key=True, ondelete="CASCADE"
+    )
+    ministere_id: str = Field(
+        foreign_key="t_ministere.id", primary_key=True, ondelete="CASCADE"
+    )
+
+
+class MembrePoleLink(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_membre_pole_link"
+    __table_args__ = {"extend_existing": True}
+    membre_id: str = Field(
+        foreign_key="t_membre.id", primary_key=True, ondelete="CASCADE"
+    )
+    pole_id: str = Field(foreign_key="t_pole.id", primary_key=True, ondelete="CASCADE")
+
 
 # -------------------------
 # 1. RÉFÉRENTIELS & POLYVALENCE
@@ -35,6 +79,13 @@ class CategorieRole(CategorieRoleBase, table=True):  # type: ignore
     __tablename__ = "t_categorierole"
     __table_args__ = {"extend_existing": True}
     roles: List["RoleCompetence"] = Relationship(back_populates="categorie")
+    # Relation vers le ministère parent (Campus Configuration)
+    # Migration requise :
+    # ALTER TABLE t_categorierole
+    #   ADD COLUMN ministere_id VARCHAR REFERENCES t_ministere(id)
+    #   ON DELETE SET NULL;
+    # ALTER TABLE t_categorierole ADD COLUMN description TEXT;
+    ministere: Optional["Ministere"] = Relationship(back_populates="categories_roles")
 
 
 class RoleCompetence(RoleCompetenceBase, table=True):  # type: ignore
@@ -72,8 +123,8 @@ class TypeResponsabilite(SQLModel, table=True):  # type: ignore
 # -------------------------
 
 
-class OrganisationICC(OrganisationICCBase, table=True):  # type: ignore
-    __tablename__ = "t_organisationicc"
+class Organisation(OrganisationBase, table=True):  # type: ignore
+    __tablename__ = "t_organisation"
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
@@ -87,10 +138,19 @@ class Pays(PaysBase, table=True):  # type: ignore
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     organisation_id: Optional[str] = Field(
-        default=None, foreign_key="t_organisationicc.id", ondelete="SET NULL"
+        default=None, foreign_key="t_organisation.id", ondelete="SET NULL"
     )
-    organisation: Optional["OrganisationICC"] = Relationship(back_populates="pays")
+    organisation: Optional["Organisation"] = Relationship(back_populates="pays")
     campus: List["Campus"] = Relationship(back_populates="pays")
+
+
+# 1. Table de liaison
+class CampusMinistereLink(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_campus_ministere_link"
+    __table_args__ = {"extend_existing": True}
+
+    campus_id: str = Field(foreign_key="t_campus.id", primary_key=True)
+    ministere_id: str = Field(foreign_key="t_ministere.id", primary_key=True)
 
 
 class Campus(CampusBase, table=True):  # type: ignore
@@ -100,9 +160,13 @@ class Campus(CampusBase, table=True):  # type: ignore
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     pays_id: str = Field(foreign_key="t_pays.id", ondelete="CASCADE")
     pays: Optional["Pays"] = Relationship(back_populates="campus")
-    ministeres: List["Ministere"] = Relationship(back_populates="campus")
+    ministeres: List["Ministere"] = Relationship(
+        back_populates="campuses", link_model=CampusMinistereLink
+    )
     activites: List["Activite"] = Relationship(back_populates="campus")
-    membres: List["Membre"] = Relationship(back_populates="campus")
+    membres: List["Membre"] = Relationship(
+        back_populates="campuses", link_model=MembreCampusLink
+    )
 
 
 class Ministere(MinistereBase, table=True):  # type: ignore
@@ -110,11 +174,17 @@ class Ministere(MinistereBase, table=True):  # type: ignore
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
-    campus_id: str = Field(foreign_key="t_campus.id", ondelete="CASCADE")
-    campus: Optional["Campus"] = Relationship(back_populates="ministeres")
+    campuses: List["Campus"] = Relationship(
+        back_populates="ministeres", link_model=CampusMinistereLink
+    )
     poles: List["Pole"] = Relationship(back_populates="ministere")
-    membres: List["Membre"] = Relationship(back_populates="ministere")
+    membres: List["Membre"] = Relationship(
+        back_populates="ministeres", link_model=MembreMinistereLink
+    )
     equipes: List["Equipe"] = Relationship(back_populates="ministere")
+    # Relation inverse des catégories (Campus Configuration)
+    categories_roles: List["CategorieRole"] = Relationship(back_populates="ministere")
+    indisponibilites: List["Indisponibilite"] = Relationship(back_populates="ministere")
 
 
 class Pole(PoleBase, table=True):  # type: ignore
@@ -124,7 +194,9 @@ class Pole(PoleBase, table=True):  # type: ignore
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     ministere_id: str = Field(foreign_key="t_ministere.id", ondelete="CASCADE")
     ministere: Optional["Ministere"] = Relationship(back_populates="poles")
-    membres: List["Membre"] = Relationship(back_populates="pole")
+    membres: List["Membre"] = Relationship(
+        back_populates="poles", link_model=MembrePoleLink
+    )
 
 
 # -------------------------
@@ -138,17 +210,21 @@ class Membre(MembreBase, table=True):  # type: ignore
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     date_inscription: datetime = Field(default_factory=datetime.now)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
-    campus_id: str = Field(foreign_key="t_campus.id", ondelete="CASCADE", index=True)
-    ministere_id: Optional[str] = Field(
-        default=None, foreign_key="t_ministere.id", ondelete="SET NULL", index=True
-    )
-    pole_id: Optional[str] = Field(
-        default=None, foreign_key="t_pole.id", ondelete="SET NULL", index=True
+    campus_principal_id: Optional[str] = Field(
+        default=None, foreign_key="t_campus.id", ondelete="SET NULL"
     )
 
-    campus: Optional["Campus"] = Relationship(back_populates="membres")
-    ministere: Optional["Ministere"] = Relationship(back_populates="membres")
-    pole: Optional["Pole"] = Relationship(back_populates="membres")
+    # Relations N:N (Architecture Flexible)
+    campuses: List["Campus"] = Relationship(
+        back_populates="membres", link_model=MembreCampusLink
+    )
+    ministeres: List["Ministere"] = Relationship(
+        back_populates="membres", link_model=MembreMinistereLink
+    )
+    poles: List["Pole"] = Relationship(
+        back_populates="membres", link_model=MembrePoleLink
+    )
+
     roles_assoc: List["MembreRole"] = Relationship(back_populates="membre")
     affectations: List["Affectation"] = Relationship(back_populates="membre")
     responsabilites: List["Responsabilite"] = Relationship(back_populates="membre")
@@ -181,6 +257,7 @@ class Activite(ActiviteBase, table=True):  # type: ignore
 class Slot(SlotBase, table=True):  # type: ignore
     __tablename__ = "t_slot"
     __table_args__ = {"extend_existing": True}
+    __mapper_args__ = {"confirm_deleted_rows": False}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     planning: Optional["PlanningService"] = Relationship(back_populates="slots")
     affectations: List["Affectation"] = Relationship(back_populates="slot")
@@ -190,7 +267,12 @@ class PlanningService(PlanningServiceBase, table=True):  # type: ignore
     __tablename__ = "t_planningservice"
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    deleted_at: Optional[datetime] = None
+    deleted_at: Optional[datetime] = Field(default=None, index=True)
+    template_id: Optional[str] = Field(
+        default=None,
+        foreign_key="t_planningtemplate.id",
+        ondelete="SET NULL",
+    )
     activite: Optional["Activite"] = Relationship(back_populates="planning_services")
     statut: Optional[StatutPlanning] = Relationship(back_populates="plannings")
     slots: List["Slot"] = Relationship(
@@ -217,14 +299,7 @@ class Affectation(AffectationBase, table=True):  # type: ignore
         back_populates="affectations"
     )
     membre: Optional["Membre"] = Relationship(back_populates="affectations")
-
-    # __table_args__ = (
-    #     ForeignKeyConstraint(
-    #         ["membre_id", "role_code"],
-    #         ["t_membre_role.membre_id", "t_membre_role.role_code"],
-    #         ondelete="CASCADE",
-    #     ),
-    # )
+    ministere: Optional["Ministere"] = Relationship()
 
 
 # -------------------------
@@ -263,7 +338,13 @@ class Indisponibilite(IndisponibiliteBase, table=True):  # type: ignore
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     membre_id: str = Field(foreign_key="t_membre.id", ondelete="CASCADE")
+    ministere_id: Optional[str] = Field(
+        default=None,
+        foreign_key="t_ministere.id",
+        ondelete="SET NULL",
+    )
     membre: Optional["Membre"] = Relationship(back_populates="indisponibilites")
+    ministere: Optional["Ministere"] = Relationship(back_populates="indisponibilites")
 
 
 class Utilisateur(UtilisateurBase, table=True):  # type: ignore
@@ -284,7 +365,6 @@ class TokenBlacklist(SQLModel, table=True):  # type: ignore
     id: Optional[int] = Field(default=None, primary_key=True)
     jti: str = Field(index=True, unique=True)
     expires_at: datetime = Field(nullable=False)
-
     revoked_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
@@ -306,17 +386,11 @@ class EquipeMembre(SQLModel, table=True):  # type: ignore
     membre: Optional["Membre"] = Relationship(back_populates="equipes_assoc")
 
 
-# -------------------------
-# 1. MODÈLE DB (Table)
-# -------------------------
 class Equipe(EquipeBase, table=True):  # type: ignore
     __tablename__ = "t_equipe"
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    # Clé étrangère
     ministere_id: str = Field(foreign_key="t_ministere.id", ondelete="CASCADE")
-
-    # Relations
     ministere: Optional["Ministere"] = Relationship(back_populates="equipes")
     membres_assoc: List["EquipeMembre"] = Relationship(back_populates="equipe")
 
@@ -365,7 +439,6 @@ class AffectationContexte(AffectationContexteBase, table=True):  # type: ignore
     __tablename__ = "t_affectation_contexte"
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-
     affectation_role_id: str = Field(
         foreign_key="t_affectation_role.id", ondelete="CASCADE"
     )
@@ -381,7 +454,61 @@ class AffectationContexte(AffectationContexteBase, table=True):  # type: ignore
     affectation: Optional["AffectationRole"] = Relationship(back_populates="contextes")
 
 
+class PlanningTemplate(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_planningtemplate"
+    __table_args__ = {"extend_existing": True}
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    nom: str = Field(max_length=150)
+    description: Optional[str] = Field(default=None, max_length=500)
+    activite_type: str = Field(max_length=100)
+    duree_minutes: int = Field(ge=1)
+    campus_id: str = Field(foreign_key="t_campus.id", ondelete="CASCADE")
+    ministere_id: str = Field(foreign_key="t_ministere.id", ondelete="CASCADE")
+    created_by_id: str = Field(foreign_key="t_membre.id", ondelete="CASCADE")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    used_count: int = Field(default=0, ge=0)
+
+    slots: List["PlanningTemplateSlot"] = Relationship(
+        back_populates="template",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
+
+class PlanningTemplateSlot(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_planningtemplateslot"
+    __table_args__ = {"extend_existing": True}
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    template_id: str = Field(foreign_key="t_planningtemplate.id", ondelete="CASCADE")
+    nom_creneau: str = Field(max_length=100)
+    offset_debut_minutes: int = Field(ge=0)
+    offset_fin_minutes: int = Field(ge=1)
+    nb_personnes_requis: int = Field(default=2, ge=1)
+
+    template: Optional["PlanningTemplate"] = Relationship(back_populates="slots")
+    roles: List["PlanningTemplateRole"] = Relationship(
+        back_populates="slot",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
+
+class PlanningTemplateRole(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_planningtemplaterole"
+    __table_args__ = {"extend_existing": True}
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    slot_id: str = Field(foreign_key="t_planningtemplateslot.id", ondelete="CASCADE")
+    role_code: str = Field(max_length=50)
+
+    slot: Optional["PlanningTemplateSlot"] = Relationship(back_populates="roles")
+
+
 __all__ = [
+    "CampusMinistereLink",
+    "MembreCampusLink",
+    "MembreMinistereLink",
+    "MembrePoleLink",
     "CategorieRole",
     "RoleCompetence",
     "Slot",
@@ -389,7 +516,7 @@ __all__ = [
     "MembreRole",
     "StatutPlanning",
     "TypeResponsabilite",
-    "OrganisationICC",
+    "Organisation",
     "Pays",
     "Campus",
     "Ministere",
@@ -409,4 +536,14 @@ __all__ = [
     "RolePermission",
     "AffectationRole",
     "AffectationContexte",
+    # Songbook
+    "ChantCategorie",
+    "Chant",
+    "ChantContenu",
+    "ChantArtisteLink",
+    "ChantTag",
+    # Planning Templates
+    "PlanningTemplate",
+    "PlanningTemplateSlot",
+    "PlanningTemplateRole",
 ]

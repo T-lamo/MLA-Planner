@@ -3,7 +3,12 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 
-from models import EquipeMembre
+from models import CampusRead, EquipeMembre, EquipeRead, MembreRead, MinistereRead
+
+MembreRead.model_rebuild()
+EquipeRead.model_rebuild()
+MinistereRead.model_rebuild()
+CampusRead.model_rebuild()
 
 # pylint: disable=redefined-outer-name
 
@@ -102,7 +107,7 @@ def test_add_member_already_present(client, admin_headers, created_equipe, test_
         f"/equipes/{equipe_id}/membres/{membre_id}", headers=admin_headers
     )
     assert response.status_code == status.HTTP_409_CONFLICT
-    assert "déjà dans cette équipe" in response.json()["detail"]
+    assert "déjà dans cette équipe" in response.json()["error"]["message"]
 
 
 def test_add_member_to_non_existent_equipe(client, admin_headers, test_membre):

@@ -2,12 +2,12 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel, computed_field, field_validator
+from pydantic import BaseModel, computed_field, field_validator, model_validator
 from sqlmodel import Field, SQLModel
 
 from mla_enum.custom_enum import PlanningStatusCode
 
-from .activite_model import ActiviteCreate, ActiviteRead, ActiviteUpdate
+from .activite_model import ActiviteCreate, ActiviteFullRead, ActiviteUpdate
 from .slot_model import SlotCreate, SlotRead
 
 # Import de l'enum défini plus haut
@@ -76,6 +76,7 @@ class PlanningServiceRead(PlanningServiceBase):
 class AffectationSimpleCreate(BaseModel):
     membre_id: str
     role_code: str
+    ministere_id: Optional[str] = None
 
 
 class SlotWithAffectationsCreate(SlotCreate):
@@ -89,6 +90,7 @@ class SlotFullNested(
     nom_creneau: str
     date_debut: datetime
     date_fin: datetime
+    nb_personnes_requis: int = Field(default=2, ge=1)
     # On omet volontairement planning_id ici
     affectations: List[AffectationSimpleCreate]
 
@@ -97,6 +99,7 @@ class PlanningFullCreate(BaseModel):
     activite: ActiviteCreate
     planning: Optional[PlanningServiceCreate] = None
     slots: List[SlotFullNested]
+    template_id: Optional[str] = None
 
 
 class AffectationFullUpdate(BaseModel):
@@ -104,6 +107,7 @@ class AffectationFullUpdate(BaseModel):
     membre_id: str
     role_code: str
     statut_affectation_code: Optional[str] = None
+    ministere_id: Optional[str] = None
 
 
 class SlotFullUpdate(BaseModel):
@@ -111,6 +115,7 @@ class SlotFullUpdate(BaseModel):
     nom_creneau: str
     date_debut: datetime
     date_fin: datetime
+    nb_personnes_requis: Optional[int] = Field(default=None, ge=1)
     affectations: List[AffectationFullUpdate] = []
 
 
@@ -118,7 +123,7 @@ class PlanningFullUpdate(BaseModel):
     activite: Optional[ActiviteUpdate] = None
     # statut_code: Optional[str] = None
     planning: Optional[PlanningServiceUpdate] = None
-    slots: List[SlotFullUpdate] = []
+    slots: Optional[List[SlotFullUpdate]] = None
 
 
 class MemberSummaryRead(BaseModel):
@@ -133,7 +138,29 @@ class AffectationFullRead(BaseModel):
     statut_affectation_code: str
     role_code: str
     membre: Optional[MemberSummaryRead] = None
+    ministere_id: Optional[str] = None
+    ministere_nom: Optional[str] = None
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="before")
+    @classmethod
+    def extract_ministere_nom(cls, data: object) -> object:
+        """Résout ministere_nom depuis la relation ORM si disponible."""
+        if isinstance(data, dict):
+            return data
+        ministere = getattr(data, "ministere", None)
+        if ministere is not None:
+            return {
+                "id": getattr(data, "id", None),
+                "statut_affectation_code": getattr(
+                    data, "statut_affectation_code", None
+                ),
+                "role_code": getattr(data, "role_code", None),
+                "membre": getattr(data, "membre", None),
+                "ministere_id": getattr(data, "ministere_id", None),
+                "ministere_nom": getattr(ministere, "nom", None),
+            }
+        return data
 
 
 class SlotFullRead(BaseModel):
@@ -162,7 +189,8 @@ class ViewContext(BaseModel):
 
 class PlanningFullRead(PlanningServiceBase):
     id: str
-    activite: Optional[ActiviteRead] = None
+    template_id: Optional[str] = None
+    activite: Optional[ActiviteFullRead] = None
     slots: List[SlotFullRead] = []
     view_context: Optional[ViewContext] = None
     model_config = {"from_attributes": True}
@@ -192,4 +220,5 @@ __all__ = [
     "AffectationFullRead",
     "MemberSummaryRead",
     "ViewContext",
+    "ActiviteFullRead",
 ]

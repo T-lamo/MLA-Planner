@@ -1,9 +1,10 @@
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional, cast
 
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
-from models import TokenBlacklist, Utilisateur
+from models import AffectationRole, TokenBlacklist, Utilisateur
 
 
 class AuthRepository:
@@ -14,7 +15,16 @@ class AuthRepository:
 
     def get_user_by_username(self, username: str) -> Optional[Utilisateur]:
         """Récupère un utilisateur par son username."""
-        statement = select(Utilisateur).where(Utilisateur.username == username)
+        statement = (
+            select(Utilisateur)
+            .where(Utilisateur.username == username)
+            .options(
+                selectinload(cast(Any, Utilisateur.affectations)).selectinload(
+                    cast(Any, AffectationRole.role)
+                ),
+                selectinload(cast(Any, Utilisateur.membre)),
+            )
+        )
         return self.db.exec(statement).first()
 
     def get_user_by_id(self, utilisateur_id: str) -> Optional[Utilisateur]:

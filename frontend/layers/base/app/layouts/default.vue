@@ -3,6 +3,7 @@
     v-if="authStore.isAuthenticated"
     class="flex h-screen overflow-hidden bg-[var(--color-slate-50)] text-slate-900"
   >
+    <AppLoader />
     <div
       v-if="!ui.isSidebarCollapsed"
       class="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm md:hidden"
@@ -18,11 +19,10 @@
       ]"
     >
       <div class="flex h-16 shrink-0 items-center justify-between px-6">
-        <span
-          v-if="!ui.isSidebarCollapsed"
-          class="truncate text-xl font-bold text-(--color-primary-700)"
-          >MLA App</span
-        >
+        <div v-if="!ui.isSidebarCollapsed" class="flex min-w-0 items-center gap-2">
+          <img src="/Logo.png" alt="Logo" class="h-8 w-8 shrink-0 object-contain" />
+          <span class="truncate text-xl font-bold text-(--color-primary-700)">Planner</span>
+        </div>
         <button
           class="rounded-lg p-1 transition-colors hover:bg-slate-100"
           @click="ui.toggleSidebar"
@@ -36,7 +36,7 @@
 
       <nav class="custom-scrollbar flex-1 overflow-y-auto px-3 py-4">
         <div class="space-y-4">
-          <div class="relative">
+          <div v-if="!authStore.isSuperAdmin" class="relative">
             <button
               ref="triggerRef"
               class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
@@ -84,6 +84,30 @@
                   :badge="planningStore.draftCount"
                   class="pl-9"
                 />
+                <SidebarLink
+                  to="/planning/mes-affectations"
+                  :icon="Bell"
+                  label="Mes affectations"
+                  :collapsed="false"
+                  :badge="pendingAffectationsCount || undefined"
+                  class="pl-9"
+                />
+                <SidebarLink
+                  v-if="authStore.hasAdminAccess"
+                  to="/planning/indisponibilites"
+                  :icon="CalendarOff"
+                  label="Indisponibilités"
+                  :collapsed="false"
+                  class="pl-9"
+                />
+                <SidebarLink
+                  v-if="authStore.canManageChants"
+                  to="/planning/templates"
+                  :icon="LayoutTemplate"
+                  label="Templates"
+                  :collapsed="false"
+                  class="pl-9"
+                />
               </ul>
             </transition>
 
@@ -117,11 +141,322 @@
                       :badge="planningStore.draftCount"
                       @click="closePopup"
                     />
+                    <SidebarLink
+                      to="/planning/mes-affectations"
+                      :icon="Bell"
+                      label="Mes affectations"
+                      :collapsed="false"
+                      :badge="pendingAffectationsCount || undefined"
+                      @click="closePopup"
+                    />
+                    <SidebarLink
+                      v-if="authStore.hasAdminAccess"
+                      to="/planning/indisponibilites"
+                      :icon="CalendarOff"
+                      label="Indisponibilités"
+                      :collapsed="false"
+                      @click="closePopup"
+                    />
+                    <SidebarLink
+                      v-if="authStore.canManageChants"
+                      to="/planning/templates"
+                      :icon="LayoutTemplate"
+                      label="Templates"
+                      :collapsed="false"
+                      @click="closePopup"
+                    />
                   </ul>
                 </div>
               </transition>
             </Teleport>
           </div>
+        </div>
+
+        <!-- Section Répertoire (tous les rôles connectés) -->
+        <div class="relative mt-4">
+          <button
+            ref="repertoireTriggerRef"
+            class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
+            :class="[
+              isRepertoireOpen && !ui.isSidebarCollapsed
+                ? 'bg-slate-50 text-(--color-primary-700)'
+                : 'text-slate-600',
+            ]"
+            @click="handleRepertoireMenuClick"
+            @mouseenter="handleRepertoireMouseEnter"
+            @mouseleave="handleRepertoireMouseLeave"
+          >
+            <Music class="size-5 shrink-0" />
+            <span
+              v-if="!ui.isSidebarCollapsed"
+              class="flex-1 text-left text-[10px] font-bold tracking-wider uppercase"
+              >Répertoire</span
+            >
+            <ChevronDown
+              v-if="!ui.isSidebarCollapsed"
+              :class="[
+                'size-3.5 transition-transform duration-200',
+                isRepertoireOpen ? 'rotate-180' : '',
+              ]"
+            />
+          </button>
+
+          <transition name="expand">
+            <ul
+              v-if="isRepertoireOpen && !ui.isSidebarCollapsed"
+              class="mt-1 space-y-1 overflow-hidden"
+            >
+              <SidebarLink
+                to="/songbook"
+                :icon="Music"
+                label="Accueil"
+                :collapsed="false"
+                class="pl-9"
+              />
+              <SidebarLink
+                to="/songbook/browse"
+                :icon="Library"
+                label="Tous les chants"
+                :collapsed="false"
+                class="pl-9"
+              />
+              <SidebarLink
+                v-if="authStore.canManageChants"
+                to="/songbook/categories"
+                :icon="Tag"
+                label="Catégories"
+                :collapsed="false"
+                class="pl-9"
+              />
+              <SidebarLink
+                v-if="authStore.canManageChants"
+                to="/songbook/new"
+                :icon="Plus"
+                label="Nouveau chant"
+                :collapsed="false"
+                class="pl-9"
+              />
+            </ul>
+          </transition>
+
+          <Teleport to="body">
+            <transition name="fade-in">
+              <div
+                v-if="ui.isSidebarCollapsed && isRepertoirePopupVisible"
+                :style="repertoirePopupStyle"
+                class="fixed z-[9999] w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl"
+                @mouseenter="cancelRepertoireClose"
+                @mouseleave="handleRepertoireMouseLeave"
+              >
+                <div
+                  class="mb-2 border-b border-slate-50 px-3 py-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase"
+                >
+                  Répertoire
+                </div>
+                <ul class="space-y-1">
+                  <SidebarLink
+                    to="/songbook"
+                    :icon="Music"
+                    label="Accueil"
+                    :collapsed="false"
+                    @click="closeRepertoirePopup"
+                  />
+                  <SidebarLink
+                    to="/songbook/browse"
+                    :icon="Library"
+                    label="Tous les chants"
+                    :collapsed="false"
+                    @click="closeRepertoirePopup"
+                  />
+                  <SidebarLink
+                    v-if="authStore.canManageChants"
+                    to="/songbook/categories"
+                    :icon="Tag"
+                    label="Catégories"
+                    :collapsed="false"
+                    @click="closeRepertoirePopup"
+                  />
+                  <SidebarLink
+                    v-if="authStore.canManageChants"
+                    to="/songbook/new"
+                    :icon="Plus"
+                    label="Nouveau chant"
+                    :collapsed="false"
+                    @click="closeRepertoirePopup"
+                  />
+                </ul>
+              </div>
+            </transition>
+          </Teleport>
+        </div>
+
+        <!-- Section Super Admin (SUPER_ADMIN uniquement) -->
+        <div v-if="authStore.isSuperAdmin" class="relative mt-4">
+          <button
+            ref="superAdminTriggerRef"
+            class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
+            :class="[
+              isSuperAdminOpen && !ui.isSidebarCollapsed
+                ? 'bg-slate-50 text-(--color-primary-700)'
+                : 'text-slate-600',
+            ]"
+            @click="handleSuperAdminMenuClick"
+            @mouseenter="handleSuperAdminMouseEnter"
+            @mouseleave="handleSuperAdminMouseLeave"
+          >
+            <Building2 class="size-5 shrink-0" />
+            <span
+              v-if="!ui.isSidebarCollapsed"
+              class="flex-1 text-left text-[10px] font-bold tracking-wider uppercase"
+              >Super Admin</span
+            >
+            <ChevronDown
+              v-if="!ui.isSidebarCollapsed"
+              :class="[
+                'size-3.5 transition-transform duration-200',
+                isSuperAdminOpen ? 'rotate-180' : '',
+              ]"
+            />
+          </button>
+
+          <transition name="expand">
+            <ul
+              v-if="isSuperAdminOpen && !ui.isSidebarCollapsed"
+              class="mt-1 space-y-1 overflow-hidden"
+            >
+              <SidebarLink
+                to="/admin/campuses"
+                :icon="Building2"
+                label="Campuses"
+                :collapsed="false"
+                class="pl-9"
+              />
+              <SidebarLink
+                to="/admin/campus-config"
+                :icon="Settings2"
+                label="Config. Campus"
+                :collapsed="false"
+                class="pl-9"
+              />
+              <SidebarLink
+                to="/admin/super/profiles"
+                :icon="Users"
+                label="Tous les profils"
+                :collapsed="false"
+                class="pl-9"
+              />
+            </ul>
+          </transition>
+
+          <Teleport to="body">
+            <transition name="fade-in">
+              <div
+                v-if="ui.isSidebarCollapsed && isSuperAdminPopupVisible"
+                :style="superAdminPopupStyle"
+                class="fixed z-[9999] w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl"
+                @mouseenter="cancelSuperAdminClose"
+                @mouseleave="handleSuperAdminMouseLeave"
+              >
+                <div
+                  class="mb-2 border-b border-slate-50 px-3 py-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase"
+                >
+                  Super Admin
+                </div>
+                <ul class="space-y-1">
+                  <SidebarLink
+                    to="/admin/campuses"
+                    :icon="Building2"
+                    label="Campuses"
+                    :collapsed="false"
+                    @click="closeSuperAdminPopup"
+                  />
+                  <SidebarLink
+                    to="/admin/campus-config"
+                    :icon="Settings2"
+                    label="Config. Campus"
+                    :collapsed="false"
+                    @click="closeSuperAdminPopup"
+                  />
+                  <SidebarLink
+                    to="/admin/super/profiles"
+                    :icon="Users"
+                    label="Tous les profils"
+                    :collapsed="false"
+                    @click="closeSuperAdminPopup"
+                  />
+                </ul>
+              </div>
+            </transition>
+          </Teleport>
+        </div>
+
+        <!-- Section Administration (ADMIN uniquement — SuperAdmin a sa propre section) -->
+        <div v-if="authStore.hasAdminAccess && !authStore.isSuperAdmin" class="relative mt-4">
+          <button
+            ref="adminTriggerRef"
+            class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
+            :class="[
+              isAdminOpen && !ui.isSidebarCollapsed
+                ? 'bg-slate-50 text-(--color-primary-700)'
+                : 'text-slate-600',
+            ]"
+            @click="handleAdminMenuClick"
+            @mouseenter="handleAdminMouseEnter"
+            @mouseleave="handleAdminMouseLeave"
+          >
+            <Users class="size-5 shrink-0" />
+            <span
+              v-if="!ui.isSidebarCollapsed"
+              class="flex-1 text-left text-[10px] font-bold tracking-wider uppercase"
+              >Administration</span
+            >
+            <ChevronDown
+              v-if="!ui.isSidebarCollapsed"
+              :class="[
+                'size-3.5 transition-transform duration-200',
+                isAdminOpen ? 'rotate-180' : '',
+              ]"
+            />
+          </button>
+
+          <transition name="expand">
+            <ul v-if="isAdminOpen && !ui.isSidebarCollapsed" class="mt-1 space-y-1 overflow-hidden">
+              <SidebarLink
+                to="/admin/profiles"
+                :icon="Users"
+                label="Profils"
+                :collapsed="false"
+                class="pl-9"
+              />
+            </ul>
+          </transition>
+
+          <Teleport to="body">
+            <transition name="fade-in">
+              <div
+                v-if="ui.isSidebarCollapsed && isAdminPopupVisible"
+                :style="adminPopupStyle"
+                class="fixed z-[9999] w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl"
+                @mouseenter="cancelAdminClose"
+                @mouseleave="handleAdminMouseLeave"
+              >
+                <div
+                  class="mb-2 border-b border-slate-50 px-3 py-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase"
+                >
+                  Administration
+                </div>
+                <ul class="space-y-1">
+                  <SidebarLink
+                    to="/admin/profiles"
+                    :icon="Users"
+                    label="Profils"
+                    :collapsed="false"
+                    @click="closeAdminPopup"
+                  />
+                </ul>
+              </div>
+            </transition>
+          </Teleport>
         </div>
       </nav>
 
@@ -144,13 +479,48 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { ChevronLeft, ChevronRight, CalendarDays, ListTodo, ChevronDown } from 'lucide-vue-next'
+import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import {
+  Bell,
+  Building2,
+  CalendarDays,
+  CalendarOff,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  LayoutTemplate,
+  Library,
+  ListTodo,
+  Music,
+  Plus,
+  Settings2,
+  Tag,
+  Users,
+} from 'lucide-vue-next'
 import { useUIStore } from '../stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
+import { useSessionManager } from '~~/layers/auth/app/composables/useSessionManager'
+import { useMyAffectationsStore } from '~~/layers/planning/app/stores/useMyAffectationsStore'
 
 const ui = useUIStore()
 const authStore = useAuthStore()
+const myAffectationsStore = useMyAffectationsStore()
+useSessionManager()
+
+const route = useRoute()
+
+// Option A — ferme le sidebar en mode overlay mobile après chaque navigation.
+// Un seul watcher couvre tous les liens (sidebar + popups) sans toucher SidebarLink.vue.
+// Sur desktop (md+, ≥768px), le sidebar n'est jamais un overlay : on ne le ferme pas.
+watch(
+  () => route.path,
+  () => {
+    if (import.meta.client && window.innerWidth < 768 && !ui.isSidebarCollapsed) {
+      ui.toggleSidebar()
+    }
+  },
+)
 
 const isPlanningOpen = ref(true)
 const isPopupVisible = ref(false)
@@ -158,7 +528,177 @@ const triggerRef = ref<HTMLElement | null>(null)
 const popupTop = ref(0)
 const planningStore = { draftCount: 5 }
 
+const pendingAffectationsCount = computed(() => myAffectationsStore.pendingCount)
+
 let closeTimer: ReturnType<typeof setTimeout> | null = null
+
+// --- Super Admin menu state ---
+const isSuperAdminOpen = ref(true)
+const isSuperAdminPopupVisible = ref(false)
+const superAdminTriggerRef = ref<HTMLElement | null>(null)
+const superAdminPopupTop = ref(0)
+let superAdminCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+const superAdminPopupStyle = computed(() => ({
+  top: `${superAdminPopupTop.value}px`,
+  left: '76px',
+}))
+
+const updateSuperAdminPopupPosition = () => {
+  if (superAdminTriggerRef.value) {
+    const rect = superAdminTriggerRef.value.getBoundingClientRect()
+    superAdminPopupTop.value = rect.top
+  }
+}
+
+const handleSuperAdminMenuClick = () => {
+  if (ui.isSidebarCollapsed) {
+    updateSuperAdminPopupPosition()
+    isSuperAdminPopupVisible.value = !isSuperAdminPopupVisible.value
+  } else {
+    isSuperAdminOpen.value = !isSuperAdminOpen.value
+  }
+}
+
+const handleSuperAdminMouseEnter = () => {
+  if (ui.isSidebarCollapsed) {
+    cancelSuperAdminClose()
+    updateSuperAdminPopupPosition()
+    isSuperAdminPopupVisible.value = true
+  }
+}
+
+const handleSuperAdminMouseLeave = () => {
+  if (ui.isSidebarCollapsed) {
+    superAdminCloseTimer = setTimeout(() => {
+      isSuperAdminPopupVisible.value = false
+    }, 150)
+  }
+}
+
+const cancelSuperAdminClose = () => {
+  if (superAdminCloseTimer) {
+    clearTimeout(superAdminCloseTimer)
+    superAdminCloseTimer = null
+  }
+}
+
+const closeSuperAdminPopup = () => {
+  cancelSuperAdminClose()
+  isSuperAdminPopupVisible.value = false
+}
+
+// --- Administration menu state ---
+const isAdminOpen = ref(true)
+const isAdminPopupVisible = ref(false)
+const adminTriggerRef = ref<HTMLElement | null>(null)
+const adminPopupTop = ref(0)
+let adminCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+const adminPopupStyle = computed(() => ({
+  top: `${adminPopupTop.value}px`,
+  left: '76px',
+}))
+
+const updateAdminPopupPosition = () => {
+  if (adminTriggerRef.value) {
+    const rect = adminTriggerRef.value.getBoundingClientRect()
+    adminPopupTop.value = rect.top
+  }
+}
+
+const handleAdminMenuClick = () => {
+  if (ui.isSidebarCollapsed) {
+    updateAdminPopupPosition()
+    isAdminPopupVisible.value = !isAdminPopupVisible.value
+  } else {
+    isAdminOpen.value = !isAdminOpen.value
+  }
+}
+
+const handleAdminMouseEnter = () => {
+  if (ui.isSidebarCollapsed) {
+    cancelAdminClose()
+    updateAdminPopupPosition()
+    isAdminPopupVisible.value = true
+  }
+}
+
+const handleAdminMouseLeave = () => {
+  if (ui.isSidebarCollapsed) {
+    adminCloseTimer = setTimeout(() => {
+      isAdminPopupVisible.value = false
+    }, 150)
+  }
+}
+
+const cancelAdminClose = () => {
+  if (adminCloseTimer) {
+    clearTimeout(adminCloseTimer)
+    adminCloseTimer = null
+  }
+}
+
+const closeAdminPopup = () => {
+  cancelAdminClose()
+  isAdminPopupVisible.value = false
+}
+
+// --- Répertoire menu state ---
+const isRepertoireOpen = ref(true)
+const isRepertoirePopupVisible = ref(false)
+const repertoireTriggerRef = ref<HTMLElement | null>(null)
+const repertoirePopupTop = ref(0)
+let repertoireCloseTimer: ReturnType<typeof setTimeout> | null = null
+
+const repertoirePopupStyle = computed(() => ({
+  top: `${repertoirePopupTop.value}px`,
+  left: '76px',
+}))
+
+const updateRepertoirePopupPosition = () => {
+  if (repertoireTriggerRef.value) {
+    const rect = repertoireTriggerRef.value.getBoundingClientRect()
+    repertoirePopupTop.value = rect.top
+  }
+}
+
+const handleRepertoireMenuClick = () => {
+  if (ui.isSidebarCollapsed) {
+    updateRepertoirePopupPosition()
+    isRepertoirePopupVisible.value = !isRepertoirePopupVisible.value
+  } else {
+    isRepertoireOpen.value = !isRepertoireOpen.value
+  }
+}
+
+const handleRepertoireMouseEnter = () => {
+  if (ui.isSidebarCollapsed) {
+    cancelRepertoireClose()
+    updateRepertoirePopupPosition()
+    isRepertoirePopupVisible.value = true
+  }
+}
+
+const handleRepertoireMouseLeave = () => {
+  if (ui.isSidebarCollapsed) {
+    repertoireCloseTimer = setTimeout(() => {
+      isRepertoirePopupVisible.value = false
+    }, 150)
+  }
+}
+
+const cancelRepertoireClose = () => {
+  if (repertoireCloseTimer) {
+    clearTimeout(repertoireCloseTimer)
+    repertoireCloseTimer = null
+  }
+}
+
+const closeRepertoirePopup = () => {
+  cancelRepertoireClose()
+  isRepertoirePopupVisible.value = false
+}
 
 const popupStyle = computed(() => ({
   top: `${popupTop.value}px`,

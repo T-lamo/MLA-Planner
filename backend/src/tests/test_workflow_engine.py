@@ -96,6 +96,7 @@ def test_get_allowed_transitions_standard(affectation_wf):
     expected = [
         AffectationStatusCode.PRESENT,
         AffectationStatusCode.ABSENT,
+        AffectationStatusCode.RETARD,
         AffectationStatusCode.REFUSE,
     ]
     assert allowed == expected

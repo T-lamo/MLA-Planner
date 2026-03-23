@@ -19,3 +19,10 @@ export interface EnhancedApiError extends Error {
   data?: ApiErrorResponse
   statusCode?: number // Injecté par Nuxt/ofetch (le code HTTP réel)
 }
+
+export interface PaginatedResponse<T> {
+  total: number
+  limit: number
+  offset: number
+  data: T[]
+}

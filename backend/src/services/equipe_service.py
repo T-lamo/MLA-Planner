@@ -1,6 +1,7 @@
 from sqlmodel import Session
 
-from core.exceptions import ConflictException, NotFoundException
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import Equipe, EquipeCreate, EquipeMembre, EquipeRead, EquipeUpdate, Membre
 from repositories.equipe_repository import EquipeRepository
 from services.base_service import BaseService
@@ -17,12 +18,12 @@ class EquipeService(BaseService[EquipeCreate, EquipeRead, EquipeUpdate, Equipe])
         equipe = self.get_one(equipe_id)
         membre = self.db.get(Membre, membre_id)
         if not membre:
-            raise NotFoundException(f"Membre {membre_id} introuvable.")
+            raise AppException(ErrorRegistry.MEMBRE_NOT_FOUND)
 
         # 2. Vérifier si déjà présent
         existing = self.db.get(EquipeMembre, (equipe_id, membre_id))
         if existing:
-            raise ConflictException("Ce membre est déjà dans cette équipe.")
+            raise AppException(ErrorRegistry.TEAM_MEMBER_DUPLICATE)
 
         # 3. Créer le lien
         lien = EquipeMembre(equipe_id=equipe.id, membre_id=membre.id)
@@ -35,7 +36,7 @@ class EquipeService(BaseService[EquipeCreate, EquipeRead, EquipeUpdate, Equipe])
         """Retire un membre de l'équipe."""
         lien = self.db.get(EquipeMembre, (equipe_id, membre_id))
         if not lien:
-            raise NotFoundException("Le membre ne fait pas partie de cette équipe.")
+            raise AppException(ErrorRegistry.TEAM_MEMBER_NOT_FOUND)
 
         self.db.delete(lien)
         self.db.flush()

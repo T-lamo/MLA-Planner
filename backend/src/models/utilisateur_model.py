@@ -1,6 +1,6 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from sqlmodel import Field, SQLModel
 
 from models.role_model import RoleRead
@@ -13,7 +13,7 @@ class UtilisateurBase(SQLModel):
 
 class UtilisateurCreate(UtilisateurBase):
     password: Optional[str] = Field(default=None, min_length=6, max_length=128)
-    roles_ids: List[int] = []
+    roles_ids: List[str] = []
 
     @field_validator("username")
     @classmethod
@@ -32,17 +32,46 @@ class UtilisateurCreate(UtilisateurBase):
 
 class UtilisateurRead(UtilisateurBase):
     id: str
-    membre_id: Optional[str] = None  # Relation
+    membre_id: Optional[str] = None
+    campus_principal_id: Optional[str] = None
+    name: Optional[str] = None
     roles: List[RoleRead] = []
 
     # password n’est jamais exposé
+
+    @model_validator(mode="before")
+    @classmethod
+    def _extract_roles_from_affectations(cls, data: Any) -> Any:
+        """Popule `roles` depuis `utilisateur.affectations[].role`.
+
+        Le modèle ORM Utilisateur expose `affectations` (AffectationRole)
+        et non un `roles` direct. Ce validateur extrait les rôles si la
+        relation a été chargée via selectinload (présente dans __dict__).
+        Si elle n’est pas chargée, `roles` conserve sa valeur par défaut [].
+        """
+        if isinstance(data, dict):
+            return data
+        loaded = getattr(data, "__dict__", {})
+        if "affectations" not in loaded:
+            return data
+        affs = loaded["affectations"] or []
+        roles = [aff.role for aff in affs if aff.__dict__.get("role") is not None]
+        return {
+            "id": data.id,
+            "username": data.username,
+            "actif": data.actif,
+            "membre_id": getattr(data, "membre_id", None),
+            "campus_principal_id": getattr(data, "campus_principal_id", None),
+            "name": getattr(data, "name", None),
+            "roles": roles,
+        }
 
 
 class UtilisateurUpdate(SQLModel):
     username: Optional[str] = Field(default=None, min_length=3, max_length=50)
     actif: Optional[bool] = None
     password: Optional[str] = Field(default=None, min_length=6, max_length=128)
-    roles_ids: Optional[List[int]] = None
+    roles_ids: Optional[List[str]] = None
 
     @field_validator("username")
     @classmethod
@@ -56,16 +85,8 @@ class UtilisateurUpdate(SQLModel):
     def roles_valid(cls, v):
         if v is None:
             return v
-
-        if len(v) == 0:
-            raise ValueError("L'utilisateur doit avoir au moins un rôle")
-
-        if 0 in v:
-            raise ValueError("Le rôle 0 est invalide")
-
         if len(set(v)) != len(v):
             raise ValueError("Les rôles ne doivent pas contenir de doublons")
-
         return v
 
 
