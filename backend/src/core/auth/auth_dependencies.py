@@ -1,13 +1,15 @@
 # core/auth/auth_dependencies.py
 from enum import Enum
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jwt import InvalidTokenError as JWTError
 from sqlmodel import Session
 
 from conf.db.database import Database
 from core.settings import settings as stng
+from mla_enum import RoleName
 from models import Utilisateur
 
 from .auth_repository import AuthRepository
@@ -82,17 +84,25 @@ class RoleChecker:
     def __init__(self, allowed_roles: list[str]):
         self.allowed_roles = allowed_roles
 
-    def __call__(self, user: Utilisateur = Depends(get_current_active_user)):
-        # Conversion vers le nom de l'enum pour comparer avec allowed_roles
+    def __call__(
+        self, user: Utilisateur = Depends(get_current_active_user)
+    ) -> list[str]:
+        def _role_name(libelle: object) -> str:
+            if isinstance(libelle, RoleName):
+                return libelle.name  # "SUPER_ADMIN", "ADMIN", etc.
+            if isinstance(libelle, Enum):
+                return libelle.name
+            return str(libelle)
+
         user_roles = [
-            (
-                aff.role.libelle.name
-                if isinstance(aff.role.libelle, Enum)
-                else aff.role.libelle
-            )
+            _role_name(aff.role.libelle)
             for aff in user.affectations
-            if aff.role
+            if aff.role and aff.role.libelle is not None
         ]
+
+        # Superadmin bypass — accès total sans restriction de rôle
+        if RoleName.SUPER_ADMIN.name in user_roles:
+            return user_roles
 
         if not any(role in self.allowed_roles for role in user_roles):
             raise HTTPException(

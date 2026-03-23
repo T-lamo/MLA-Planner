@@ -36,3 +36,26 @@ def create_access_token(
         to_encode, stng.JWT_SECRET_KEY, algorithm=stng.JWT_ALGORITHM
     )
     return encoded_jwt, expire
+
+
+def create_refresh_token(
+    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
+) -> tuple[str, datetime]:
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(days=stng.REFRESH_TOKEN_EXPIRE_DAYS)
+    )
+
+    to_encode.update(
+        {
+            "exp": expire,
+            "iat": datetime.now(timezone.utc),
+            "jti": str(uuid.uuid4()),
+            "type": "refresh",
+        }
+    )
+
+    encoded_jwt = jwt.encode(
+        to_encode, stng.JWT_SECRET_KEY, algorithm=stng.JWT_ALGORITHM
+    )
+    return encoded_jwt, expire

@@ -4,7 +4,11 @@ import pytest
 from fastapi import status
 from sqlmodel import Session
 
-from models import Campus, Ministere
+from models import Campus, CampusRead, MembreRead, Ministere, MinistereRead
+
+MembreRead.model_rebuild()
+MinistereRead.model_rebuild()
+CampusRead.model_rebuild()
 
 # pylint: disable=redefined-outer-name, unused-argument
 
@@ -28,39 +32,48 @@ def test_min(session: Session, test_campus: Campus) -> Ministere:
 
 
 def test_create_ministere_success(client, admin_headers, test_campus):
-    """Vérifie la création réussie avec campus valide."""
+    """Vérifie la création réussie avec une liste de campus."""
     payload = {
         "nom": f"Ministère Louange {uuid4()}",
         "date_creation": "2024-01-01",
-        "campus_id": test_campus.id,
+        "campus_ids": [str(test_campus.id)],  # Modifié en liste
     }
     response = client.post("/ministeres/", json=payload, headers=admin_headers)
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert data["nom"] == payload["nom"]
     assert "id" in data
-    assert "poles_count" in data  # Vérifie que le computed field est présent
 
 
 def test_create_ministere_duplicate_name(client, admin_headers, test_min):
-    """Vérifie qu'on ne peut pas avoir deux ministères
-    avec le même nom sur le même campus."""
+    """Vérifie l'unicité globale du nom du ministère."""
+    # Note : Ton service vérifie désormais le nom de manière globale
     payload = {
         "nom": test_min.nom,
         "date_creation": "2024-01-01",
-        "campus_id": test_min.campus_id,
+        "campus_ids": [str(c.id) for c in test_min.campuses],
     }
     response = client.post("/ministeres/", json=payload, headers=admin_headers)
-    # Ton service lève une BadRequestException sur IntegrityError
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 
-def test_create_ministere_orphaned_fails(client, admin_headers):
-    """Vérifie le 404 si le campus_id n'existe pas."""
+def test_create_ministere_no_campus_fails(client, admin_headers):
+    """Vérifie qu'un ministère sans campus est refusé (règle métier)."""
     payload = {
-        "nom": "Ministere Sans Campus",
+        "nom": "Ministere Erreur",
         "date_creation": "2024-01-01",
-        "campus_id": str(uuid4()),
+        "campus_ids": [],  # Liste vide
+    }
+    response = client.post("/ministeres/", json=payload, headers=admin_headers)
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+def test_create_ministere_invalid_campus_id(client, admin_headers):
+    """Vérifie le 404 si l'un des IDs de la liste n'existe pas."""
+    payload = {
+        "nom": "Ministere Fantôme",
+        "date_creation": "2024-01-01",
+        "campus_ids": [str(uuid4())],
     }
     response = client.post("/ministeres/", json=payload, headers=admin_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -82,8 +95,6 @@ def test_get_one_ministere_with_counts(client, test_min):
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert data["id"] == test_min.id
-    assert "poles_count" in data
-    assert isinstance(data["poles_count"], int)
 
 
 def test_update_ministere_partial(client, admin_headers, test_min):

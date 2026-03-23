@@ -9,10 +9,14 @@ from .affectation_model import __all__ as affectation
 from .affectation_role_model import *  # noqa: F401,F403
 from .affectation_role_model import __all__ as affectation_role
 from .base_pagination import *  # noqa: F401,F403
+from .campus_config_model import *  # noqa: F401,F403
+from .campus_config_model import __all__ as campus_config
 from .campus_model import *  # noqa: F401,F403
 from .campus_model import __all__ as campus
 from .categorie_role_model import *  # noqa: F401,F403
 from .categorie_role_model import __all__ as category_role
+from .chant_model import *  # noqa: F401,F403
+from .chant_model import __all__ as chant_model
 from .equipe_membre import *  # noqa: F401,F403
 from .equipe_membre import __all__ as equipe_membre
 from .equipe_model import *  # noqa: F401,F403
@@ -25,8 +29,10 @@ from .membre_role_model import *  # noqa: F401,F403
 from .membre_role_model import __all__ as membre_role
 from .ministere_model import *  # noqa: F401,F403
 from .ministere_model import __all__ as ministere
-from .organisationicc_model import *  # noqa: F401,F403
-from .organisationicc_model import __all__ as organisation
+from .model_base import *  # noqa: F401,F403
+from .model_base import __all__ as response
+from .organisation_model import *  # noqa: F401,F403
+from .organisation_model import __all__ as organisation
 from .pays_model import *  # noqa: F401,F403
 from .pays_model import __all__ as pays
 from .permission_model import *  # noqa: F401,F403
@@ -35,6 +41,8 @@ from .planning_model import *  # noqa: F401,F403
 from .planning_model import __all__ as planning_model
 from .pole_model import *  # noqa: F401,F403
 from .pole_model import __all__ as pole_model
+from .profil_model import *  # noqa: F401,F403
+from .profil_model import __all__ as profile
 from .role_competence_model import *  # noqa: F401,F403
 from .role_competence_model import __all__ as role_competence
 from .role_model import *  # noqa: F401,F403
@@ -43,6 +51,8 @@ from .schema_db_model import *  # noqa: F401,F403
 from .schema_db_model import __all__ as schema_dbs
 from .slot_model import *  # noqa: F401,F403
 from .slot_model import __all__ as slot_model
+from .team_model import *  # noqa: F401,F403
+from .team_model import __all__ as team_model
 from .utilisateur_model import *  # noqa: F401,F403
 from .utilisateur_model import __all__ as utilisateurs
 from .voix_model import *  # noqa: F401,F403
@@ -76,4 +86,9 @@ __all__: List[str] = (
     + list(slot_model)
     + list(planning_model)
     + list(affectation)
+    + list(profile)
+    + list(team_model)
+    + list(response)
+    + list(campus_config)
+    + list(chant_model)
 )

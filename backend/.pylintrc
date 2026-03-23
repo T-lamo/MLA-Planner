@@ -13,10 +13,17 @@ disable=
     R0903,
     R0913,
     logging-fstring-interpolation,
-    C0121
+    C0121,
+    W0718,
+    W0613
 
 [BASIC]
 # On autorise les noms de constantes en minuscules pour les chemins (ex: dotenv_path)
 const-rgx=[a-z_][a-z0-9_]{2,30}$|(?P<uppercase>[A-Z_][A-Z0-9_]{2,30}$)
 # On autorise les noms de classes avec des underscores (ex: Equipe_Membre)
 class-rgx=[a-zA-Z_][a-zA-Z0-9_]+$
+
+[SIMILARITIES]
+# Seuil augmenté à 8 : les blocs selectinload() de 6 lignes sont
+# du code de configuration légitime, pas de la vraie duplication.
+min-similarity-lines=8

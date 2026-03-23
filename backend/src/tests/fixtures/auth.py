@@ -80,9 +80,46 @@ def inactive_user(session: Session) -> Utilisateur:
 
 
 @pytest.fixture
+def test_superadmin(session: Session) -> Utilisateur:
+    """Crée un superadmin avec son rôle (Get or Create)."""
+    super_role = session.exec(
+        select(Role).where(Role.libelle == RoleName.SUPER_ADMIN)
+    ).first()
+    if not super_role:
+        super_role = Role(libelle=RoleName.SUPER_ADMIN)
+        session.add(super_role)
+        session.flush()
+
+    user = session.exec(
+        select(Utilisateur).where(Utilisateur.username == "superadmin_user")
+    ).first()
+    if not user:
+        user = Utilisateur(
+            username="superadmin_user",
+            password=get_password_hash("superadminpass"),
+            actif=True,
+        )
+        session.add(user)
+        session.flush()
+
+        aff = AffectationRole(utilisateur_id=user.id, role_id=super_role.id)
+        session.add(aff)
+
+    session.flush()
+    session.refresh(user)
+    return user
+
+
+@pytest.fixture
 def admin_headers(test_admin):
     # Remplace par ta vraie fonction de création de token
     token, _ = create_access_token(data={"sub": test_admin.username})
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def superadmin_headers(test_superadmin):
+    token, _ = create_access_token(data={"sub": test_superadmin.username})
     return {"Authorization": f"Bearer {token}"}
 
 

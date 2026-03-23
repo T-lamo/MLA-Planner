@@ -1,0 +1,350 @@
+.
+├── backend
+│   ├── alembic
+│   │   ├── env.py
+│   │   ├── README
+│   │   ├── script.py.mako
+│   │   └── versions
+│   │       ├── 2de1716fa833_.py
+│   │       ├── 387bf6be9538_.py
+│   │       ├── 46913fa5fc89_.py
+│   │       ├── 6d98d29545c6_.py
+│   │       └── 88ac551b6b93_.py
+│   ├── alembic.ini
+│   ├── debug_change.patch
+│   ├── Dockerfile
+│   ├── logs
+│   │   └── test
+│   ├── Makefile
+│   ├── requirements.txt
+│   ├── scripts
+│   │   ├── db_admin.py
+│   │   └── __init__.py
+│   └── src
+│       ├── conf
+│       │   ├── db
+│       │   │   ├── database.py
+│       │   │   ├── db_service.py
+│       │   │   ├── __init__.py
+│       │   │   └── seed
+│       │   │       ├── config.py
+│       │   │       ├── data.py
+│       │   │       ├── exceptions.py
+│       │   │       ├── __init__.py
+│       │   │       ├── seed_referential.py
+│       │   │       └── seed_service.py
+│       │   └── __init__.py
+│       ├── core
+│       │   ├── auth
+│       │   │   ├── auth_dependencies.py
+│       │   │   ├── auth_repository.py
+│       │   │   ├── auth_route.py
+│       │   │   ├── auth_service.py
+│       │   │   ├── __init__.py
+│       │   │   ├── models.py
+│       │   │   └── security.py
+│       │   ├── exceptions
+│       │   │   ├── app_exception.py
+│       │   │   ├── exceptions_handlers.py
+│       │   │   ├── exceptions.py
+│       │   │   └── __init__.py
+│       │   ├── __init__.py
+│       │   ├── message.py
+│       │   ├── settings.py
+│       │   ├── validation_message.py
+│       │   └── workflow_engine.py
+│       ├── __init__.py
+│       ├── main.py
+│       ├── mla_enum
+│       │   ├── custom_enum.py
+│       │   └── __init__.py
+│       ├── models
+│       │   ├── activite_model.py
+│       │   ├── affectation_context_model.py
+│       │   ├── affectation_model.py
+│       │   ├── affectation_role_model.py
+│       │   ├── base_pagination.py
+│       │   ├── campus_model.py
+│       │   ├── categorie_role_model.py
+│       │   ├── equipe_membre.py
+│       │   ├── equipe_model.py
+│       │   ├── indisponibilite_model.py
+│       │   ├── __init__.py
+│       │   ├── membre_model.py
+│       │   ├── membre_role_model.py
+│       │   ├── ministere_model.py
+│       │   ├── model_base.py
+│       │   ├── organisationicc_model.py
+│       │   ├── pays_model.py
+│       │   ├── permission_model.py
+│       │   ├── planning_model.py
+│       │   ├── pole_model.py
+│       │   ├── profil_model.py
+│       │   ├── role_competence_model.py
+│       │   ├── role_model.py
+│       │   ├── schema_db_model.py
+│       │   ├── slot_model.py
+│       │   ├── utilisateur_model.py
+│       │   └── voix_model.py
+│       ├── repositories
+│       │   ├── activite_repository.py
+│       │   ├── affectation_repository.py
+│       │   ├── base_repository.py
+│       │   ├── campus_repository.py
+│       │   ├── category_role_repository.py
+│       │   ├── equipe_repository.py
+│       │   ├── indisponibilite_repository.py
+│       │   ├── __init__.py
+│       │   ├── membre_repository.py
+│       │   ├── membre_role_repository.py
+│       │   ├── ministere_repository.py
+│       │   ├── organisation_repository.py
+│       │   ├── pays_repository.py
+│       │   ├── planning_repository.py
+│       │   ├── pole_repository.py
+│       │   ├── role_competence_repository.py
+│       │   └── slot_repository.py
+│       ├── routes
+│       │   ├── activite_router.py
+│       │   ├── affectation_router.py
+│       │   ├── base_route_factory.py
+│       │   ├── campus_router.py
+│       │   ├── categorie_role_router.py
+│       │   ├── dependance.py
+│       │   ├── deps.py
+│       │   ├── equipe_router.py
+│       │   ├── indisponibilite_router.py
+│       │   ├── __init__.py
+│       │   ├── membre_role_router.py
+│       │   ├── membre_router.py
+│       │   ├── ministere_router.py
+│       │   ├── organisation_router.py
+│       │   ├── pays_router.py
+│       │   ├── planning_router.py
+│       │   ├── pole_router.py
+│       │   ├── profil_router.py
+│       │   ├── role_competence_router.py
+│       │   └── slot_router.py
+│       ├── services
+│       │   ├── activite_service.py
+│       │   ├── affectation_service.py
+│       │   ├── base_service.py
+│       │   ├── campus_service.py
+│       │   ├── categorie_role_service.py
+│       │   ├── equipe_service.py
+│       │   ├── indisponibilite_service.py
+│       │   ├── __init__.py
+│       │   ├── membre_role_service.py
+│       │   ├── membre_service.py
+│       │   ├── ministere_service.py
+│       │   ├── organisation_service.py
+│       │   ├── pays_service.py
+│       │   ├── planing_service.py
+│       │   ├── pole_service.py
+│       │   ├── profile_service.py
+│       │   ├── role_competence_service.py
+│       │   ├── slot_service.py
+│       │   └── validation_engine.py
+│       ├── tests
+│       │   ├── conftest.py
+│       │   ├── fixtures
+│       │   │   ├── auth.py
+│       │   │   ├── core.py
+│       │   │   ├── geo.py
+│       │   │   ├── __init__.py
+│       │   │   ├── mocks.py
+│       │   │   ├── planning.py
+│       │   │   └── profile.py
+│       │   ├── __init__.py
+│       │   ├── test_activite.py
+│       │   ├── test_assignement_service.py
+│       │   ├── test_auth.py
+│       │   ├── test_campus.py
+│       │   ├── test_categorie_role.py
+│       │   ├── test_equipe.py
+│       │   ├── test_indisponibilite.py
+│       │   ├── test_membre.py
+│       │   ├── test_membre_role.py
+│       │   ├── test_membre_service.py
+│       │   ├── test_ministere.py
+│       │   ├── test_organisation.py
+│       │   ├── test_pays.py
+│       │   ├── test_planning_delete.py
+│       │   ├── test_planning_integration.py
+│       │   ├── test_planning.py
+│       │   ├── test_planning_read.py
+│       │   ├── test_pole.py
+│       │   ├── test_profile.py
+│       │   ├── test_role_competence.py
+│       │   ├── test_slot.py
+│       │   ├── test_workflow_engine.py
+│       │   └── test_workflow.py
+│       └── utils
+│           ├── __init__.py
+│           ├── utils_func.py
+│           └── validator.py
+├── check_import.py
+├── create_init.py
+├── debug_change.patch
+├── frontend
+│   ├── app
+│   │   ├── app.vue
+│   │   ├── pages
+│   │   │   └── index.vue
+│   │   └── plugins
+│   │       └── ui-core.client.ts
+│   ├── eslint.config.mjs
+│   ├── layers
+│   │   ├── auth
+│   │   │   ├── app
+│   │   │   │   ├── components
+│   │   │   │   ├── layouts
+│   │   │   │   │   └── auth.vue
+│   │   │   │   ├── middleware
+│   │   │   │   │   └── 01.auth.global.ts
+│   │   │   │   ├── pages
+│   │   │   │   │   └── login.vue
+│   │   │   │   ├── plugins
+│   │   │   │   │   └── auth-init.server.ts
+│   │   │   │   ├── repositories
+│   │   │   │   │   └── AuthRepository.ts
+│   │   │   │   └── stores
+│   │   │   │       └── useAuthStore.ts
+│   │   │   └── nuxt.config.ts
+│   │   ├── base
+│   │   │   ├── app
+│   │   │   │   ├── assets
+│   │   │   │   │   └── css
+│   │   │   │   │       └── main.css
+│   │   │   │   ├── components
+│   │   │   │   │   ├── AppDrawer.vue
+│   │   │   │   │   ├── BaseBadge.vue
+│   │   │   │   │   ├── CampusSelector.vue
+│   │   │   │   │   ├── FormSection.vue
+│   │   │   │   │   ├── MLANotifications.vue
+│   │   │   │   │   ├── profile
+│   │   │   │   │   │   ├── avanrefacto.vue
+│   │   │   │   │   │   ├── ProfileBasicInfo.vue
+│   │   │   │   │   │   ├── ProfileCampusSelector.vue
+│   │   │   │   │   │   ├── ProfileCard.vue
+│   │   │   │   │   │   ├── ProfileFilters.vue
+│   │   │   │   │   │   ├── ProfileFormDrawer.vue
+│   │   │   │   │   │   ├── ProfileHeader.vue
+│   │   │   │   │   │   ├── ProfileMinistereManager.vue
+│   │   │   │   │   │   └── ProfileSecurityAccess.vue
+│   │   │   │   │   ├── Profile
+│   │   │   │   │   ├── SidebarLink.vue
+│   │   │   │   │   ├── TopBar.vue
+│   │   │   │   │   ├── UserBar.vue
+│   │   │   │   │   └── UserMenu.vue
+│   │   │   │   ├── composables
+│   │   │   │   │   ├── useApiFetch.ts
+│   │   │   │   │   ├── useCampuses.ts
+│   │   │   │   │   ├── useErrorHandler.ts
+│   │   │   │   │   ├── useMinistere.ts
+│   │   │   │   │   ├── useMLANotify.ts
+│   │   │   │   │   ├── useProfileFormLogic.ts
+│   │   │   │   │   └── useProfile.ts
+│   │   │   │   ├── layouts
+│   │   │   │   │   └── default.vue
+│   │   │   │   ├── pages
+│   │   │   │   │   └── admin
+│   │   │   │   │       └── profiles.vue
+│   │   │   │   ├── plugins
+│   │   │   │   │   └── api.ts
+│   │   │   │   ├── repositories
+│   │   │   │   │   ├── BaseRepository.ts
+│   │   │   │   │   ├── CampusRepository.ts
+│   │   │   │   │   ├── GeneriqueRepository.ts
+│   │   │   │   │   ├── MinistereRepository.ts
+│   │   │   │   │   └── ProfileRepository.ts
+│   │   │   │   └── stores
+│   │   │   │       ├── useCampusStore.ts
+│   │   │   │       ├── useMinistereStore.ts
+│   │   │   │       ├── useMLANotificationStore.ts
+│   │   │   │       ├── useProfileStore.ts
+│   │   │   │       ├── useUiStore.ts
+│   │   │   │       └── utils
+│   │   │   │           └── usePagination.ts
+│   │   │   ├── nuxt.config.ts
+│   │   │   ├── tailwind.config.ts
+│   │   │   └── types
+│   │   │       ├── api.ts
+│   │   │       ├── campus.ts
+│   │   │       ├── index.ts
+│   │   │       ├── membre-role.ts
+│   │   │       ├── membre.ts
+│   │   │       ├── ministere.ts
+│   │   │       ├── notification.ts
+│   │   │       ├── pole.ts
+│   │   │       ├── profiles.ts
+│   │   │       ├── shared.ts
+│   │   │       └── utilisateur.ts
+│   │   └── planning
+│   │       ├── app
+│   │       │   ├── components
+│   │       │   │   ├── AppCalendar.vue
+│   │       │   │   ├── CalendarPerspectiveToggle.vue
+│   │       │   │   ├── calendar.vue
+│   │       │   │   └── PlanningDetailDrawer.vue
+│   │       │   ├── composables
+│   │       │   │   └── usePlanning.ts
+│   │       │   ├── pages
+│   │       │   │   ├── planning
+│   │       │   │   │   ├── calendar.vue
+│   │       │   │   │   ├── index.vue
+│   │       │   │   │   └── list.vue
+│   │       │   │   └── planning.vue
+│   │       │   └── types
+│   │       │       └── planning.types.ts
+│   │       └── nuxt.config.ts
+│   ├── Makefile
+│   ├── nuxt.config.ts
+│   ├── package.json
+│   ├── pnpm-lock.yaml
+│   ├── public
+│   │   ├── favicon.ico
+│   │   └── robots.txt
+│   ├── README.md
+│   ├── tests
+│   │   └── basic.test.ts
+│   └── tsconfig.json
+├── Makefile
+├── merge_files.py
+├── mypy.ini
+├── netlify.toml
+├── package.json
+├── packages
+│   └── ui-core
+│       ├── dist
+│       │   ├── components
+│       │   │   ├── CoreElement.d.ts
+│       │   │   ├── ui-hello.d.ts
+│       │   │   └── ui-login.d.ts
+│       │   ├── index.d.ts
+│       │   ├── styles
+│       │   │   └── tokens.d.ts
+│       │   └── ui-core.js
+│       ├── Makefile
+│       ├── package.json
+│       ├── src
+│       │   ├── components
+│       │   │   ├── CoreElement.ts
+│       │   │   ├── ui-hello.ts
+│       │   │   └── ui-login.ts
+│       │   ├── env.d.ts
+│       │   ├── index.ts
+│       │   ├── styles
+│       │   │   └── tokens.ts
+│       │   └── vite-env.d.ts
+│       ├── tsconfig.json
+│       └── vite.config.ts
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
+├── pyproject.toml
+├── pytest.ini
+├── README.md
+├── render.yaml
+└── structure.txt
+
+67 directories, 281 files

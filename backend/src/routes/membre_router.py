@@ -2,13 +2,16 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import Depends, status
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from conf.db.database import Database
-from core.auth.auth_dependencies import RoleChecker
-from models import MembreCreate, MembreRead, MembreUpdate, UtilisateurRead
+from core.auth.auth_dependencies import RoleChecker, get_current_active_user
+from models import MembreCreate, MembreRead, MembreUpdate, Utilisateur, UtilisateurRead
+
+# MembreSimple est défini localement dans membre_model (hors __init__)
+from models.membre_model import MembreSimple
 from models.membre_role_model import MembreRoleCreate, MembreRoleRead
-from models.schema_db_model import Membre
+from models.schema_db_model import Membre, Ministere
 from routes.dependance import get_current_membre
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.membre_service import MembreService
@@ -79,6 +82,23 @@ def remove_membre_role(
 ):
     """Retire une compétence à un membre (Hard Delete sur la table de liaison)."""
     service.remove_role_from_membre(id_membre, role_code)
+
+
+@router.get(
+    "/by-ministere/{ministere_id}",
+    response_model=List[MembreSimple],
+    summary="Membres d'un ministère",
+    description="Retourne tous les membres actifs liés à un ministère donné.",
+)
+def list_membres_by_ministere(
+    ministere_id: str,
+    db: Session = Depends(Database.get_db_for_route),
+    _: Utilisateur = Depends(get_current_active_user),
+):
+    ministere = db.exec(select(Ministere).where(Ministere.id == ministere_id)).first()
+    if not ministere:
+        return []
+    return [m for m in ministere.membres if m.actif]
 
 
 @router.get("/me/agenda")

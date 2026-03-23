@@ -1,7 +1,10 @@
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import ConfigDict, field_validator
 from sqlmodel import Field, SQLModel
+
+from .membre_model import MembreSimple
+from .ministere_model import MinistereSimple
 
 
 # -------------------------
@@ -51,6 +54,10 @@ class CampusRead(CampusBase):
     pays_id: str
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
+
+class CampusReadWithDetails(CampusRead):
+    membres: List["MembreSimple"] = []
+    ministeres: List["MinistereSimple"] = []
     # Note : On inclut généralement PaysRead ici si importé,
     # sinon on reste sur les types simples pour éviter les cycles.
 
@@ -60,4 +67,5 @@ __all__ = [
     "CampusUpdate",
     "CampusRead",
     "CampusCreate",
+    "CampusReadWithDetails",
 ]

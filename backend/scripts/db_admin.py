@@ -25,17 +25,25 @@ def recreate_db():
 
 def seed_db():
     engine = Database.get_engine()
-    # On utilise Session(engine) pour s'assurer d'être sur la bonne connexion
+    print(f"🌱 [SEED] Remplissage de la base : {engine.url.database}...")
+
+    # SeedService gère son propre begin/commit via `with self.db.begin()`
     with Session(engine) as session:
         try:
-            print(f"🌱 [SEED] Remplissage de la base : {engine.url.database}...")
             SeedService(session).run()
-            session.commit() # Important : commit explicite
-            print("✅ Seeding terminé avec succès.")
+            print("✅ SeedService terminé.")
         except Exception as e:
             session.rollback()
-            print(f"❌ Erreur lors du seeding : {e}")
+            print(f"❌ Erreur SeedService : {e}")
             sys.exit(1)
+
+    # SeedReferentials désactivé : ses données (campus "Toulouse", org "ICC_WORLD",
+    # pays "FRANCE", ministères "MLA"/"ACCUEIL"/"MFI") conflictent avec SeedService
+    # ("Campus Toulouse", "ICC Europe", "France", "Louange et Adoration"…).
+    # SeedService couvre désormais l'intégralité des données de référence.
+
+    print("✅ Seeding terminé avec succès.")
+
 
 if __name__ == "__main__":
     args = sys.argv

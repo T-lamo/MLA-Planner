@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Planning annulé — MLA Planning</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F8FAFC;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0"
+         style="background-color:#F8FAFC;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0"
+               style="max-width:600px;width:100%;background-color:#FFFFFF;
+                      border-radius:12px;overflow:hidden;
+                      border:1px solid #E2E8F0;">
+
+          <!-- EN-TÊTE -->
+          <tr>
+            <td style="background-color:#EF4444;padding:24px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <span style="font-size:20px;font-weight:700;
+                                 color:#FFFFFF;letter-spacing:0.5px;">
+                      MLA Planning
+                    </span>
+                  </td>
+                  <td align="right">
+                    <span style="display:inline-block;background-color:#FFFFFF;
+                                 color:#DC2626;font-size:11px;font-weight:700;
+                                 letter-spacing:0.08em;text-transform:uppercase;
+                                 padding:4px 12px;border-radius:999px;">
+                      Planning annulé
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CORPS -->
+          <tr>
+            <td style="padding:32px 32px 0 32px;">
+              <p style="margin:0 0 8px 0;font-size:16px;font-weight:600;
+                         color:#1E293B;">
+                Bonjour {{ prenom }} {{ nom }},
+              </p>
+              <p style="margin:0 0 24px 0;font-size:14px;color:#475569;
+                         line-height:1.6;">
+                Le planning auquel vous étiez assigné(e) a été
+                <strong style="color:#DC2626;">annulé</strong>.
+              </p>
+
+              <!-- BLOC DÉTAIL -->
+              <table width="100%" cellpadding="0" cellspacing="0"
+                     style="background-color:#FEF2F2;border:1px solid #FECACA;
+                            border-radius:10px;overflow:hidden;">
+                <tr>
+                  <td style="padding:20px 24px;">
+
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:6px 0;border-bottom:1px solid #FEE2E2;">
+                          <span style="font-size:11px;font-weight:700;
+                                       color:#6B7280;text-transform:uppercase;
+                                       letter-spacing:0.06em;display:block;
+                                       margin-bottom:2px;">Type</span>
+                          <span style="font-size:14px;font-weight:600;
+                                       color:#1E293B;">{{ type_activite }}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;border-bottom:1px solid #FEE2E2;">
+                          <span style="font-size:11px;font-weight:700;
+                                       color:#6B7280;text-transform:uppercase;
+                                       letter-spacing:0.06em;display:block;
+                                       margin-bottom:2px;">Date</span>
+                          <span style="font-size:14px;font-weight:600;
+                                       color:#1E293B;">{{ date_activite }}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;border-bottom:1px solid #FEE2E2;">
+                          <span style="font-size:11px;font-weight:700;
+                                       color:#6B7280;text-transform:uppercase;
+                                       letter-spacing:0.06em;display:block;
+                                       margin-bottom:2px;">Campus</span>
+                          <span style="font-size:14px;font-weight:600;
+                                       color:#1E293B;">{{ campus_nom }}</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;
+                          {% if motif %}border-bottom:1px solid #FEE2E2;{% endif %}">
+                          <span style="font-size:11px;font-weight:700;
+                                       color:#6B7280;text-transform:uppercase;
+                                       letter-spacing:0.06em;display:block;
+                                       margin-bottom:2px;">Ministère</span>
+                          <span style="font-size:14px;font-weight:600;
+                                       color:#1E293B;">{{ ministere_nom }}</span>
+                        </td>
+                      </tr>
+                      {% if motif %}
+                      <tr>
+                        <td style="padding:6px 0;">
+                          <span style="font-size:11px;font-weight:700;
+                                       color:#6B7280;text-transform:uppercase;
+                                       letter-spacing:0.06em;display:block;
+                                       margin-bottom:2px;">Motif</span>
+                          <span style="font-size:14px;color:#475569;">
+                            {{ motif }}
+                          </span>
+                        </td>
+                      </tr>
+                      {% endif %}
+                    </table>
+
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:20px 0 0 0;font-size:13px;color:#64748B;
+                         line-height:1.6;">
+                Pour toute question, rapprochez-vous de votre responsable de
+                ministère.
+              </p>
+            </td>
+          </tr>
+
+          <!-- PIED -->
+          <tr>
+            <td style="padding:24px 32px 32px 32px;">
+              <p style="margin:24px 0 0 0;font-size:11px;color:#94A3B8;
+                         text-align:center;border-top:1px solid #F1F5F9;
+                         padding-top:20px;line-height:1.6;">
+                Cet email a été envoyé automatiquement par
+                <strong>MLA Planning</strong>.<br/>
+                Ne pas répondre à cet email.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

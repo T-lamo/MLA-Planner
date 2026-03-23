@@ -2,7 +2,6 @@
   <div class="flex min-h-screen items-center justify-center bg-slate-50">
     <ui-login
       submitLabel="Accéder à mon compte"
-      :loading="isLoading"
       loadingLabel="Vérification..."
       identifierLabel="Identifiant"
       identifierPlaceholder="Ex: MLA-2024"
@@ -11,6 +10,7 @@
       @auth-submit="onLogin"
     >
       <div slot="logo" class="flex flex-col items-center gap-4">
+        <img src="/Logo.png" alt="Logo" class="h-16 w-auto object-contain" />
         <h2 class="text-xl font-bold text-slate-800">Espace Membre</h2>
       </div>
     </ui-login>
@@ -19,11 +19,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/useAuthStore'
+import { useGlobalLoader } from '~~/layers/base/app/composables/useLoader'
 import type { EnhancedApiError } from '~~/layers/base/types/api'
+
 definePageMeta({
-  layout: 'auth', // Utilise le layout vide
+  layout: 'auth',
 })
 
 // Interface pour typer l'événement du Web Component
@@ -35,46 +37,37 @@ interface LoginEvent {
 }
 
 const authStore = useAuthStore()
-const router = useRouter()
 const route = useRoute()
-
 const { notifyError } = useErrorHandler()
+const { withLoader } = useGlobalLoader()
 
 const authError = ref('')
-const isLoading = ref(false)
 
 const onLogin = async (event: LoginEvent) => {
   authError.value = ''
-  isLoading.value = true
 
   const { identifier, password } = event.detail
+  if (!identifier || !password) return
 
-  if (!identifier || !password) {
-    isLoading.value = false
-    return
-  }
+  await withLoader(async () => {
+    try {
+      await authStore.login({ username: identifier, password })
 
-  try {
-    await authStore.login({
-      username: identifier,
-      password: password,
-    })
+      // SuperAdmin → toujours /admin/campuses, ignore le redirect query
+      if (authStore.isSuperAdmin) {
+        await navigateTo('/admin/campuses')
+        return
+      }
 
-    const redirectPath = (route.query.redirect as string) || '/'
-    await router.push(redirectPath)
-  } catch (error: unknown) {
-    // On caste en EnhancedApiError pour le traitement
-    const err = error as EnhancedApiError
-
-    // Notification globale (Toast)
-    notifyError(err)
-
-    // Mise à jour du message d'erreur interne pour le composant ui-login
-    const apiErrorMessage = err?.data?.error?.message || err?.data?.message
-    authError.value = apiErrorMessage || 'Une erreur technique est survenue.'
-  } finally {
-    isLoading.value = false
-  }
+      const redirectPath = (route.query.redirect as string) || '/planning/calendar'
+      await navigateTo(redirectPath)
+    } catch (error: unknown) {
+      const err = error as EnhancedApiError
+      notifyError(err)
+      const apiErrorMessage = err?.data?.error?.message || err?.data?.message
+      authError.value = apiErrorMessage || 'Une erreur technique est survenue.'
+    }
+  })
 }
 </script>
 

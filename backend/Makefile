@@ -4,6 +4,10 @@ APP_MODULE = src.main:app
 DB_TEST_URL = "postgresql+psycopg2://postgres:postgres@localhost:5432/mla_test_db"
 DB_ADMIN_SCRIPT = scripts/db_admin.py
 
+# Venv — ajoute les outils (isort, black, mypy, pylint…) au PATH
+VENV_BIN := $(shell pwd)/../.venv/bin
+export PATH := $(VENV_BIN):$(PATH)
+
 # PYTHONPATH pour l'exécution interne
 export PYTHONPATH := .:src
 
@@ -29,7 +33,7 @@ lint:
 	isort --check-only --profile black src
 	black --check src
 	mypy src
-	pylint --rcfile=$(shell pwd)/.pylintrc src || pylint --rcfile=../.pylintrc src
+	pylint --rcfile=$(shell pwd)/.pylintrc src
 
 flake:
 	flake8 src
@@ -74,7 +78,7 @@ test-debug:
 
 # --- BASE DE DONNEES (DEV) ---
 db-reset:
-	DATABASE_URL=$(DB_TEST_URL) $(PYTHON) $(DB_ADMIN_SCRIPT) reset
+	$(PYTHON) $(DB_ADMIN_SCRIPT) reset
 
 db-seed:
 	$(PYTHON) $(DB_ADMIN_SCRIPT) seed

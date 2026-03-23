@@ -7,7 +7,7 @@ from sqlmodel import Session
 from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from core.auth.auth_service import AuthService
-from core.auth.models import PasswordChangeRequest, Token
+from core.auth.models import PasswordChangeRequest, RefreshTokenRequest, Token
 from models import Utilisateur
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -73,17 +73,29 @@ def change_password(
 # ---------------------------
 # UTILISATEUR ACTIF (ME)
 # ---------------------------
-@router.get(
-    "/users/me", response_model=Any
-)  # Tu peux créer un schéma UserRead plus tard
+@router.get("/users/me", response_model=Any)
 async def read_users_me(
     current_user: Utilisateur = Depends(get_current_active_user),
-) -> Utilisateur:
+) -> dict:
     """
     Retourne les informations de l'utilisateur actuellement connecté
     extraites de la base de données via le token.
     """
-    return current_user
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "actif": current_user.actif,
+        "membre_id": current_user.membre_id,
+        "campus_principal_id": (
+            current_user.membre.campus_principal_id if current_user.membre else None
+        ),
+        "name": (
+            f"{current_user.membre.prenom} {current_user.membre.nom}"
+            if current_user.membre
+            else current_user.username
+        ),
+        "roles": [aff.role.libelle for aff in current_user.affectations if aff.role],
+    }
 
 
 # ---------------------------
@@ -95,6 +107,15 @@ async def read_users_me(
 async def test_admin_route() -> dict[str, str]:
     """Route de test accessible uniquement aux administrateurs."""
     return {"message": "Bienvenue, Administrateur."}
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh_token(
+    body: RefreshTokenRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+) -> Any:
+    """Émet une nouvelle paire access/refresh token par rotation."""
+    return auth_service.refresh_access_token(body.refresh_token)
 
 
 @router.post("/logout", status_code=status.HTTP_200_OK)

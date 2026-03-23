@@ -4,4 +4,5 @@ pytest_plugins = [
     "src.tests.fixtures.geo",
     "src.tests.fixtures.planning",
     "src.tests.fixtures.mocks",
+    "src.tests.fixtures.profile",
 ]

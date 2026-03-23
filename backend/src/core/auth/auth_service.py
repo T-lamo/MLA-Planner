@@ -1,15 +1,22 @@
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+import jwt
 from sqlmodel import Session
 
 from core.auth.auth_repository import AuthRepository
-from core.auth.security import create_access_token, get_password_hash, verify_password
-
-# Import de l'exception générique et du registre
+from core.auth.security import (
+    create_access_token,
+    create_refresh_token,
+    get_password_hash,
+    verify_password,
+)
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
+from core.settings import settings as stng
 from models import Utilisateur
+from models.role_model import RoleRead
+from models.utilisateur_model import UtilisateurRead
 
 
 class AuthService:
@@ -46,33 +53,92 @@ class AuthService:
 
         return contexts
 
-    def authenticate_and_create_token(
-        self, username: str, password: str
-    ) -> Dict[str, Any]:
-        user = self.repo.get_user_by_username(username)
-
-        # Utilisation du code AUTH_001 pour Unauthorized
-        if not user or not verify_password(password, user.password):
-            raise AppException(ErrorRegistry.AUTH_INVALID_CREDENTIALS)
-
-        # Utilisation du code AUTH_002 pour Forbidden
-        if not user.actif:
-            raise AppException(ErrorRegistry.AUTH_ACCOUNT_DISABLED)
-
+    def _build_token_response(self, user: Utilisateur) -> Dict[str, Any]:
+        """Émet access + refresh token et construit la réponse standard."""
         token_data: Dict[str, Any] = {
             "sub": user.username,
             "user_id": user.id,
             "context": self._build_user_context(user),
         }
-
         token, expire = create_access_token(data=token_data)
+        new_refresh = create_refresh_token(data={"sub": user.username})[0]
 
+        campus_id = user.membre.campus_principal_id if user.membre else None
+        name = (
+            f"{user.membre.prenom} {user.membre.nom}" if user.membre else user.username
+        )
+        roles = [
+            RoleRead(libelle=aff.role.libelle, id=aff.role.id)
+            for aff in user.affectations
+            if aff.role
+        ]
+        user_read = UtilisateurRead(
+            id=user.id,
+            username=user.username,
+            actif=user.actif,
+            membre_id=user.membre_id,
+            campus_principal_id=campus_id,
+            name=name,
+            roles=roles,
+        )
         return {
             "access_token": token,
             "token_type": "bearer",
             "expires_at": expire.isoformat(),
-            "user": user,
+            "refresh_token": new_refresh,
+            "user": user_read,
         }
+
+    def authenticate_and_create_token(
+        self, username: str, password: str
+    ) -> Dict[str, Any]:
+        user = self.repo.get_user_by_username(username)
+
+        if not user or not verify_password(password, user.password):
+            raise AppException(ErrorRegistry.AUTH_INVALID_CREDENTIALS)
+
+        if not user.actif:
+            raise AppException(ErrorRegistry.AUTH_ACCOUNT_DISABLED)
+
+        return self._build_token_response(user)
+
+    def refresh_access_token(self, refresh_token_str: str) -> Dict[str, Any]:
+        """Vérifie le refresh token, le blackliste, et émet une nouvelle paire."""
+        try:
+            payload = jwt.decode(
+                refresh_token_str,
+                stng.JWT_SECRET_KEY,
+                algorithms=[stng.JWT_ALGORITHM],
+            )
+        except jwt.PyJWTError as exc:
+            raise AppException(ErrorRegistry.AUTH_REFRESH_TOKEN_INVALID) from exc
+
+        if payload.get("type") != "refresh":
+            raise AppException(ErrorRegistry.AUTH_REFRESH_TOKEN_INVALID)
+
+        jti = payload.get("jti")
+        if not jti or self.repo.is_token_revoked(jti):
+            raise AppException(ErrorRegistry.AUTH_REFRESH_TOKEN_INVALID)
+
+        username = payload.get("sub")
+        if not username:
+            raise AppException(ErrorRegistry.AUTH_REFRESH_TOKEN_INVALID)
+
+        user = self.repo.get_user_by_username(username)
+        if not user or not user.actif:
+            raise AppException(ErrorRegistry.AUTH_REFRESH_TOKEN_INVALID)
+
+        # Rotation : blacklist de l'ancien refresh token
+        exp_ts = payload.get("exp")
+        if exp_ts:
+            self.repo.add_to_blacklist(
+                jti=jti,
+                expires_at=datetime.fromtimestamp(exp_ts, tz=timezone.utc),
+            )
+
+        response = self._build_token_response(user)
+        self.db.commit()
+        return response
 
     def change_password(
         self, utilisateur_id: str, current_password: str, new_password: str
@@ -82,16 +148,15 @@ class AuthService:
         """
         user = self.repo.get_user_by_id(utilisateur_id)
 
-        # Utilisation du code AUTH_003 pour NotFound
         if not user:
             raise AppException(ErrorRegistry.AUTH_USER_NOT_FOUND)
 
-        # Utilisation du code AUTH_004 pour BadRequest
         if not verify_password(current_password, user.password):
             raise AppException(ErrorRegistry.AUTH_CURRENT_PASSWORD_INCORRECT)
 
         hashed_new_password: str = get_password_hash(new_password)
         self.repo.update_password(user, hashed_new_password)
+        self.db.commit()
 
     def logout(self, token_payload: dict) -> None:
         """
@@ -100,12 +165,9 @@ class AuthService:
         jti = token_payload.get("jti")
         exp_timestamp = token_payload.get("exp")
 
-        # Utilisation du code AUTH_005 pour BadRequest
         if not jti or not exp_timestamp:
             raise AppException(ErrorRegistry.AUTH_INVALID_LOGOUT_TOKEN)
 
-        # Conversion du timestamp JWT en objet datetime
         expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
-
-        # Appel au repository pour la persistance
         self.repo.add_to_blacklist(jti=jti, expires_at=expires_at)
+        self.db.commit()
