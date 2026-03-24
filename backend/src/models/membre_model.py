@@ -71,6 +71,14 @@ class MembreSimple(MembreBase):
     model_config = {"from_attributes": True}
 
 
+class MembreSimpleWithRoles(MembreSimple):
+    """MembreSimple enrichi des role_codes de compétence."""
+
+    roles: List[str] = Field(default_factory=list)
+
+    model_config = {"from_attributes": True}
+
+
 # -------------------------
 # READ (Version Allégée - Utilisée partout en imbriqué)
 # -------------------------
@@ -163,5 +171,6 @@ __all__ = [
     "UtilisateurSimple",
     "MembreRoleSimple",
     "MembreSimple",
+    "MembreSimpleWithRoles",
     "MembreRoleRich",
 ]

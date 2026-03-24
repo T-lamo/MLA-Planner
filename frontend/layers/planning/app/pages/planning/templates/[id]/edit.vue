@@ -3,11 +3,17 @@ import { ref, reactive, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-vue-next'
 import { usePlanningTemplateStore } from '../../../../stores/usePlanningTemplateStore'
-import type { PlanningTemplateSlotWrite } from '../../../../types/planning.types'
+import { PlanningRepository } from '../../../../repositories/PlanningRepository'
+import type {
+  MembreSimple,
+  PlanningTemplateSlotWrite,
+  TemplateRoleWrite,
+} from '../../../../types/planning.types'
 
 const route = useRoute()
 const templateStore = usePlanningTemplateStore()
 const { selectedTemplate, isLoading } = storeToRefs(templateStore)
+const repo = new PlanningRepository()
 
 const templateId = route.params.id as string
 
@@ -27,6 +33,7 @@ const form = reactive<{
 
 const isSaving = ref(false)
 const loadError = ref<string | null>(null)
+const membresDisponibles = ref<MembreSimple[]>([])
 
 onMounted(async () => {
   try {
@@ -41,8 +48,20 @@ onMounted(async () => {
         offset_debut_minutes: s.offset_debut_minutes,
         offset_fin_minutes: s.offset_fin_minutes,
         nb_personnes_requis: s.nb_personnes_requis,
-        roles: s.roles.map((r) => r.role_code),
+        roles: s.roles.map(
+          (r): TemplateRoleWrite => ({
+            role_code: r.role_code,
+            membres_suggeres_ids: r.membres_suggeres.map((m) => m.membre_id),
+          }),
+        ),
       }))
+      if (tpl.ministere_id) {
+        try {
+          membresDisponibles.value = await repo.getMembersByMinistere(tpl.ministere_id)
+        } catch {
+          membresDisponibles.value = []
+        }
+      }
     }
   } catch {
     loadError.value = 'Impossible de charger ce template.'
@@ -73,11 +92,27 @@ function moveSlot(index: number, direction: 'up' | 'down') {
 }
 
 function addRole(slot: SlotForm) {
-  slot.roles.push('')
+  slot.roles.push({ role_code: '', membres_suggeres_ids: [] })
 }
 
 function removeRole(slot: SlotForm, rIdx: number) {
   slot.roles.splice(rIdx, 1)
+}
+
+function addSuggestedMember(role: TemplateRoleWrite, membreId: string) {
+  if (!role.membres_suggeres_ids.includes(membreId)) {
+    role.membres_suggeres_ids.push(membreId)
+  }
+}
+
+function removeSuggestedMember(role: TemplateRoleWrite, membreId: string) {
+  const idx = role.membres_suggeres_ids.indexOf(membreId)
+  if (idx !== -1) role.membres_suggeres_ids.splice(idx, 1)
+}
+
+function membreLabel(id: string): string {
+  const m = membresDisponibles.value.find((x) => x.id === id)
+  return m ? `${m.prenom} ${m.nom}` : id
 }
 
 async function handleSave() {
@@ -91,7 +126,7 @@ async function handleSave() {
         offset_debut_minutes: s.offset_debut_minutes,
         offset_fin_minutes: s.offset_fin_minutes,
         nb_personnes_requis: s.nb_personnes_requis,
-        roles: s.roles.filter((r) => r.trim() !== ''),
+        roles: s.roles.filter((r) => r.role_code.trim() !== ''),
       })),
     })
     await navigateTo('/planning/templates')
@@ -273,8 +308,8 @@ async function handleSave() {
             </div>
 
             <!-- Rôles -->
-            <div class="mt-3">
-              <div class="mb-1 flex items-center justify-between">
+            <div class="mt-3 space-y-3">
+              <div class="flex items-center justify-between">
                 <label class="text-xs font-medium text-slate-600">Rôles requis</label>
                 <button
                   type="button"
@@ -284,25 +319,79 @@ async function handleSave() {
                   + Ajouter
                 </button>
               </div>
-              <div class="flex flex-wrap gap-2">
-                <div v-for="(_, rIdx) in slot.roles" :key="rIdx" class="flex items-center gap-1">
+
+              <p v-if="slot.roles.length === 0" class="text-xs text-slate-400 italic">Aucun rôle</p>
+
+              <div
+                v-for="(role, rIdx) in slot.roles"
+                :key="rIdx"
+                class="rounded-md border border-slate-200 bg-white p-3"
+              >
+                <!-- Code rôle + supprimer -->
+                <div class="mb-2 flex items-center gap-2">
                   <input
-                    v-model="slot.roles[rIdx]"
+                    v-model="role.role_code"
                     type="text"
-                    class="w-28 rounded border border-slate-300 px-2 py-1 text-xs uppercase outline-none focus:border-blue-400"
+                    class="w-32 rounded border border-slate-300 px-2 py-1 text-xs uppercase outline-none focus:border-blue-400"
                     placeholder="ROLE_CODE"
                   />
                   <button
                     type="button"
-                    class="text-slate-400 hover:text-red-500"
+                    class="ml-auto text-slate-400 hover:text-red-500"
                     @click="removeRole(slot, rIdx)"
                   >
                     <Trash2 class="size-3.5" />
                   </button>
                 </div>
-                <span v-if="slot.roles.length === 0" class="text-xs text-slate-400 italic">
-                  Aucun rôle
-                </span>
+
+                <!-- Membres suggérés -->
+                <div class="space-y-1.5">
+                  <p class="text-xs font-medium text-slate-500">Membres suggérés</p>
+
+                  <!-- Tags membres déjà ajoutés -->
+                  <div v-if="role.membres_suggeres_ids.length > 0" class="flex flex-wrap gap-1">
+                    <span
+                      v-for="membreId in role.membres_suggeres_ids"
+                      :key="membreId"
+                      class="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
+                    >
+                      {{ membreLabel(membreId) }}
+                      <button
+                        type="button"
+                        class="text-blue-500 hover:text-blue-800"
+                        @click="removeSuggestedMember(role, membreId)"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  </div>
+
+                  <!-- Select pour ajouter un membre -->
+                  <select
+                    v-if="membresDisponibles.length > 0"
+                    class="w-full rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 outline-none focus:border-blue-400"
+                    @change="
+                      (e) => {
+                        const val = (e.target as HTMLSelectElement).value
+                        if (val) {
+                          addSuggestedMember(role, val)
+                          ;(e.target as HTMLSelectElement).value = ''
+                        }
+                      }
+                    "
+                  >
+                    <option value="">— Ajouter un membre —</option>
+                    <option
+                      v-for="m in membresDisponibles.filter(
+                        (x) => !role.membres_suggeres_ids.includes(x.id),
+                      )"
+                      :key="m.id"
+                      :value="m.id"
+                    >
+                      {{ m.prenom }} {{ m.nom }}
+                    </option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
