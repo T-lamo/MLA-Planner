@@ -41,8 +41,24 @@
               </div>
             </div>
 
-            <div class="custom-scrollbar flex-1 overflow-y-auto p-6">
-              <slot />
+            <div class="relative flex-1 overflow-hidden">
+              <div
+                v-show="showTopFade"
+                class="pointer-events-none absolute inset-x-0 top-0 z-10 h-10 bg-gradient-to-b from-white to-transparent"
+                aria-hidden="true"
+              />
+              <div
+                ref="scrollEl"
+                class="custom-scrollbar h-full overflow-y-auto p-6"
+                @scroll="onScroll"
+              >
+                <slot />
+              </div>
+              <div
+                v-show="showBottomFade"
+                class="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-10 bg-gradient-to-t from-white to-transparent"
+                aria-hidden="true"
+              />
             </div>
 
             <div v-if="$slots.footer" class="border-t border-slate-100 bg-slate-50 p-4">
@@ -57,7 +73,19 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+
 import { X, Maximize2, Minimize2 } from 'lucide-vue-next'
+
+const scrollEl = ref<HTMLElement | null>(null)
+const showTopFade = ref(false)
+const showBottomFade = ref(true)
+
+function onScroll() {
+  if (!scrollEl.value) return
+  const { scrollTop, scrollHeight, clientHeight } = scrollEl.value
+  showTopFade.value = scrollTop > 8
+  showBottomFade.value = scrollTop + clientHeight < scrollHeight - 8
+}
 
 // Types pour les tailles
 type DrawerSize = 'standard' | 'half' | 'full'

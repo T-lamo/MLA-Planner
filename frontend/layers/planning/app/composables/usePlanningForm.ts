@@ -11,8 +11,10 @@ import {
 } from 'vue'
 import { PlanningRepository } from '../repositories/PlanningRepository'
 import type {
+  AffectationFormItem,
   AffectationStatus,
   ActiviteFormState,
+  ApplyTemplateResult,
   CampusTeamRead,
   MinistereColor,
   PlanningFullRead,
@@ -20,6 +22,8 @@ import type {
   RoleCompetenceRead,
   SlotFormItem,
   TeamMemberRead,
+  WarningIndispo,
+  WarningMembreIgnore,
 } from '../types/planning.types'
 import { getMinistereColor } from '../types/planning.types'
 import { TRANSITION_META } from './usePlanningWorkflow'
@@ -161,6 +165,8 @@ export function usePlanningForm(
   const slotPickers = ref<SlotPickerState[]>([])
   const selectedTemplateId = ref<string | null>(null)
   const templateApplied = ref(false)
+  const applyWarningsIndispo = ref<WarningIndispo[]>([])
+  const applyIgnoredMembres = ref<WarningMembreIgnore[]>([])
   const isSaving = ref(false)
   const apiError = ref<string | null>(null)
   const formTargetStatus = ref<string>('BROUILLON')
@@ -397,6 +403,12 @@ export function usePlanningForm(
     slotPickers.value[slotIdx] = defaultPicker()
   }
 
+  function dismissApplyWarnings(): void {
+    applyWarningsIndispo.value = []
+    applyIgnoredMembres.value = []
+    callbacks.onClose()
+  }
+
   function rolesForMembre(membreId: string): RoleCompetenceRead[] {
     if (!campusTeam.value) return roles.value
     for (const min of campusTeam.value.ministeres) {
@@ -406,6 +418,19 @@ export function usePlanningForm(
       }
     }
     return roles.value
+  }
+
+  /**
+   * Résout un membre depuis campusTeam à partir de son ID.
+   * Retourne null si introuvable.
+   */
+  function resolveMembre(membreId: string): { prenom: string; nom: string } | null {
+    if (!campusTeam.value) return null
+    for (const min of campusTeam.value.ministeres) {
+      const m = min.membres.find((mb) => mb.id === membreId)
+      if (m) return { prenom: m.prenom, nom: m.nom }
+    }
+    return null
   }
 
   function applyTemplate(template: PlanningTemplateRead): void {
@@ -420,14 +445,49 @@ export function usePlanningForm(
     }
 
     // 3. Construire les slots depuis les créneaux du template
-    const newSlots: SlotFormItem[] = template.slots.map((tplSlot) => ({
-      _tempId: newTempId(),
-      nom_creneau: tplSlot.nom_creneau,
-      heure_debut: offsetToHHMM(activiteForm.date_debut, tplSlot.offset_debut_minutes),
-      heure_fin: offsetToHHMM(activiteForm.date_debut, tplSlot.offset_fin_minutes),
-      nb_personnes_requis: tplSlot.nb_personnes_requis,
-      affectations: [],
-    }))
+    const newSlots: SlotFormItem[] = template.slots.map((tplSlot) => {
+      const affectations: AffectationFormItem[] = []
+
+      for (const role of tplSlot.roles) {
+        for (const membreSuggere of role.membres_suggeres ?? []) {
+          const alreadyAdded = affectations.some(
+            (a) => a.membre_id === membreSuggere.membre_id && a.role_code === role.role_code,
+          )
+          if (alreadyAdded) continue
+
+          const resolved = resolveMembre(membreSuggere.membre_id)
+          let prenom = ''
+          let nom = membreSuggere.membre_nom ?? ''
+          if (resolved) {
+            prenom = resolved.prenom
+            nom = resolved.nom
+          } else if (membreSuggere.membre_nom) {
+            const parts = membreSuggere.membre_nom.split(' ')
+            prenom = parts[0] ?? ''
+            nom = parts.slice(1).join(' ')
+          }
+
+          affectations.push({
+            _tempId: `suggest-${membreSuggere.membre_id}-${role.role_code}-${Date.now()}`,
+            membre_id: membreSuggere.membre_id,
+            membre_prenom: prenom,
+            membre_nom: nom,
+            role_code: role.role_code,
+            ministere_id: template.ministere_id,
+            statut_affectation_code: 'PROPOSE',
+          })
+        }
+      }
+
+      return {
+        _tempId: newTempId(),
+        nom_creneau: tplSlot.nom_creneau,
+        heure_debut: offsetToHHMM(activiteForm.date_debut, tplSlot.offset_debut_minutes),
+        heure_fin: offsetToHHMM(activiteForm.date_debut, tplSlot.offset_fin_minutes),
+        nb_personnes_requis: tplSlot.nb_personnes_requis,
+        affectations,
+      }
+    })
 
     slotsForm.value = newSlots
     slotPickers.value = newSlots.map(() => defaultPicker())
@@ -453,6 +513,8 @@ export function usePlanningForm(
     slotsForm.value = []
     slotPickers.value = []
     apiError.value = null
+    applyWarningsIndispo.value = []
+    applyIgnoredMembres.value = []
     activeSections.value = new Set(['activite'])
     formTargetStatus.value = 'BROUILLON'
 
@@ -567,10 +629,28 @@ export function usePlanningForm(
         result = await repo.updateStatus(result.id, targetStatus)
       }
 
+      // US-96 : application des membres suggérés du template sur le planning créé
+      if (internalMode.value === 'create' && selectedTemplateId.value) {
+        try {
+          const applyResult: ApplyTemplateResult = await repo.applyTemplate(
+            selectedTemplateId.value,
+            result.id,
+          )
+          applyWarningsIndispo.value = applyResult.avertissements_indispo
+          applyIgnoredMembres.value = applyResult.membres_ignores
+        } catch {
+          // Non bloquant — le planning est créé, les affectations seront à faire manuellement
+        }
+      }
+
       const isNew = internalMode.value === 'create'
       notify.success(isNew ? 'Planning créé' : 'Planning mis à jour', result.activite?.type ?? '')
       callbacks.onSaved(result, isNew)
-      callbacks.onClose()
+      const hasWarnings =
+        applyWarningsIndispo.value.length > 0 || applyIgnoredMembres.value.length > 0
+      if (!hasWarnings) {
+        callbacks.onClose()
+      }
     } catch (e) {
       apiError.value = handleError(e, 'Une erreur est survenue, veuillez réessayer.')
     } finally {
@@ -596,6 +676,8 @@ export function usePlanningForm(
     slotPickers,
     selectedTemplateId,
     templateApplied,
+    applyWarningsIndispo,
+    applyIgnoredMembres,
     isSaving,
     apiError,
     formTargetStatus,
@@ -624,6 +706,7 @@ export function usePlanningForm(
     resetPicker,
     rolesForMembre,
     applyTemplate,
+    dismissApplyWarnings,
     initForm,
     save,
   }

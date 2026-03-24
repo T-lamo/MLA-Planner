@@ -9,6 +9,7 @@ from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from models import DataListResponse, DataResponse, Utilisateur
 from models.planning_template_model import (
+    ApplyTemplateResultSchema,
     PlanningTemplateFullUpdate,
     PlanningTemplateListItem,
     PlanningTemplateRead,
@@ -167,3 +168,23 @@ def delete_template(
 ) -> None:
     """Supprime un template (nullifie les refs dans les plannings)."""
     svc.delete_template_with_access(template_id, current_user)
+
+
+@router.post(
+    "/{template_id}/apply/{planning_id}",
+    response_model=ApplyTemplateResultSchema,
+    dependencies=[Depends(_WRITE_ROLES)],
+    status_code=200,
+)
+def apply_template(
+    template_id: str,
+    planning_id: str,
+    svc: PlanningTemplateSvc = Depends(_get_svc),
+) -> ApplyTemplateResultSchema:
+    """Applique un template sur un planning existant (US-96).
+
+    Crée des slots et des affectations PROPOSE pour chaque membre suggéré
+    éligible. Retourne les avertissements d'indisponibilité et membres ignorés.
+    """
+    result = svc.apply_to_planning(template_id, planning_id)
+    return ApplyTemplateResultSchema(**result)

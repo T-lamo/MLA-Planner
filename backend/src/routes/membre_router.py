@@ -8,10 +8,10 @@ from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from models import MembreCreate, MembreRead, MembreUpdate, Utilisateur, UtilisateurRead
 
-# MembreSimple est défini localement dans membre_model (hors __init__)
-from models.membre_model import MembreSimple
+# MembreSimple et MembreSimpleWithRoles définis dans membre_model (hors __init__)
+from models.membre_model import MembreSimpleWithRoles
 from models.membre_role_model import MembreRoleCreate, MembreRoleRead
-from models.schema_db_model import Membre, Ministere
+from models.schema_db_model import Membre, MembreRole, Ministere
 from routes.dependance import get_current_membre
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.membre_service import MembreService
@@ -86,7 +86,7 @@ def remove_membre_role(
 
 @router.get(
     "/by-ministere/{ministere_id}",
-    response_model=List[MembreSimple],
+    response_model=List[MembreSimpleWithRoles],
     summary="Membres d'un ministère",
     description="Retourne tous les membres actifs liés à un ministère donné.",
 )
@@ -94,11 +94,31 @@ def list_membres_by_ministere(
     ministere_id: str,
     db: Session = Depends(Database.get_db_for_route),
     _: Utilisateur = Depends(get_current_active_user),
-):
+) -> List[MembreSimpleWithRoles]:
+    """Liste les membres actifs d'un ministère avec leurs role_codes."""
+
     ministere = db.exec(select(Ministere).where(Ministere.id == ministere_id)).first()
     if not ministere:
         return []
-    return [m for m in ministere.membres if m.actif]
+    membres_actifs = [m for m in ministere.membres if m.actif]
+    result: List[MembreSimpleWithRoles] = []
+    for m in membres_actifs:
+        roles_stmt = select(MembreRole).where(MembreRole.membre_id == m.id)
+        roles_assoc = list(db.exec(roles_stmt).all())
+        result.append(
+            MembreSimpleWithRoles(
+                id=m.id,
+                nom=m.nom,
+                prenom=m.prenom,
+                email=m.email,
+                telephone=m.telephone,
+                actif=m.actif,
+                campus_principal_id=m.campus_principal_id,
+                date_inscription=m.date_inscription,
+                roles=[r.role_code for r in roles_assoc],
+            )
+        )
+    return result
 
 
 @router.get("/me/agenda")

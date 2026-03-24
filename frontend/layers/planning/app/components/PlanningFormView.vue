@@ -588,6 +588,83 @@
         </div>
       </FormSection>
     </div>
+
+    <!-- ── US-96 : avertissements membres suggérés ──────────────────────── -->
+    <div
+      v-if="applyWarningsIndispo.length > 0 || applyIgnoredMembres.length > 0"
+      class="rounded-xl border border-amber-200 bg-amber-50 p-4"
+    >
+      <div class="mb-3 flex items-center justify-between">
+        <p class="text-sm font-semibold text-amber-800">Avertissements — application du template</p>
+        <button
+          type="button"
+          class="rounded-full p-1 text-amber-500 transition-colors hover:bg-amber-100"
+          @click="dismissApplyWarnings()"
+        >
+          <X class="size-4" />
+        </button>
+      </div>
+
+      <!-- Indisponibilités -->
+      <div v-if="applyWarningsIndispo.length > 0" class="mb-3">
+        <div class="mb-1.5 flex items-center gap-1.5">
+          <AlertTriangle class="size-3.5 text-amber-600" />
+          <p class="text-xs font-semibold text-amber-700">
+            Membres indisponibles à cette date ({{ applyWarningsIndispo.length }})
+          </p>
+        </div>
+        <div class="space-y-1">
+          <div
+            v-for="(w, i) in applyWarningsIndispo"
+            :key="i"
+            class="flex items-center gap-2 rounded-lg bg-amber-100 px-3 py-1.5 text-xs text-amber-800"
+          >
+            <span class="font-medium">{{ w.membre_nom }}</span>
+            <span class="text-amber-600">·</span>
+            <span>{{ w.creneau_nom }}</span>
+            <span
+              class="ml-auto rounded-full bg-amber-200 px-1.5 py-0.5 font-mono text-[10px] text-amber-700"
+            >
+              {{ w.role_code }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Membres ignorés -->
+      <div v-if="applyIgnoredMembres.length > 0">
+        <div class="mb-1.5 flex items-center gap-1.5">
+          <UserX class="size-3.5 text-slate-500" />
+          <p class="text-xs font-semibold text-slate-600">
+            Membres ignorés ({{ applyIgnoredMembres.length }})
+          </p>
+        </div>
+        <div class="space-y-1">
+          <div
+            v-for="(w, i) in applyIgnoredMembres"
+            :key="i"
+            class="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-700"
+          >
+            <span class="font-medium">{{ w.membre_nom }}</span>
+            <span class="text-slate-400">·</span>
+            <span
+              class="ml-auto rounded-full bg-slate-200 px-1.5 py-0.5 font-mono text-[10px] text-slate-600"
+            >
+              {{ w.role_code }}
+            </span>
+            <span
+              class="rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+              :class="{
+                'bg-orange-100 text-orange-700': w.raison === 'hors_ministere',
+                'bg-slate-200 text-slate-600': w.raison !== 'hors_ministere',
+              }"
+            >
+              {{ w.raison }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   </form>
 </template>
 
@@ -603,6 +680,8 @@ import {
   Clock,
   Users as UsersIcon,
   BookmarkPlus,
+  AlertTriangle,
+  UserX,
 } from 'lucide-vue-next'
 import FormSection from '~~/layers/base/app/components/FormSection.vue'
 import { planningFormKey } from '../composables/usePlanningForm'
@@ -641,6 +720,8 @@ const {
   formTargetStatus,
   selectedTemplateId,
   templateApplied,
+  applyWarningsIndispo,
+  applyIgnoredMembres,
   toggleSection,
   selectMinistere,
   onDateDebutChange,
@@ -656,6 +737,7 @@ const {
   rolesForMembre,
   loadMinistreresForCampus,
   applyTemplate,
+  dismissApplyWarnings,
   internalMode,
 } = form
 

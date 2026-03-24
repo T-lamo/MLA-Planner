@@ -1,6 +1,7 @@
 import { BaseRepository } from '~~/layers/base/app/repositories/BaseRepository'
 import type { MinistereSimple } from '~~/layers/base/types/ministere'
 import type {
+  ApplyTemplateResult,
   CampusFilterParams,
   CampusTeamRead,
   MembreSimple,
@@ -165,5 +166,14 @@ export class PlanningRepository extends BaseRepository {
     return this.unwrap<PlanningTemplateListItem>(`/planning-templates/${id}/duplicate`, {
       method: 'POST',
     })
+  }
+
+  // ── US-96 : application d'un template sur un planning ───────────────────
+
+  async applyTemplate(templateId: string, planningId: string): Promise<ApplyTemplateResult> {
+    return this.unwrap<ApplyTemplateResult>(
+      `/planning-templates/${templateId}/apply/${planningId}`,
+      { method: 'POST' },
+    )
   }
 }

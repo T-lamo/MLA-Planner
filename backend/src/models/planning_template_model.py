@@ -4,6 +4,16 @@ from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
+from typing_extensions import TypedDict
+
+
+class PlanningTemplateRoleMembreRead(BaseModel):
+    """DTO lecture d'un membre suggéré pour un rôle de template."""
+
+    id: str
+    membre_id: str
+    membre_nom: str
+    membre_username: str
 
 
 class PlanningTemplateRoleRead(BaseModel):
@@ -11,6 +21,14 @@ class PlanningTemplateRoleRead(BaseModel):
 
     id: str
     role_code: str
+    membres_suggeres: List[PlanningTemplateRoleMembreRead] = Field(default_factory=list)
+
+
+class PlanningTemplateRoleWrite(BaseModel):
+    """Payload création/remplacement d'un rôle de template."""
+
+    role_code: str
+    membres_suggeres_ids: List[str] = Field(default_factory=list)
 
 
 class PlanningTemplateSlotRead(BaseModel):
@@ -66,7 +84,7 @@ class PlanningTemplateSlotWrite(BaseModel):
     offset_debut_minutes: int = Field(ge=0)
     offset_fin_minutes: int = Field(ge=1)
     nb_personnes_requis: int = Field(default=1, ge=1)
-    roles: List[str]  # liste de role_codes
+    roles: List[PlanningTemplateRoleWrite]
 
 
 class PlanningTemplateFullUpdate(BaseModel):
@@ -97,3 +115,45 @@ class PlanningTemplateUpdate(BaseModel):
 
     nom: Optional[str] = Field(default=None, min_length=1, max_length=150)
     description: Optional[str] = Field(default=None, max_length=500)
+
+
+# ── TypedDict résultats apply US-96 ───────────────────────────────────────────
+
+
+class WarningIndispo(TypedDict):
+    """Avertissement : membre indisponible à la date du planning."""
+
+    membre_id: str
+    membre_nom: str
+    creneau_nom: str
+    role_code: str
+
+
+class WarningMembreIgnore(TypedDict):
+    """Avertissement : membre ignoré lors de l'application."""
+
+    membre_id: str
+    membre_nom: str
+    role_code: str
+    raison: str  # "hors_ministere" | "introuvable"
+
+
+class ApplyTemplateResult(TypedDict):
+    """Résultat de l'application d'un template sur un planning."""
+
+    planning_id: str
+    affectations_creees: int
+    avertissements_indispo: List[WarningIndispo]
+    membres_ignores: List[WarningMembreIgnore]
+
+
+# ── Schéma Pydantic pour le response_model FastAPI ────────────────────────────
+
+
+class ApplyTemplateResultSchema(BaseModel):
+    """Schéma Pydantic miroir de ApplyTemplateResult (pour response_model)."""
+
+    planning_id: str
+    affectations_creees: int
+    avertissements_indispo: List[WarningIndispo]
+    membres_ignores: List[WarningMembreIgnore]

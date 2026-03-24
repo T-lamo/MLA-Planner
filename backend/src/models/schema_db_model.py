@@ -502,6 +502,30 @@ class PlanningTemplateRole(SQLModel, table=True):  # type: ignore
     role_code: str = Field(max_length=50)
 
     slot: Optional["PlanningTemplateSlot"] = Relationship(back_populates="roles")
+    membres_suggeres: List["PlanningTemplateRoleMembre"] = Relationship(
+        back_populates="template_role",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
+
+class PlanningTemplateRoleMembre(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_planning_template_role_membre"
+    __table_args__ = {"extend_existing": True}
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    template_role_id: str = Field(
+        foreign_key="t_planningtemplaterole.id",
+        ondelete="CASCADE",
+    )
+    membre_id: str = Field(
+        foreign_key="t_membre.id",
+        ondelete="CASCADE",
+    )
+
+    template_role: Optional["PlanningTemplateRole"] = Relationship(
+        back_populates="membres_suggeres"
+    )
+    membre: Optional["Membre"] = Relationship()
 
 
 __all__ = [
@@ -546,4 +570,5 @@ __all__ = [
     "PlanningTemplate",
     "PlanningTemplateSlot",
     "PlanningTemplateRole",
+    "PlanningTemplateRoleMembre",
 ]

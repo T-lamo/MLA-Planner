@@ -15,17 +15,27 @@ from core.message import ErrorRegistry
 from mla_enum import RoleName
 from models import (
     Activite,
+    Affectation,
     AffectationRole,
     Campus,
     PlanningService,
     Role,
+    Slot,
     Utilisateur,
 )
 from models.planning_template_model import (
     PlanningTemplateFullUpdate,
+    PlanningTemplateRoleWrite,
     PlanningTemplateSlotWrite,
 )
-from models.schema_db_model import PlanningTemplate, PlanningTemplateSlot
+from models.schema_db_model import (
+    Indisponibilite,
+    Membre,
+    PlanningTemplate,
+    PlanningTemplateRole,
+    PlanningTemplateRoleMembre,
+    PlanningTemplateSlot,
+)
 from services.planning_template_service import PlanningTemplateSvc
 
 # ---------------------------------------------------------------------------
@@ -241,7 +251,10 @@ def test_update_template(session, test_admin, test_membre, template_fixture):
                 offset_debut_minutes=0,
                 offset_fin_minutes=60,
                 nb_personnes_requis=3,
-                roles=["TENOR", "SON"],
+                roles=[
+                    PlanningTemplateRoleWrite(role_code="TENOR"),
+                    PlanningTemplateRoleWrite(role_code="SON"),
+                ],
             )
         ],
     )
@@ -328,3 +341,325 @@ def test_api_delete_template_forbidden(
         headers=responsable_headers,
     )
     assert resp.status_code == status.HTTP_403_FORBIDDEN
+
+
+# ---------------------------------------------------------------------------
+# Fixtures US-96
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def membre_dans_ministere(session: Session, test_campus, test_ministere) -> Membre:
+    """Membre actif, lié au test_ministere."""
+    m = Membre(
+        nom=f"Test{uuid4().hex[:4]}",
+        prenom="Membre",
+        email=f"membre_{uuid4().hex[:6]}@test.com",
+        actif=True,
+    )
+    m.campuses = [test_campus]
+    m.ministeres = [test_ministere]
+    session.add(m)
+    session.flush()
+    session.refresh(m)
+    return m
+
+
+@pytest.fixture
+def template_avec_membres(
+    session: Session, test_campus, test_ministere, test_membre, membre_dans_ministere
+) -> PlanningTemplate:
+    """Template avec 1 slot, 1 rôle, 1 membre suggéré (éligible)."""
+    tpl = PlanningTemplate(
+        nom="Template US96",
+        description=None,
+        activite_type="Culte",
+        duree_minutes=120,
+        campus_id=test_campus.id,
+        ministere_id=test_ministere.id,
+        created_by_id=test_membre.id,
+    )
+    session.add(tpl)
+    session.flush()
+    slot = PlanningTemplateSlot(
+        template_id=tpl.id,
+        nom_creneau="Louange",
+        offset_debut_minutes=0,
+        offset_fin_minutes=60,
+        nb_personnes_requis=1,
+    )
+    session.add(slot)
+    session.flush()
+    role = PlanningTemplateRole(slot_id=slot.id, role_code="TENOR")
+    session.add(role)
+    session.flush()
+    session.add(
+        PlanningTemplateRoleMembre(
+            template_role_id=role.id,
+            membre_id=membre_dans_ministere.id,
+        )
+    )
+    session.flush()
+    session.refresh(tpl)
+    return tpl
+
+
+@pytest.fixture
+def planning_vide(
+    session: Session, test_campus, test_ministere, template_avec_membres
+) -> PlanningService:
+    """Planning BROUILLON lié au template_avec_membres."""
+    base = datetime(2026, 7, 1, 9, 0)
+    activite = Activite(
+        type="Culte",
+        date_debut=base,
+        date_fin=base + timedelta(hours=2),
+        campus_id=test_campus.id,
+        ministere_organisateur_id=test_ministere.id,
+    )
+    session.add(activite)
+    session.flush()
+    planning = PlanningService(
+        activite_id=activite.id,
+        statut_code="BROUILLON",
+        template_id=template_avec_membres.id,
+    )
+    session.add(planning)
+    session.flush()
+    session.refresh(planning)
+    return planning
+
+
+@pytest.fixture
+def indispo_fixture(
+    session: Session, membre_dans_ministere, test_ministere
+) -> Indisponibilite:
+    """Indisponibilité couvrant 2026-07-01 pour membre_dans_ministere."""
+    indispo = Indisponibilite(
+        membre_id=membre_dans_ministere.id,
+        date_debut="2026-07-01",
+        date_fin="2026-07-01",
+        motif="Test indispo",
+        validee=True,
+        ministere_id=test_ministere.id,
+    )
+    session.add(indispo)
+    session.flush()
+    return indispo
+
+
+# ---------------------------------------------------------------------------
+# Tests US-96
+# ---------------------------------------------------------------------------
+
+
+def test_update_template_with_membres_suggeres(
+    session, test_admin, test_membre, template_fixture, membre_dans_ministere
+):
+    """PUT template avec membres_suggeres_ids → membres sauvegardés."""
+    test_admin.membre_id = test_membre.id
+    session.add(test_admin)
+    session.flush()
+    svc = PlanningTemplateSvc(session)
+    payload = PlanningTemplateFullUpdate(
+        nom=template_fixture.nom,
+        description=None,
+        slots=[
+            PlanningTemplateSlotWrite(
+                nom_creneau="Louange",
+                offset_debut_minutes=0,
+                offset_fin_minutes=60,
+                nb_personnes_requis=1,
+                roles=[
+                    PlanningTemplateRoleWrite(
+                        role_code="TENOR",
+                        membres_suggeres_ids=[membre_dans_ministere.id],
+                    )
+                ],
+            )
+        ],
+    )
+    result = svc.update_template_full(template_fixture.id, payload, test_admin)
+    assert len(result.slots) == 1
+    roles = result.slots[0].roles
+    assert len(roles) == 1
+    assert len(roles[0].membres_suggeres) == 1
+    assert roles[0].membres_suggeres[0].membre_id == membre_dans_ministere.id
+
+
+def test_template_role_read_includes_membres(
+    session, test_admin, test_membre, template_avec_membres
+):
+    """GET template → slots[].roles[].membres_suggeres non vide."""
+    test_admin.membre_id = test_membre.id
+    session.add(test_admin)
+    session.flush()
+    svc = PlanningTemplateSvc(session)
+    result = svc.get_template_full(template_avec_membres.id, test_admin)
+    assert len(result.slots) == 1
+    assert len(result.slots[0].roles) == 1
+    membres = result.slots[0].roles[0].membres_suggeres
+    assert len(membres) == 1
+
+
+def test_apply_template_creates_affectations_propose(
+    session, test_admin, test_membre, template_avec_membres, planning_vide
+):
+    """Application → affectation PROPOSE créée en DB."""
+    test_admin.membre_id = test_membre.id
+    session.add(test_admin)
+    session.flush()
+    svc = PlanningTemplateSvc(session)
+    result = svc.apply_to_planning(template_avec_membres.id, planning_vide.id)
+    assert result["affectations_creees"] == 1
+    aff = session.exec(
+        select(Affectation).where(Affectation.statut_affectation_code == "PROPOSE")
+    ).first()
+    assert aff is not None
+
+
+def test_apply_template_ignore_membre_introuvable(
+    session, test_admin, test_membre, test_campus, test_ministere
+):
+    """_apply_membre_suggere avec UUID inexistant → raison introuvable."""
+    test_admin.membre_id = test_membre.id
+    session.add(test_admin)
+    session.flush()
+    # On appelle directement la méthode helper du service
+    svc = PlanningTemplateSvc(session)
+    base = datetime(2026, 8, 1, 9, 0)
+    act = Activite(
+        type="Culte",
+        date_debut=base,
+        date_fin=base + timedelta(hours=2),
+        campus_id=test_campus.id,
+        ministere_organisateur_id=test_ministere.id,
+    )
+    session.add(act)
+    session.flush()
+    planning = PlanningService(activite_id=act.id, statut_code="BROUILLON")
+    session.add(planning)
+    session.flush()
+    fake_slot = Slot(
+        planning_id=planning.id,
+        nom_creneau="Test",
+        date_debut=base,
+        date_fin=base + timedelta(hours=1),
+    )
+    session.add(fake_slot)
+    session.flush()
+    fake_id = "00000000-0000-0000-0000-000000000099"
+    _aff, _wi, w_ig = svc._apply_membre_suggere(  # pylint: disable=W0212
+        fake_id,
+        slot=fake_slot,
+        role_code="TENOR",
+        ministere_id=test_ministere.id,
+        planning_date_str="2026-08-01",
+    )
+    assert w_ig is not None
+    assert w_ig["raison"] == "introuvable"
+
+
+def test_apply_template_ignore_membre_hors_ministere(
+    session, test_admin, test_membre, template_avec_membres, planning_vide
+):
+    """Membre non lié au ministère → ignoré avec raison hors_ministere."""
+    test_admin.membre_id = test_membre.id
+    session.add(test_admin)
+    session.flush()
+    # Ajouter test_membre (sans ministere_link) au rôle
+    tpl_slot = session.exec(
+        select(PlanningTemplateSlot).where(
+            PlanningTemplateSlot.template_id == template_avec_membres.id
+        )
+    ).first()
+    assert tpl_slot is not None
+    tpl_role = session.exec(
+        select(PlanningTemplateRole).where(PlanningTemplateRole.slot_id == tpl_slot.id)
+    ).first()
+    assert tpl_role is not None
+    # test_membre n'est pas dans test_ministere
+    session.add(
+        PlanningTemplateRoleMembre(
+            template_role_id=tpl_role.id, membre_id=test_membre.id
+        )
+    )
+    session.flush()
+    svc = PlanningTemplateSvc(session)
+    result = svc.apply_to_planning(template_avec_membres.id, planning_vide.id)
+    raisons = [ig["raison"] for ig in result["membres_ignores"]]
+    assert "hors_ministere" in raisons
+
+
+def test_apply_template_warning_indisponibilite(  # pylint: disable=R0917
+    session,
+    test_admin,
+    test_membre,
+    template_avec_membres,
+    planning_vide,
+    indispo_fixture,
+):
+    """Membre indispo → affectation quand même créée + dans avertissements."""
+    test_admin.membre_id = test_membre.id
+    session.add(test_admin)
+    session.flush()
+    svc = PlanningTemplateSvc(session)
+    result = svc.apply_to_planning(template_avec_membres.id, planning_vide.id)
+    assert result["affectations_creees"] == 1
+    assert len(result["avertissements_indispo"]) == 1
+
+
+def test_apply_template_membre_plusieurs_roles(  # pylint: disable=R0917
+    session, test_admin, test_membre, test_campus, test_ministere, membre_dans_ministere
+):
+    """Même membre sur 2 rôles → 2 affectations PROPOSE distinctes."""
+    test_admin.membre_id = test_membre.id
+    session.add(test_admin)
+    session.flush()
+    tpl = PlanningTemplate(
+        nom="Tpl 2 roles",
+        description=None,
+        activite_type="Culte",
+        duree_minutes=120,
+        campus_id=test_campus.id,
+        ministere_id=test_ministere.id,
+        created_by_id=test_membre.id,
+    )
+    session.add(tpl)
+    session.flush()
+    slot = PlanningTemplateSlot(
+        template_id=tpl.id,
+        nom_creneau="Slot",
+        offset_debut_minutes=0,
+        offset_fin_minutes=60,
+        nb_personnes_requis=2,
+    )
+    session.add(slot)
+    session.flush()
+    for rc in ["TENOR", "PIANO"]:
+        r = PlanningTemplateRole(slot_id=slot.id, role_code=rc)
+        session.add(r)
+        session.flush()
+        session.add(
+            PlanningTemplateRoleMembre(
+                template_role_id=r.id,
+                membre_id=membre_dans_ministere.id,
+            )
+        )
+    session.flush()
+    base = datetime(2026, 9, 1, 9, 0)
+    act = Activite(
+        type="Culte",
+        date_debut=base,
+        date_fin=base + timedelta(hours=2),
+        campus_id=test_campus.id,
+        ministere_organisateur_id=test_ministere.id,
+    )
+    session.add(act)
+    session.flush()
+    planning = PlanningService(activite_id=act.id, statut_code="BROUILLON")
+    session.add(planning)
+    session.flush()
+    svc = PlanningTemplateSvc(session)
+    result = svc.apply_to_planning(tpl.id, planning.id)
+    assert result["affectations_creees"] == 2
