@@ -1,10 +1,19 @@
 """Schémas Pydantic pour les templates de planning."""
 
+import enum
 from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import TypedDict
+
+
+class VisibiliteTemplate(str, enum.Enum):
+    """Niveaux de visibilité d'un template."""
+
+    PRIVE = "PRIVE"
+    MINISTERE = "MINISTERE"
+    CAMPUS = "CAMPUS"
 
 
 class PlanningTemplateRoleMembreRead(BaseModel):
@@ -55,6 +64,7 @@ class PlanningTemplateRead(BaseModel):
     created_by_id: str
     created_at: datetime
     used_count: int
+    visibilite: str
     slots: List[PlanningTemplateSlotRead]
 
 
@@ -63,7 +73,7 @@ PlanningTemplateReadFull = PlanningTemplateRead
 
 
 class PlanningTemplateListItem(BaseModel):
-    """DTO liste des templates — vue résumée."""
+    """DTO liste des templates — vue résumée avec section d'affichage."""
 
     id: str
     nom: str
@@ -75,6 +85,8 @@ class PlanningTemplateListItem(BaseModel):
     usage_count: int
     last_used_at: Optional[datetime] = None
     created_at: datetime
+    visibilite: str
+    section: str  # "mes_templates" | "ministere" | "campus"
 
 
 class PlanningTemplateSlotWrite(BaseModel):
@@ -92,6 +104,7 @@ class PlanningTemplateFullUpdate(BaseModel):
 
     nom: str = Field(min_length=1, max_length=150)
     description: Optional[str] = Field(default=None, max_length=500)
+    visibilite: Optional[str] = None
     slots: List[PlanningTemplateSlotWrite]
 
 
@@ -100,6 +113,7 @@ class SaveAsTemplateRequest(BaseModel):
 
     nom: str = Field(min_length=1, max_length=150)
     description: Optional[str] = Field(default=None, max_length=500)
+    visibilite: str = VisibiliteTemplate.MINISTERE
 
     @field_validator("nom")
     @classmethod

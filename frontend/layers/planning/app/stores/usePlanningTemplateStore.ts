@@ -45,6 +45,7 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
         nom: updated.nom,
         description: updated.description ?? null,
         nb_creneaux: updated.slots.length,
+        visibilite: updated.visibilite,
       }
     }
     notify.success('Template mis à jour')
