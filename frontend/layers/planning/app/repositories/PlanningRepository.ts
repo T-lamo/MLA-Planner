@@ -1,8 +1,11 @@
 import { BaseRepository } from '~~/layers/base/app/repositories/BaseRepository'
 import type { MinistereSimple } from '~~/layers/base/types/ministere'
 import type {
+  ApplyTemplateResult,
   CampusFilterParams,
   CampusTeamRead,
+  GenerateSeriesForm,
+  GenerateSeriesResponse,
   MembreSimple,
   PlanningFullCreate,
   PlanningFullRead,
@@ -13,6 +16,7 @@ import type {
   PlanningTemplateReadFull,
   RoleCompetenceRead,
   SaveAsTemplateRequest,
+  SeriesPreviewResponse,
 } from '../types/planning.types'
 
 export class PlanningRepository extends BaseRepository {
@@ -165,5 +169,35 @@ export class PlanningRepository extends BaseRepository {
     return this.unwrap<PlanningTemplateListItem>(`/planning-templates/${id}/duplicate`, {
       method: 'POST',
     })
+  }
+
+  // ── US-96 : application d'un template sur un planning ───────────────────
+
+  async applyTemplate(templateId: string, planningId: string): Promise<ApplyTemplateResult> {
+    return this.unwrap<ApplyTemplateResult>(
+      `/planning-templates/${templateId}/apply/${planningId}`,
+      { method: 'POST' },
+    )
+  }
+
+  // ── US-98 : génération de séries ─────────────────────────────────────────
+
+  async previewSeries(form: GenerateSeriesForm): Promise<SeriesPreviewResponse> {
+    const { data } = await this.apiRequest<SeriesPreviewResponse>(
+      '/planning-templates/preview-series',
+      { method: 'POST', body: form },
+    )
+    return data
+  }
+
+  async generateSeries(
+    templateId: string,
+    form: GenerateSeriesForm,
+  ): Promise<GenerateSeriesResponse> {
+    const { data } = await this.apiRequest<GenerateSeriesResponse>(
+      '/planning-templates/generate-series',
+      { method: 'POST', body: { ...form, template_id: templateId } },
+    )
+    return data
   }
 }

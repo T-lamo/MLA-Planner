@@ -29,12 +29,17 @@ class OrganisationData(TypedDict):
     date_creation: datetime
 
 
+class PlanningTemplateRoleSeedData(TypedDict):
+    role_code: str
+    membres_suggeres_ids: List[str]
+
+
 class PlanningTemplateSlotSeedData(TypedDict):
     nom_creneau: str
     offset_debut_minutes: int
     offset_fin_minutes: int
     nb_personnes_requis: int
-    roles: List[str]
+    roles: List[PlanningTemplateRoleSeedData]
 
 
 class PlanningTemplateSeedData(TypedDict):
@@ -51,7 +56,7 @@ PLANNING_TEMPLATES_SEED: List[PlanningTemplateSeedData] = [
     {
         "nom": "Culte Dominical Standard",
         "description": (
-            "Template type pour un culte dominical " "avec louange matin et soir."
+            "Template type pour un culte dominical" " avec louange matin et soir."
         ),
         "activite_type": "Culte Dominical",
         "duree_minutes": 720,
@@ -62,14 +67,32 @@ PLANNING_TEMPLATES_SEED: List[PlanningTemplateSeedData] = [
                 "offset_debut_minutes": 0,
                 "offset_fin_minutes": 180,
                 "nb_personnes_requis": 2,
-                "roles": ["TENOR", "SON"],
+                "roles": [
+                    {
+                        "role_code": "TENOR",
+                        "membres_suggeres_ids": [],
+                    },
+                    {
+                        "role_code": "SON",
+                        "membres_suggeres_ids": [],
+                    },
+                ],
             },
             {
                 "nom_creneau": "Équipe Louange Soir",
                 "offset_debut_minutes": 540,
                 "offset_fin_minutes": 720,
                 "nb_personnes_requis": 2,
-                "roles": ["TENOR", "SON"],
+                "roles": [
+                    {
+                        "role_code": "TENOR",
+                        "membres_suggeres_ids": [],
+                    },
+                    {
+                        "role_code": "SON",
+                        "membres_suggeres_ids": [],
+                    },
+                ],
             },
         ],
     },
@@ -85,7 +108,12 @@ PLANNING_TEMPLATES_SEED: List[PlanningTemplateSeedData] = [
                 "offset_debut_minutes": 0,
                 "offset_fin_minutes": 60,
                 "nb_personnes_requis": 3,
-                "roles": ["HOTE_ACCUEIL"],
+                "roles": [
+                    {
+                        "role_code": "HOTE_ACCUEIL",
+                        "membres_suggeres_ids": [],
+                    },
+                ],
             },
         ],
     },
