@@ -23,6 +23,7 @@ from models.planning_template_model import (
     PlanningTemplateSlotWrite,
     PlanningTemplateUpdate,
     SaveAsTemplateRequest,
+    VisibiliteTemplate,
     WarningIndispo,
     WarningMembreIgnore,
 )
@@ -87,38 +88,86 @@ class PlanningTemplateSvc:
         """Liste les templates d'un ministère."""
         return [self._to_read(t) for t in self.repo.list_by_ministere(ministere_id)]
 
-    # ── Liste bibliothèque US-95 ───────────────────────────────────────
+    # ── Liste bibliothèque US-95/99 ───────────────────────────────────
 
     def list_templates(
         self,
         user: Utilisateur,
         ministere_id_filter: Optional[str] = None,
     ) -> List[PlanningTemplateListItem]:
-        """Liste les templates avec stats d'usage.
+        """Liste les templates visibles par l'utilisateur, avec section.
 
-        Admin/Super Admin : tous les templates du système.
-        Responsable MLA   : uniquement ceux de son campus principal.
+        Visibilité (US-99) :
+        - PRIVE     → créateur uniquement
+        - MINISTERE → tous les responsables ayant accès à ce ministère
+        - CAMPUS    → tous les responsables du campus
+        Admin/Super Admin voient MINISTERE + CAMPUS + leurs propres PRIVE.
         """
+        is_admin = _is_admin_or_super(user)
         campus_filter = self._resolve_campus_filter(user)
-        raw = self._fetch_templates_with_stats(campus_filter, ministere_id_filter)
-        return raw
+        membre = user.membre
+        membre_id = str(membre.id) if membre else ""
+        ministere_ids = [str(m.id) for m in membre.ministeres] if membre else []
+        return self._fetch_templates_with_stats(
+            campus_filter,
+            ministere_id_filter,
+            membre_id=membre_id,
+            accessible_ministere_ids=ministere_ids,
+            is_admin=is_admin,
+        )
 
     def _resolve_campus_filter(self, user: Utilisateur) -> Optional[str]:
-        """Retourne le campus_id à filtrer, ou None si admin."""
-        if _is_admin_or_super(user):
-            return None
+        """Retourne le campus_id à filtrer (None pour super admin sans campus)."""
         membre = user.membre
         campus_id = membre.campus_principal_id if membre else None
-        if not campus_id:
+        if not campus_id and not _is_admin_or_super(user):
             raise AppException(ErrorRegistry.TMPL_005)
         return campus_id
+
+    def _is_visible(
+        self,
+        tpl: PlanningTemplate,
+        *,
+        membre_id: str,
+        accessible_ministere_ids: List[str],
+        campus_filter: Optional[str],
+        is_admin: bool,
+    ) -> bool:
+        """Retourne True si l'utilisateur peut voir ce template."""
+        if tpl.created_by_id == membre_id:
+            return True
+        if tpl.visibilite == VisibiliteTemplate.PRIVE:
+            return False
+        if is_admin:
+            return True
+        if tpl.visibilite == VisibiliteTemplate.MINISTERE:
+            return (
+                tpl.campus_id == campus_filter
+                and tpl.ministere_id in accessible_ministere_ids
+            )
+        if tpl.visibilite == VisibiliteTemplate.CAMPUS:
+            return tpl.campus_id == campus_filter
+        return False
+
+    @staticmethod
+    def _compute_section(tpl: PlanningTemplate, *, membre_id: str) -> str:
+        """Retourne la section d'affichage (mes_templates/ministere/campus)."""
+        if tpl.created_by_id == membre_id:
+            return "mes_templates"
+        if tpl.visibilite == VisibiliteTemplate.MINISTERE:
+            return "ministere"
+        return "campus"
 
     def _fetch_templates_with_stats(
         self,
         campus_filter: Optional[str],
         ministere_filter: Optional[str],
+        *,
+        membre_id: str,
+        accessible_ministere_ids: List[str],
+        is_admin: bool,
     ) -> List[PlanningTemplateListItem]:
-        """Charge templates + calcule nb_creneaux, usage_count, last_used."""
+        """Charge templates + filtre visibilité + calcule stats et section."""
         stmt = select(PlanningTemplate)
         if campus_filter:
             stmt = stmt.where(PlanningTemplate.campus_id == campus_filter)
@@ -127,8 +176,17 @@ class PlanningTemplateSvc:
         templates = list(self.db.exec(stmt).all())
         items: List[PlanningTemplateListItem] = []
         for tpl in templates:
+            if not self._is_visible(
+                tpl,
+                membre_id=membre_id,
+                accessible_ministere_ids=accessible_ministere_ids,
+                campus_filter=campus_filter,
+                is_admin=is_admin,
+            ):
+                continue
             stats = self._compute_usage_stats(tpl.id)
             nb_creneaux = self._compute_nb_creneaux(tpl.id)
+            section = self._compute_section(tpl, membre_id=membre_id)
             items.append(
                 PlanningTemplateListItem(
                     id=tpl.id,
@@ -141,6 +199,8 @@ class PlanningTemplateSvc:
                     usage_count=stats[0],
                     last_used_at=stats[1],
                     created_at=tpl.created_at,
+                    visibilite=tpl.visibilite,
+                    section=section,
                 )
             )
         items.sort(
@@ -234,6 +294,8 @@ class PlanningTemplateSvc:
         self.db.expire(template)
         template.nom = data.nom
         template.description = data.description
+        if data.visibilite is not None:
+            template.visibilite = data.visibilite
         self.db.add(template)
         self.db.flush()
         for slot_write in data.slots:
@@ -356,6 +418,7 @@ class PlanningTemplateSvc:
             campus_id=source.campus_id,
             ministere_id=source.ministere_id,
             created_by_id=member_id,
+            visibilite=source.visibilite,
         )
         self.db.add(new_tpl)
         self.db.flush()
@@ -373,6 +436,8 @@ class PlanningTemplateSvc:
             usage_count=stats[0],
             last_used_at=stats[1],
             created_at=new_tpl.created_at,
+            visibilite=new_tpl.visibilite,
+            section="mes_templates",
         )
 
     def _copy_slots(self, source: PlanningTemplate, new_template_id: str) -> None:
@@ -452,9 +517,27 @@ class PlanningTemplateSvc:
         if _is_admin_or_super(user):
             return
         membre = user.membre
-        campus_id = membre.campus_principal_id if membre else None
-        if template.campus_id != campus_id:
+        membre_id = str(membre.id) if membre else ""
+        if template.created_by_id == membre_id:
+            return
+        if template.visibilite == VisibiliteTemplate.PRIVE:
             raise AppException(ErrorRegistry.TMPL_004)
+        campus_id = membre.campus_principal_id if membre else None
+        if template.visibilite == VisibiliteTemplate.CAMPUS:
+            if template.campus_id != campus_id:
+                raise AppException(ErrorRegistry.TMPL_004)
+            return
+        if template.visibilite == VisibiliteTemplate.MINISTERE:
+            ministere_ids = (
+                [str(m.id) for m in (membre.ministeres or [])] if membre else []
+            )
+            if (
+                template.ministere_id not in ministere_ids
+                or template.campus_id != campus_id
+            ):
+                raise AppException(ErrorRegistry.TMPL_004)
+            return
+        raise AppException(ErrorRegistry.TMPL_004)
 
     def _load_planning(self, planning_id: str) -> PlanningService:
         """Charge un planning avec activité et créneaux+affectations."""
@@ -504,6 +587,7 @@ class PlanningTemplateSvc:
             campus_id=activite.campus_id,
             ministere_id=activite.ministere_organisateur_id,
             created_by_id=created_by_id,
+            visibilite=data.visibilite,
         )
 
     def _add_template_slot(
@@ -777,6 +861,7 @@ class PlanningTemplateSvc:
             created_by_id=template.created_by_id,
             created_at=template.created_at,
             used_count=template.used_count,
+            visibilite=template.visibilite,
             slots=[
                 PlanningTemplateSlotRead(
                     id=s.id,

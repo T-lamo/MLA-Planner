@@ -469,6 +469,7 @@ class PlanningTemplate(SQLModel, table=True):  # type: ignore
     created_by_id: str = Field(foreign_key="t_membre.id", ondelete="CASCADE")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     used_count: int = Field(default=0, ge=0)
+    visibilite: str = Field(default="MINISTERE", max_length=20)
 
     slots: List["PlanningTemplateSlot"] = Relationship(
         back_populates="template",
