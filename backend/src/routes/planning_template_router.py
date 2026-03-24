@@ -7,6 +7,8 @@ from sqlmodel import Session
 
 from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker, get_current_active_user
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import DataListResponse, DataResponse, Utilisateur
 from models.planning_template_model import (
     ApplyTemplateResultSchema,
@@ -16,7 +18,14 @@ from models.planning_template_model import (
     PlanningTemplateUpdate,
     SaveAsTemplateRequest,
 )
+from models.serie_model import (
+    GenerateSeriesPreviewRequest,
+    GenerateSeriesRequest,
+    GenerateSeriesResponse,
+    SeriesPreviewResponse,
+)
 from services.planning_template_service import PlanningTemplateSvc
+from services.serie_service import SerieService
 
 router = APIRouter(
     prefix="/planning-templates",
@@ -29,6 +38,73 @@ _WRITE_ROLES = RoleChecker(["RESPONSABLE_MLA", "ADMIN", "Super Admin"])
 def _get_svc(db: Session = Depends(Database.get_db_for_route)) -> PlanningTemplateSvc:
     """Factory d'injection du service template."""
     return PlanningTemplateSvc(db)
+
+
+def _get_serie_svc(
+    db: Session = Depends(Database.get_db_for_route),
+) -> SerieService:
+    """Factory d'injection du service série."""
+    return SerieService(db)
+
+
+def _resolve_ministere_id(user: Utilisateur) -> Optional[str]:
+    """Extrait le premier ministère du membre courant, ou None pour les admins."""
+    membre = user.membre
+    if membre and membre.ministeres:
+        return str(membre.ministeres[0].id)
+    return None
+
+
+def _resolve_ministere_campus(user: Utilisateur) -> tuple[str, str]:
+    """Retourne (ministere_id, campus_id) depuis le membre courant."""
+    membre = user.membre
+    if not membre:
+        raise AppException(ErrorRegistry.TMPL_005)
+    ministere_id = str(membre.ministeres[0].id) if membre.ministeres else None
+    campus_id = membre.campus_principal_id
+    if not ministere_id or not campus_id:
+        raise AppException(ErrorRegistry.TMPL_005)
+    return ministere_id, campus_id
+
+
+@router.post(
+    "/preview-series",
+    response_model=SeriesPreviewResponse,
+    status_code=200,
+    summary="Prévisualiser les dates d'une série",
+    dependencies=[Depends(_WRITE_ROLES)],
+)
+def preview_series(
+    payload: GenerateSeriesPreviewRequest,
+    current_user: Utilisateur = Depends(get_current_active_user),
+    svc: SerieService = Depends(_get_serie_svc),
+) -> SeriesPreviewResponse:
+    """Calcule les dates selon la récurrence et détecte les conflits."""
+    ministere_id = _resolve_ministere_id(current_user)
+    return svc.get_series_preview(payload, ministere_id=ministere_id)
+
+
+@router.post(
+    "/generate-series",
+    response_model=GenerateSeriesResponse,
+    status_code=201,
+    summary="Générer une série de plannings depuis un template",
+    dependencies=[Depends(_WRITE_ROLES)],
+)
+def generate_series(
+    payload: GenerateSeriesRequest,
+    current_user: Utilisateur = Depends(get_current_active_user),
+    svc: SerieService = Depends(_get_serie_svc),
+) -> GenerateSeriesResponse:
+    """Crée N plannings en BROUILLON depuis un template avec un serie_id commun."""
+    ministere_id, campus_id = _resolve_ministere_campus(current_user)
+    created_by_id = str(current_user.membre_id or "")
+    return svc.generate_series(
+        payload,
+        created_by_id=created_by_id,
+        ministere_id=ministere_id,
+        campus_id=campus_id,
+    )
 
 
 @router.post(

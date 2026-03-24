@@ -421,6 +421,42 @@ export interface ActiviteFormState {
   ministere_organisateur_id: string
 }
 
+// ── US-98 : génération de plannings en série ───────────────────────────────
+
+export type SerieRecurrence = 'HEBDOMADAIRE' | 'MENSUELLE'
+
+export interface GenerateSeriesForm {
+  date_debut: string
+  date_fin: string
+  recurrence: SerieRecurrence
+  jour_semaine: number | null
+}
+
+export interface SeriesConflitDate {
+  date: string
+  planning_id: string
+  planning_titre: string
+}
+
+export interface SeriesPreviewResponse {
+  dates: string[]
+  total: number
+  conflits: SeriesConflitDate[]
+}
+
+export interface PlanningSerieItem {
+  id: string
+  titre: string
+  date_debut: string
+  statut: string
+}
+
+export interface GenerateSeriesResponse {
+  serie_id: string
+  total: number
+  plannings: PlanningSerieItem[]
+}
+
 /** Types d'activité disponibles */
 export const ACTIVITE_TYPES = [
   'Culte',
