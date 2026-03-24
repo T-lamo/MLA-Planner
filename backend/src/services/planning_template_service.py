@@ -1,7 +1,7 @@
 """Service métier pour les templates de planning."""
 
-from datetime import datetime
-from typing import List, Optional
+from datetime import datetime, timedelta
+from typing import List, Optional, Tuple
 from uuid import uuid4
 
 from sqlalchemy import func
@@ -12,20 +12,29 @@ from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from mla_enum import RoleName
 from models.planning_template_model import (
+    ApplyTemplateResult,
     PlanningTemplateFullUpdate,
     PlanningTemplateListItem,
     PlanningTemplateRead,
+    PlanningTemplateRoleMembreRead,
     PlanningTemplateRoleRead,
+    PlanningTemplateRoleWrite,
     PlanningTemplateSlotRead,
     PlanningTemplateSlotWrite,
     PlanningTemplateUpdate,
     SaveAsTemplateRequest,
+    WarningIndispo,
+    WarningMembreIgnore,
 )
 from models.schema_db_model import (
     Activite,
+    Affectation,
+    Indisponibilite,
+    Membre,
     PlanningService,
     PlanningTemplate,
     PlanningTemplateRole,
+    PlanningTemplateRoleMembre,
     PlanningTemplateSlot,
     Slot,
     Utilisateur,
@@ -233,7 +242,7 @@ class PlanningTemplateSvc:
         return self.get_template(template_id)
 
     def _delete_slots_and_roles(self, template: PlanningTemplate) -> None:
-        """Supprime tous les créneaux (et leurs rôles via cascade) du template."""
+        """Supprime tous les créneaux (et leurs rôles/membres via cascade)."""
         slots = list(
             self.db.exec(
                 select(PlanningTemplateSlot).where(
@@ -250,6 +259,15 @@ class PlanningTemplateSvc:
                 ).all()
             )
             for role in roles:
+                membres = list(
+                    self.db.exec(
+                        select(PlanningTemplateRoleMembre).where(
+                            PlanningTemplateRoleMembre.template_role_id == role.id
+                        )
+                    ).all()
+                )
+                for m in membres:
+                    self.db.delete(m)
                 self.db.delete(role)
             self.db.delete(slot)
         self.db.flush()
@@ -268,16 +286,36 @@ class PlanningTemplateSvc:
         self.db.add(tpl_slot)
         self.db.flush()
         seen: set[str] = set()
-        for role_code in slot_write.roles:
-            if role_code not in seen:
-                seen.add(role_code)
-                self.db.add(
-                    PlanningTemplateRole(
-                        slot_id=tpl_slot.id,
-                        role_code=role_code,
-                    )
-                )
+        for role_write in slot_write.roles:
+            if role_write.role_code not in seen:
+                seen.add(role_write.role_code)
+                self._create_role_with_membres(tpl_slot.id, role_write, db=self.db)
         self.db.flush()
+
+    def _create_role_with_membres(
+        self,
+        slot_id: str,
+        role_write: PlanningTemplateRoleWrite,
+        *,
+        db: Session,
+    ) -> PlanningTemplateRole:
+        """Crée un PlanningTemplateRole avec ses membres suggérés."""
+        role = PlanningTemplateRole(
+            slot_id=slot_id,
+            role_code=role_write.role_code,
+        )
+        db.add(role)
+        db.flush()
+        for membre_id in role_write.membres_suggeres_ids:
+            if db.get(Membre, membre_id) is None:
+                continue
+            db.add(
+                PlanningTemplateRoleMembre(
+                    template_role_id=role.id,
+                    membre_id=membre_id,
+                )
+            )
+        return role
 
     # ── Mise à jour partielle (nom/desc) ───────────────────────────────
 
@@ -338,7 +376,7 @@ class PlanningTemplateSvc:
         )
 
     def _copy_slots(self, source: PlanningTemplate, new_template_id: str) -> None:
-        """Copie tous les créneaux et rôles du template source."""
+        """Copie tous les créneaux, rôles et membres suggérés du template."""
         for slot in source.slots:
             new_slot = PlanningTemplateSlot(
                 template_id=new_template_id,
@@ -350,12 +388,19 @@ class PlanningTemplateSvc:
             self.db.add(new_slot)
             self.db.flush()
             for role in slot.roles:
-                self.db.add(
-                    PlanningTemplateRole(
-                        slot_id=new_slot.id,
-                        role_code=role.role_code,
-                    )
+                new_role = PlanningTemplateRole(
+                    slot_id=new_slot.id,
+                    role_code=role.role_code,
                 )
+                self.db.add(new_role)
+                self.db.flush()
+                for ms in role.membres_suggeres:
+                    self.db.add(
+                        PlanningTemplateRoleMembre(
+                            template_role_id=new_role.id,
+                            membre_id=ms.membre_id,
+                        )
+                    )
         self.db.flush()
 
     # ── Suppression US-95 ─────────────────────────────────────────────
@@ -502,6 +547,223 @@ class PlanningTemplateSvc:
         self.db.flush()
 
     @staticmethod
+    def _role_to_read(role: PlanningTemplateRole) -> PlanningTemplateRoleRead:
+        """Convertit un ORM PlanningTemplateRole en DTO de lecture."""
+        membres: List[PlanningTemplateRoleMembreRead] = []
+        for ms in role.membres_suggeres:
+            m = ms.membre
+            if m is None:
+                continue
+            u = m.utilisateur
+            membres.append(
+                PlanningTemplateRoleMembreRead(
+                    id=ms.id,
+                    membre_id=ms.membre_id,
+                    membre_nom=f"{m.prenom} {m.nom}",
+                    membre_username=u.username if u else "",
+                )
+            )
+        return PlanningTemplateRoleRead(
+            id=role.id,
+            role_code=role.role_code,
+            membres_suggeres=membres,
+        )
+
+    # ── Application d'un template sur un planning US-96 ────────────────
+
+    def apply_to_planning(
+        self, template_id: str, planning_id: str
+    ) -> ApplyTemplateResult:
+        """Applique un template à un planning existant.
+
+        Crée des slots et des affectations PROPOSE pour chaque membre suggéré
+        éligible (actif, dans le bon ministère).
+        Retourne un résultat avec warnings indispo et membres ignorés.
+        """
+        template = self.repo.get_with_slots(template_id)
+        if not template:
+            raise AppException(ErrorRegistry.TMPL_003)
+        planning = self._load_planning_with_activite(planning_id)
+        activite: Activite = planning.activite  # type: ignore[assignment]
+        ministere_id = activite.ministere_organisateur_id
+        planning_date = activite.date_debut.date()
+        avertissements: List[WarningIndispo] = []
+        ignores: List[WarningMembreIgnore] = []
+        nb_creees = 0
+        for tpl_slot in template.slots:
+            slot = self._create_real_slot(planning_id, tpl_slot, activite)
+            for role in tpl_slot.roles:
+                counts = self._apply_role_membres(
+                    role,
+                    slot=slot,
+                    ministere_id=ministere_id,
+                    planning_date_str=str(planning_date),
+                )
+                nb_creees += counts[0]
+                avertissements.extend(counts[1])
+                ignores.extend(counts[2])
+        self.db.flush()
+        return ApplyTemplateResult(
+            planning_id=planning_id,
+            affectations_creees=nb_creees,
+            avertissements_indispo=avertissements,
+            membres_ignores=ignores,
+        )
+
+    def _load_planning_with_activite(self, planning_id: str) -> PlanningService:
+        """Charge un planning avec son activité."""
+        stmt = (
+            select(PlanningService)
+            .where(PlanningService.id == planning_id)
+            .options(
+                selectinload(PlanningService.activite),  # type: ignore[arg-type]
+            )
+        )
+        planning = self.db.exec(stmt).first()
+        if not planning or not planning.activite:
+            raise AppException(ErrorRegistry.PLAN_014)
+        return planning
+
+    def _create_real_slot(
+        self,
+        planning_id: str,
+        tpl_slot: PlanningTemplateSlot,
+        activite: Activite,
+    ) -> Slot:
+        """Crée un Slot réel depuis un slot de template."""
+        debut = activite.date_debut + timedelta(minutes=tpl_slot.offset_debut_minutes)
+        fin = activite.date_debut + timedelta(minutes=tpl_slot.offset_fin_minutes)
+        slot = Slot(
+            planning_id=planning_id,
+            nom_creneau=tpl_slot.nom_creneau,
+            date_debut=debut,
+            date_fin=fin,
+            nb_personnes_requis=tpl_slot.nb_personnes_requis,
+        )
+        self.db.add(slot)
+        self.db.flush()
+        return slot
+
+    def _apply_role_membres(
+        self,
+        role: PlanningTemplateRole,
+        *,
+        slot: Slot,
+        ministere_id: str,
+        planning_date_str: str,
+    ) -> Tuple[int, List[WarningIndispo], List[WarningMembreIgnore]]:
+        """Crée les affectations pour tous les membres suggérés d'un rôle."""
+        nb = 0
+        warns: List[WarningIndispo] = []
+        ignores: List[WarningMembreIgnore] = []
+        for ms in role.membres_suggeres:
+            aff, w_i, w_ig = self._apply_membre_suggere(
+                ms.membre_id,
+                slot=slot,
+                role_code=role.role_code,
+                ministere_id=ministere_id,
+                planning_date_str=planning_date_str,
+            )
+            if aff is not None:
+                nb += 1
+            if w_i is not None:
+                warns.append(w_i)
+            if w_ig is not None:
+                ignores.append(w_ig)
+        return nb, warns, ignores
+
+    def _check_membre_eligibilite(
+        self,
+        membre: Membre,
+        *,
+        ministere_id: str,
+    ) -> Optional[str]:
+        """Retourne la raison d'exclusion ou None si éligible."""
+        if not membre.actif:
+            return "introuvable"
+        ids = [str(m.id) for m in (membre.ministeres or [])]
+        if ministere_id not in ids:
+            return "hors_ministere"
+        return None
+
+    def _check_indisponibilite(
+        self,
+        *,
+        membre_id: str,
+        planning_date_str: str,
+    ) -> bool:
+        """Retourne True si le membre est indisponible à la date donnée."""
+        stmt = select(Indisponibilite).where(
+            Indisponibilite.membre_id == membre_id,
+        )
+        rows = self.db.exec(stmt).all()
+        for row in rows:
+            if row.date_debut is None or row.date_fin is None:
+                continue
+            if row.date_debut <= planning_date_str <= row.date_fin:
+                return True
+        return False
+
+    def _apply_membre_suggere(
+        self,
+        membre_id: str,
+        *,
+        slot: Slot,
+        role_code: str,
+        ministere_id: str,
+        planning_date_str: str,
+    ) -> Tuple[
+        Optional[Affectation],
+        Optional[WarningIndispo],
+        Optional[WarningMembreIgnore],
+    ]:
+        """Tente de créer une affectation pour un membre suggéré."""
+        membre = self.db.get(Membre, membre_id)
+        if membre is None:
+            return (
+                None,
+                None,
+                WarningMembreIgnore(
+                    membre_id=membre_id,
+                    membre_nom="Inconnu",
+                    role_code=role_code,
+                    raison="introuvable",
+                ),
+            )
+        raison = self._check_membre_eligibilite(membre, ministere_id=ministere_id)
+        if raison is not None:
+            return (
+                None,
+                None,
+                WarningMembreIgnore(
+                    membre_id=membre_id,
+                    membre_nom=f"{membre.prenom} {membre.nom}",
+                    role_code=role_code,
+                    raison=raison,
+                ),
+            )
+        w_indispo: Optional[WarningIndispo] = None
+        if self._check_indisponibilite(
+            membre_id=membre_id,
+            planning_date_str=planning_date_str,
+        ):
+            w_indispo = WarningIndispo(
+                membre_id=membre_id,
+                membre_nom=f"{membre.prenom} {membre.nom}",
+                creneau_nom=slot.nom_creneau,
+                role_code=role_code,
+            )
+        affectation = Affectation(
+            slot_id=slot.id,
+            membre_id=membre_id,
+            role_code=role_code,
+            statut_affectation_code="PROPOSE",
+            ministere_id=ministere_id,
+        )
+        self.db.add(affectation)
+        return affectation, w_indispo, None
+
+    @staticmethod
     def _to_read(template: PlanningTemplate) -> PlanningTemplateRead:
         """Convertit un ORM PlanningTemplate en DTO de lecture."""
         return PlanningTemplateRead(
@@ -522,10 +784,7 @@ class PlanningTemplateSvc:
                     offset_debut_minutes=s.offset_debut_minutes,
                     offset_fin_minutes=s.offset_fin_minutes,
                     nb_personnes_requis=s.nb_personnes_requis,
-                    roles=[
-                        PlanningTemplateRoleRead(id=r.id, role_code=r.role_code)
-                        for r in s.roles
-                    ],
+                    roles=[PlanningTemplateSvc._role_to_read(r) for r in s.roles],
                 )
                 for s in template.slots
             ],

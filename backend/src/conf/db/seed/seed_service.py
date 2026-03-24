@@ -33,6 +33,7 @@ from models import (
     PlanningService,
     PlanningTemplate,
     PlanningTemplateRole,
+    PlanningTemplateRoleMembre,
     PlanningTemplateSlot,
     Pole,
     Responsabilite,
@@ -841,12 +842,27 @@ class SeedService:
                     "nb_personnes_requis": s["nb_personnes_requis"],
                 },
             )
-            for role_code in s["roles"]:
-                self._get_or_create(
+            for role_data in s["roles"]:
+                role, _ = self._get_or_create(
                     PlanningTemplateRole,
                     slot_id=slot.id,
-                    role_code=role_code,
+                    role_code=role_data["role_code"],
                 )
+                self._seed_template_role_membres(
+                    role.id,
+                    role_data.get("membres_suggeres_ids", []),
+                )
+
+    def _seed_template_role_membres(self, role_id: str, membre_ids: list) -> None:
+        """Crée les membres suggérés d'un rôle de template (idempotent)."""
+        for membre_id in membre_ids:
+            if self.db.get(Membre, membre_id) is None:
+                continue
+            self._get_or_create(
+                PlanningTemplateRoleMembre,
+                template_role_id=role_id,
+                membre_id=membre_id,
+            )
 
     # --- SONGBOOK ---
 

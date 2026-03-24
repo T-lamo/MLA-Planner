@@ -559,6 +559,23 @@ class ErrorRegistry:
         http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
     )
 
+    # --- DOMAINE SÉRIE DE PLANNINGS (SERIE) ---
+    SERIE_001 = ErrorDetail(
+        code="SERIE_001",
+        message="Limite de 52 plannings par lot dépassée",
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+    SERIE_002 = ErrorDetail(
+        code="SERIE_002",
+        message="Date de fin antérieure à la date de début",
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+    SERIE_003 = ErrorDetail(
+        code="SERIE_003",
+        message="jour_semaine requis pour récurrence HEBDOMADAIRE",
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+
     # --- DOMAINE CHANTS / SONGBOOK (SONG) ---
     SONG_CAT_NOT_FOUND = ErrorDetail(
         code="SONG_001",

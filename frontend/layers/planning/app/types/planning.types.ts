@@ -248,6 +248,7 @@ export interface MembreSimple {
   prenom: string
   email?: string | null
   actif: boolean
+  roles: string[] // role_codes depuis MembreSimpleWithRoles
 }
 
 /** Rôle de compétence pour le select affectation */
@@ -282,9 +283,43 @@ export interface CampusTeamRead {
 // 7. PLANNING TEMPLATES — US-01 / US-95
 // ============================================================
 
+export interface TemplateRoleMembreRead {
+  id: string
+  membre_id: string
+  membre_nom: string
+  membre_username: string
+}
+
+export interface TemplateRoleWrite {
+  role_code: string
+  membres_suggeres_ids: string[]
+}
+
+export interface WarningIndispo {
+  membre_id: string
+  membre_nom: string
+  creneau_nom: string
+  role_code: string
+}
+
+export interface WarningMembreIgnore {
+  membre_id: string
+  membre_nom: string
+  role_code: string
+  raison: 'hors_ministere' | 'role_manquant' | 'introuvable'
+}
+
+export interface ApplyTemplateResult {
+  planning_id: string
+  affectations_creees: number
+  avertissements_indispo: WarningIndispo[]
+  membres_ignores: WarningMembreIgnore[]
+}
+
 export interface PlanningTemplateRoleRead {
   id: string
   role_code: string
+  membres_suggeres: TemplateRoleMembreRead[]
 }
 
 export interface PlanningTemplateSlotRead {
@@ -343,7 +378,7 @@ export interface PlanningTemplateSlotWrite {
   offset_debut_minutes: number
   offset_fin_minutes: number
   nb_personnes_requis: number
-  roles: string[]
+  roles: TemplateRoleWrite[]
 }
 
 export interface PlanningTemplateFullUpdate {
@@ -384,6 +419,42 @@ export interface ActiviteFormState {
   description: string
   campus_id: string
   ministere_organisateur_id: string
+}
+
+// ── US-98 : génération de plannings en série ───────────────────────────────
+
+export type SerieRecurrence = 'HEBDOMADAIRE' | 'MENSUELLE'
+
+export interface GenerateSeriesForm {
+  date_debut: string
+  date_fin: string
+  recurrence: SerieRecurrence
+  jour_semaine: number | null
+}
+
+export interface SeriesConflitDate {
+  date: string
+  planning_id: string
+  planning_titre: string
+}
+
+export interface SeriesPreviewResponse {
+  dates: string[]
+  total: number
+  conflits: SeriesConflitDate[]
+}
+
+export interface PlanningSerieItem {
+  id: string
+  titre: string
+  date_debut: string
+  statut: string
+}
+
+export interface GenerateSeriesResponse {
+  serie_id: string
+  total: number
+  plannings: PlanningSerieItem[]
 }
 
 /** Types d'activité disponibles */

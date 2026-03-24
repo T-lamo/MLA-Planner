@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { PlanningRepository } from '../repositories/PlanningRepository'
 import type {
+  GenerateSeriesForm,
+  GenerateSeriesResponse,
   PlanningTemplateFullUpdate,
   PlanningTemplateListItem,
   PlanningTemplateReadFull,
@@ -69,6 +71,13 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
     }
   }
 
+  async function generateSeries(
+    templateId: string,
+    form: GenerateSeriesForm,
+  ): Promise<GenerateSeriesResponse> {
+    return repo.generateSeries(templateId, form)
+  }
+
   return {
     templates,
     selectedTemplate,
@@ -78,5 +87,6 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
     updateTemplate,
     duplicateTemplate,
     deleteTemplate,
+    generateSeries,
   }
 })
