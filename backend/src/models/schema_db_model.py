@@ -273,6 +273,7 @@ class PlanningService(PlanningServiceBase, table=True):  # type: ignore
         foreign_key="t_planningtemplate.id",
         ondelete="SET NULL",
     )
+    serie_id: Optional[str] = Field(default=None, index=True)
     activite: Optional["Activite"] = Relationship(back_populates="planning_services")
     statut: Optional[StatutPlanning] = Relationship(back_populates="plannings")
     slots: List["Slot"] = Relationship(

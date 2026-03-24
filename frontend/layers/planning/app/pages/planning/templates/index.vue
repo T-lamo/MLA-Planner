@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { Copy, LayoutTemplate, Pencil, Trash2 } from 'lucide-vue-next'
+import { LayoutTemplate } from 'lucide-vue-next'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import { usePlanningTemplateStore } from '../../../stores/usePlanningTemplateStore'
-import type { PlanningTemplateListItem } from '../../../types/planning.types'
+import type {
+  GenerateSeriesResponse,
+  PlanningTemplateListItem,
+} from '../../../types/planning.types'
 
 const editingTemplateId = ref<string | null>(null)
 
@@ -17,6 +20,7 @@ const { templates, isLoading } = storeToRefs(templateStore)
 const ministereFilter = ref<string | undefined>(undefined)
 const deleteTarget = ref<string | null>(null)
 const isDeleting = ref(false)
+const generateSerieTarget = ref<{ id: string; nom: string } | null>(null)
 
 onMounted(() => templateStore.fetchTemplates())
 
@@ -41,8 +45,8 @@ function formatDate(iso: string): string {
   })
 }
 
-async function handleDuplicate(tpl: PlanningTemplateListItem) {
-  await templateStore.duplicateTemplate(tpl.id)
+async function handleDuplicate(id: string) {
+  await templateStore.duplicateTemplate(id)
 }
 
 function openDeleteDialog(id: string) {
@@ -62,6 +66,14 @@ async function confirmDelete() {
   } finally {
     isDeleting.value = false
   }
+}
+
+function openGenerateSerie(tpl: PlanningTemplateListItem) {
+  generateSerieTarget.value = { id: tpl.id, nom: tpl.nom }
+}
+
+function onSerieGenerated(_result: GenerateSeriesResponse) {
+  generateSerieTarget.value = null
 }
 
 const canWrite = computed(() => authStore.canManageChants)
@@ -137,30 +149,14 @@ const canWrite = computed(() => authStore.canManageChants)
             <td class="px-4 py-3 text-slate-500">
               {{ formatDate(tpl.created_at) }}
             </td>
-            <td v-if="canWrite" class="px-4 py-3">
-              <div class="flex items-center justify-end gap-2">
-                <button
-                  class="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                  title="Modifier"
-                  @click="editingTemplateId = tpl.id"
-                >
-                  <Pencil class="size-4" />
-                </button>
-                <button
-                  class="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-                  title="Dupliquer"
-                  @click="handleDuplicate(tpl)"
-                >
-                  <Copy class="size-4" />
-                </button>
-                <button
-                  class="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
-                  title="Supprimer"
-                  @click="openDeleteDialog(tpl.id)"
-                >
-                  <Trash2 class="size-4" />
-                </button>
-              </div>
+            <td v-if="canWrite" class="px-4 py-3 text-right">
+              <TemplateActionMenu
+                :template="tpl"
+                @edit="editingTemplateId = tpl.id"
+                @duplicate="handleDuplicate(tpl.id)"
+                @generate-serie="openGenerateSerie(tpl)"
+                @delete="openDeleteDialog(tpl.id)"
+              />
             </td>
           </tr>
         </tbody>
@@ -172,6 +168,14 @@ const canWrite = computed(() => authStore.canManageChants)
       :templateId="editingTemplateId"
       @close="editingTemplateId = null"
       @saved="templateStore.fetchTemplates(ministereFilter || undefined)"
+    />
+
+    <!-- Drawer génération de série -->
+    <GenerateSerieDrawer
+      :templateId="generateSerieTarget?.id ?? null"
+      :templateNom="generateSerieTarget?.nom ?? ''"
+      @close="generateSerieTarget = null"
+      @generated="onSerieGenerated"
     />
 
     <!-- Dialog suppression -->

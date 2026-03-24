@@ -4,6 +4,8 @@ import type {
   ApplyTemplateResult,
   CampusFilterParams,
   CampusTeamRead,
+  GenerateSeriesForm,
+  GenerateSeriesResponse,
   MembreSimple,
   PlanningFullCreate,
   PlanningFullRead,
@@ -14,6 +16,7 @@ import type {
   PlanningTemplateReadFull,
   RoleCompetenceRead,
   SaveAsTemplateRequest,
+  SeriesPreviewResponse,
 } from '../types/planning.types'
 
 export class PlanningRepository extends BaseRepository {
@@ -175,5 +178,26 @@ export class PlanningRepository extends BaseRepository {
       `/planning-templates/${templateId}/apply/${planningId}`,
       { method: 'POST' },
     )
+  }
+
+  // ── US-98 : génération de séries ─────────────────────────────────────────
+
+  async previewSeries(form: GenerateSeriesForm): Promise<SeriesPreviewResponse> {
+    const { data } = await this.apiRequest<SeriesPreviewResponse>(
+      '/planning-templates/preview-series',
+      { method: 'POST', body: form },
+    )
+    return data
+  }
+
+  async generateSeries(
+    templateId: string,
+    form: GenerateSeriesForm,
+  ): Promise<GenerateSeriesResponse> {
+    const { data } = await this.apiRequest<GenerateSeriesResponse>(
+      '/planning-templates/generate-series',
+      { method: 'POST', body: { ...form, template_id: templateId } },
+    )
+    return data
   }
 }
