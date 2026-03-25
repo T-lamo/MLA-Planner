@@ -156,9 +156,11 @@ function formatTime(iso: string) {
     <!-- ── Barre de filtres ── -->
     <div class="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
       <!-- Chips statut -->
-      <div class="mb-3 flex flex-wrap gap-1.5">
+      <div
+        class="mb-3 flex gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         <button
-          class="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+          class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors"
           :class="
             selectedStatus === 'TOUS'
               ? 'border-slate-700 bg-slate-700 text-white'
@@ -171,7 +173,7 @@ function formatTime(iso: string) {
         <button
           v-for="s in STATUS_ORDER"
           :key="s"
-          class="rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+          class="shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors"
           :class="selectedStatus === s ? STATUS_CONFIG[s].chipActive : STATUS_CONFIG[s].chip"
           @click="selectedStatus = selectedStatus === s ? 'TOUS' : s"
         >
@@ -423,9 +425,8 @@ function formatTime(iso: string) {
                   <!-- Badge statut -->
                   <span
                     v-else
-                    class="inline-block max-w-20 truncate rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                    class="inline-block rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
                     :class="STATUS_CONFIG[aff.statut_affectation_code as AffectationStatus].badge"
-                    :title="STATUS_CONFIG[aff.statut_affectation_code as AffectationStatus].label"
                   >
                     {{ STATUS_CONFIG[aff.statut_affectation_code as AffectationStatus].label }}
                   </span>
