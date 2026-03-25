@@ -105,6 +105,7 @@
           <input
             :value="dateDebutDate"
             type="date"
+            :min="todayDate"
             class="mb-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
             @change="setDebutDate(($event.target as HTMLInputElement).value)"
           />
@@ -718,6 +719,7 @@ const {
 } = form
 
 // ── Helpers pour séparer date et heure (évite le débordement du datetime-local natif) ──
+const todayDate = new Date().toISOString().slice(0, 10)
 const dateDebutDate = computed(() => activiteForm.date_debut.slice(0, 10))
 const dateDebutTime = computed(() => activiteForm.date_debut.slice(11, 16))
 const dateFinDate = computed(() => activiteForm.date_fin.slice(0, 10))

@@ -2,6 +2,8 @@
 import type { GenerateSeriesForm, SerieRecurrence } from '../../types/planning.types'
 import { useSerieDate } from '../../composables/useSerieDate'
 
+const todayDate = new Date().toISOString().slice(0, 10)
+
 const props = defineProps<{ form: GenerateSeriesForm }>()
 
 const emit = defineEmits<{
@@ -35,6 +37,7 @@ function set(patch: Partial<GenerateSeriesForm>) {
       <input
         :value="form.date_debut"
         type="date"
+        :min="todayDate"
         class="w-full rounded-lg border border-(--color-neutral-300) px-3 py-2 text-sm outline-none focus:border-(--color-primary-500)"
         @input="set({ date_debut: ($event.target as HTMLInputElement).value })"
       />
@@ -46,6 +49,7 @@ function set(patch: Partial<GenerateSeriesForm>) {
       <input
         :value="form.date_fin"
         type="date"
+        :min="form.date_debut || todayDate"
         class="w-full rounded-lg border border-(--color-neutral-300) px-3 py-2 text-sm outline-none focus:border-(--color-primary-500)"
         @input="set({ date_fin: ($event.target as HTMLInputElement).value })"
       />
