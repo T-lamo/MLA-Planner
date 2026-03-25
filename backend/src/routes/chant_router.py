@@ -35,8 +35,8 @@ from services.chant_service import ChantCategorieService, ChantService
 router = APIRouter(prefix="/chants", tags=["Songbook"])
 
 _DB = Depends(Database.get_db_for_route)
-_AUTH = Depends(RoleChecker(["Super Admin", "Admin", "RESPONSABLE_MLA", "MEMBRE_MLA"]))
-_ADMIN = Depends(RoleChecker(["Super Admin", "Admin", "RESPONSABLE_MLA"]))
+_AUTH = Depends(RoleChecker(["SUPER_ADMIN", "ADMIN", "RESPONSABLE_MLA", "MEMBRE_MLA"]))
+_ADMIN = Depends(RoleChecker(["SUPER_ADMIN", "ADMIN", "RESPONSABLE_MLA"]))
 
 
 def _get_cat_svc(db: Session = _DB) -> ChantCategorieService:  # type: ignore
