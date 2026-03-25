@@ -1,6 +1,7 @@
 # MLA Planner
 
-[![CI Backend](https://github.com/T-lamo/MLA-Planner/actions/workflows/ci.yml/badge.svg)](https://github.com/T-lamo/MLA-Planner/actions)
+[![CI](https://github.com/T-lamo/MLA-Planner/actions/workflows/ci.yml/badge.svg)](https://github.com/T-lamo/MLA-Planner/actions)
+[![Coverage](https://codecov.io/gh/T-lamo/MLA-Planner/branch/develop/graph/badge.svg)](https://codecov.io/gh/T-lamo/MLA-Planner)
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.128-009688)
 ![Nuxt](https://img.shields.io/badge/Nuxt-4.3-00DC82)
