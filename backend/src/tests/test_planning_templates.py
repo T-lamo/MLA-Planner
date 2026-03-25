@@ -116,7 +116,11 @@ def test_save_as_template_happy_path(session, planning_with_slots, created_by_id
         type(
             "Req",
             (),
-            {"nom": "Mon Template", "description": "Desc test"},
+            {
+                "nom": "Mon Template",
+                "description": "Desc test",
+                "visibilite": "MINISTERE",
+            },
         )(),
         created_by_id,
     )

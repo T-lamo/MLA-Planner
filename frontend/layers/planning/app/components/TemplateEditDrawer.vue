@@ -9,6 +9,7 @@ import type {
   PlanningTemplateSlotWrite,
   RoleCompetenceRead,
   TemplateRoleWrite,
+  VisibiliteTemplate,
 } from '../types/planning.types'
 
 const props = defineProps<{
@@ -30,8 +31,9 @@ interface SlotForm extends PlanningTemplateSlotWrite {
 const form = reactive<{
   nom: string
   description: string
+  visibilite: VisibiliteTemplate
   slots: SlotForm[]
-}>({ nom: '', description: '', slots: [] })
+}>({ nom: '', description: '', visibilite: 'MINISTERE', slots: [] })
 
 const isSaving = ref(false)
 const loadError = ref<string | null>(null)
@@ -60,6 +62,7 @@ function populateForm() {
   if (!tpl) return
   form.nom = tpl.nom
   form.description = tpl.description ?? ''
+  form.visibilite = (tpl.visibilite as VisibiliteTemplate) ?? 'MINISTERE'
   form.slots = tpl.slots.map((s) => ({
     _tempId: s.id,
     nom_creneau: s.nom_creneau,
@@ -169,6 +172,7 @@ async function handleSave() {
     await templateStore.updateTemplate(props.templateId, {
       nom: form.nom,
       description: form.description || null,
+      visibilite: form.visibilite,
       slots: form.slots.map((s) => ({
         nom_creneau: s.nom_creneau,
         offset_debut_minutes: s.offset_debut_minutes,
@@ -242,6 +246,23 @@ async function handleSave() {
                 class="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 transition-colors outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 placeholder="Description facultative…"
               />
+            </div>
+            <div>
+              <label
+                class="mb-1 block text-sm font-medium text-slate-700"
+                for="drawer-tpl-visibilite"
+              >
+                Visibilité
+              </label>
+              <select
+                id="drawer-tpl-visibilite"
+                v-model="form.visibilite"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              >
+                <option value="PRIVE">Privé — visible par moi uniquement</option>
+                <option value="MINISTERE">Ministère — tous les membres du ministère</option>
+                <option value="CAMPUS">Campus — tous les campus</option>
+              </select>
             </div>
           </div>
         </div>
