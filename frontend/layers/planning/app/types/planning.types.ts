@@ -132,6 +132,7 @@ export interface AffectationMemberRead {
   slot_fin: string
   activite_type?: string | null
   ministere_nom?: string | null
+  lieu?: string | null
 }
 
 // --- Membre résumé (dans les affectations) ---
