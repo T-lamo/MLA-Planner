@@ -259,7 +259,9 @@ def robust_data_factory(session, test_campus, test_ministere, test_role_comp):
     """
 
     def _create_complex_tree(status: str = "BROUILLON"):
-        base_date = datetime(2026, 6, 1, 8, 0, 0)
+        base_date = datetime.now().replace(
+            hour=8, minute=0, second=0, microsecond=0
+        ) + timedelta(days=30)
         membres = _create_robust_members(session, test_campus.id, test_role_comp.code)
         session.flush()
 
@@ -302,7 +304,9 @@ def valid_planning_full_payload(
     """
     Génère un payload PlanningFullCreate valide et réutilisable.
     """
-    base_date = datetime(2026, 2, 16, 9, 0, 0)
+    base_date = datetime.now().replace(
+        hour=9, minute=0, second=0, microsecond=0
+    ) + timedelta(days=30)
 
     return PlanningFullCreate(
         activite=ActiviteCreate(
