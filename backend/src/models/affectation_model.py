@@ -41,6 +41,7 @@ class AffectationMemberRead(BaseModel):
     slot_fin: datetime
     activite_type: Optional[str] = None
     ministere_nom: Optional[str] = None
+    lieu: Optional[str] = None
     model_config = {"from_attributes": True}
 
     @model_validator(mode="before")
@@ -61,6 +62,7 @@ class AffectationMemberRead(BaseModel):
             "slot_fin": getattr(slot, "date_fin", None) if slot else None,
             "activite_type": getattr(activite, "type", None) if activite else None,
             "ministere_nom": getattr(ministere, "nom", None) if ministere else None,
+            "lieu": getattr(activite, "lieu", None) if activite else None,
         }
 
 

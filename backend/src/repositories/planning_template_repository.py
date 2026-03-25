@@ -6,7 +6,12 @@ from sqlalchemy import desc
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
-from models.schema_db_model import PlanningTemplate, PlanningTemplateSlot
+from models.schema_db_model import (
+    PlanningTemplate,
+    PlanningTemplateRole,
+    PlanningTemplateRoleMembre,
+    PlanningTemplateSlot,
+)
 from repositories.base_repository import BaseRepository
 
 
@@ -17,7 +22,7 @@ class PlanningTemplateRepository(BaseRepository[PlanningTemplate]):
         super().__init__(db, PlanningTemplate)
 
     def get_with_slots(self, template_id: str) -> Optional[PlanningTemplate]:
-        """Charge un template avec ses créneaux et rôles (évite N+1)."""
+        """Charge template avec créneaux, rôles et membres suggérés."""
         stmt = (
             select(PlanningTemplate)
             .where(PlanningTemplate.id == template_id)
@@ -28,11 +33,14 @@ class PlanningTemplateRepository(BaseRepository[PlanningTemplate]):
         return self.db.exec(stmt).first()
 
     def _slot_roles_option(self):  # type: ignore[return]
-        """Retourne l'option eager-load slots → roles."""
-        return selectinload(
-            PlanningTemplate.slots  # type: ignore[arg-type]
-        ).selectinload(
-            PlanningTemplateSlot.roles  # type: ignore[arg-type]
+        """Retourne l'option eager-load slots → roles → membres_suggeres → membre."""
+        return (
+            selectinload(PlanningTemplate.slots)  # type: ignore[arg-type]
+            .selectinload(PlanningTemplateSlot.roles)  # type: ignore[arg-type]
+            .selectinload(
+                PlanningTemplateRole.membres_suggeres  # type: ignore[arg-type]
+            )
+            .selectinload(PlanningTemplateRoleMembre.membre)  # type: ignore[arg-type]
         )
 
     def list_by_campus(self, campus_id: str) -> List[PlanningTemplate]:

@@ -425,13 +425,14 @@ def test_list_chants_superadmin_no_campus_id(
     assert "data" in body
 
 
-def test_list_chants_non_admin_requires_campus_id(
+def test_list_chants_any_user_no_campus_id(
     client: TestClient,
     user_headers: dict,
 ) -> None:
-    """Un membre sans campus_id reçoit 422 (SONG_008)."""
+    """Tout utilisateur authentifié peut lister sans campus_id (répertoire commun)."""
     response = client.get("/chants", headers=user_headers)
-    assert response.status_code == 422
+    assert response.status_code == 200
+    assert "data" in response.json()
 
 
 # ------------------------------------------------------------------ #

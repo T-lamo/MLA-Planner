@@ -273,6 +273,7 @@ class PlanningService(PlanningServiceBase, table=True):  # type: ignore
         foreign_key="t_planningtemplate.id",
         ondelete="SET NULL",
     )
+    serie_id: Optional[str] = Field(default=None, index=True)
     activite: Optional["Activite"] = Relationship(back_populates="planning_services")
     statut: Optional[StatutPlanning] = Relationship(back_populates="plannings")
     slots: List["Slot"] = Relationship(
@@ -468,6 +469,7 @@ class PlanningTemplate(SQLModel, table=True):  # type: ignore
     created_by_id: str = Field(foreign_key="t_membre.id", ondelete="CASCADE")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     used_count: int = Field(default=0, ge=0)
+    visibilite: str = Field(default="MINISTERE", max_length=20)
 
     slots: List["PlanningTemplateSlot"] = Relationship(
         back_populates="template",
@@ -502,6 +504,30 @@ class PlanningTemplateRole(SQLModel, table=True):  # type: ignore
     role_code: str = Field(max_length=50)
 
     slot: Optional["PlanningTemplateSlot"] = Relationship(back_populates="roles")
+    membres_suggeres: List["PlanningTemplateRoleMembre"] = Relationship(
+        back_populates="template_role",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
+
+
+class PlanningTemplateRoleMembre(SQLModel, table=True):  # type: ignore
+    __tablename__ = "t_planning_template_role_membre"
+    __table_args__ = {"extend_existing": True}
+
+    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
+    template_role_id: str = Field(
+        foreign_key="t_planningtemplaterole.id",
+        ondelete="CASCADE",
+    )
+    membre_id: str = Field(
+        foreign_key="t_membre.id",
+        ondelete="CASCADE",
+    )
+
+    template_role: Optional["PlanningTemplateRole"] = Relationship(
+        back_populates="membres_suggeres"
+    )
+    membre: Optional["Membre"] = Relationship()
 
 
 __all__ = [
@@ -546,4 +572,5 @@ __all__ = [
     "PlanningTemplate",
     "PlanningTemplateSlot",
     "PlanningTemplateRole",
+    "PlanningTemplateRoleMembre",
 ]
