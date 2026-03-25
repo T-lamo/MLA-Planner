@@ -180,24 +180,27 @@ function formatTime(iso: string) {
       </div>
 
       <!-- Période + tri -->
-      <div class="flex flex-wrap items-center gap-2">
-        <div class="flex items-center gap-1.5">
-          <CalendarDays class="size-3.5 shrink-0 text-slate-400" />
-          <span class="text-xs text-slate-500">Du</span>
-          <input
-            v-model="filterDateDebut"
-            type="date"
-            class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-blue-400 focus:outline-none"
-          />
-        </div>
-        <div class="flex items-center gap-1.5">
-          <span class="text-xs text-slate-500">Au</span>
-          <input
-            v-model="filterDateFin"
-            type="date"
-            :min="filterDateDebut"
-            class="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-700 focus:border-blue-400 focus:outline-none"
-          />
+      <div class="flex flex-wrap items-end gap-2">
+        <!-- Du / Au : colonne sur mobile, ligne sur sm+ -->
+        <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <div class="flex items-center gap-1.5">
+            <CalendarDays class="size-3.5 shrink-0 text-slate-400" />
+            <span class="w-5 shrink-0 text-xs text-slate-500">Du</span>
+            <input
+              v-model="filterDateDebut"
+              type="date"
+              class="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-700 focus:border-blue-400 focus:outline-none sm:flex-none"
+            />
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-5 shrink-0 text-xs text-slate-500">Au</span>
+            <input
+              v-model="filterDateFin"
+              type="date"
+              :min="filterDateDebut"
+              class="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-700 focus:border-blue-400 focus:outline-none sm:flex-none"
+            />
+          </div>
         </div>
 
         <div class="ml-auto flex items-center gap-2">
@@ -360,12 +363,12 @@ function formatTime(iso: string) {
           <li
             v-for="aff in filtered"
             :key="aff.id"
-            class="overflow-hidden rounded-xl border bg-white shadow-sm"
+            class="w-full overflow-hidden rounded-xl border bg-white shadow-sm"
             :class="
               aff.statut_affectation_code === 'PROPOSE' ? 'border-amber-100' : 'border-slate-100'
             "
           >
-            <div class="flex">
+            <div class="flex min-w-0">
               <!-- Bande couleur -->
               <div
                 class="w-0.5 shrink-0"
@@ -379,7 +382,7 @@ function formatTime(iso: string) {
                 }"
               ></div>
 
-              <div class="flex flex-1 items-center gap-3 px-3 py-3">
+              <div class="flex min-w-0 flex-1 items-center gap-3 px-3 py-3">
                 <!-- Date bloc -->
                 <div class="w-16 shrink-0 text-center">
                   <p class="text-xs font-bold text-slate-800">
@@ -400,7 +403,7 @@ function formatTime(iso: string) {
                 </div>
 
                 <!-- Statut / Actions -->
-                <div class="shrink-0">
+                <div class="ml-auto shrink-0">
                   <!-- Actions pour PROPOSE -->
                   <div v-if="aff.statut_affectation_code === 'PROPOSE'" class="flex gap-1.5">
                     <button
@@ -420,8 +423,9 @@ function formatTime(iso: string) {
                   <!-- Badge statut -->
                   <span
                     v-else
-                    class="rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                    class="inline-block max-w-20 truncate rounded-full border px-2 py-0.5 text-[11px] font-semibold"
                     :class="STATUS_CONFIG[aff.statut_affectation_code as AffectationStatus].badge"
+                    :title="STATUS_CONFIG[aff.statut_affectation_code as AffectationStatus].label"
                   >
                     {{ STATUS_CONFIG[aff.statut_affectation_code as AffectationStatus].label }}
                   </span>
