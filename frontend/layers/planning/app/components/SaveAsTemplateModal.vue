@@ -79,6 +79,25 @@
               />
             </div>
 
+            <!-- Visibilité -->
+            <div>
+              <label
+                for="template-visibilite"
+                class="mb-1.5 block text-xs font-semibold text-slate-700"
+              >
+                Visibilité
+              </label>
+              <select
+                id="template-visibilite"
+                v-model="visibilite"
+                class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="MINISTERE">Ministère — tous les membres du ministère</option>
+                <option value="CAMPUS">Campus — tous les campus</option>
+                <option value="PRIVE">Privé — visible par moi uniquement</option>
+              </select>
+            </div>
+
             <!-- Erreur API -->
             <p v-if="templateError" class="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
               {{ templateError }}
@@ -116,7 +135,7 @@
 import { ref, watch } from 'vue'
 import { BookmarkPlus, Loader2, X } from 'lucide-vue-next'
 import { usePlanningTemplates } from '../composables/usePlanningTemplates'
-import type { PlanningTemplateRead } from '../types/planning.types'
+import type { PlanningTemplateRead, VisibiliteTemplate } from '../types/planning.types'
 
 // ---------------------------------------------------------------------------
 // Props & Emits
@@ -136,6 +155,7 @@ const emit = defineEmits<{
 // ---------------------------------------------------------------------------
 const nom = ref('')
 const description = ref('')
+const visibilite = ref<VisibiliteTemplate>('MINISTERE')
 const nomError = ref('')
 
 const { isSaving, templateError, saveAsTemplate } = usePlanningTemplates()
@@ -147,6 +167,7 @@ watch(
     if (open) {
       nom.value = ''
       description.value = ''
+      visibilite.value = 'MINISTERE'
       nomError.value = ''
     }
   },
@@ -170,6 +191,7 @@ async function handleSave(): Promise<void> {
   const result = await saveAsTemplate(props.planningId, {
     nom: trimmed,
     description: description.value.trim() || null,
+    visibilite: visibilite.value,
   })
 
   if (result) {

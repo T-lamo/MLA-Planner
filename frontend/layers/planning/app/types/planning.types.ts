@@ -132,6 +132,7 @@ export interface AffectationMemberRead {
   slot_fin: string
   activite_type?: string | null
   ministere_nom?: string | null
+  lieu?: string | null
 }
 
 // --- Membre résumé (dans les affectations) ---
@@ -248,6 +249,7 @@ export interface MembreSimple {
   prenom: string
   email?: string | null
   actif: boolean
+  roles: string[] // role_codes depuis MembreSimpleWithRoles
 }
 
 /** Rôle de compétence pour le select affectation */
@@ -279,12 +281,48 @@ export interface CampusTeamRead {
 }
 
 // ============================================================
-// 7. PLANNING TEMPLATES — US-01
+// 7. PLANNING TEMPLATES — US-01 / US-95 / US-99
 // ============================================================
+
+export type VisibiliteTemplate = 'PRIVE' | 'MINISTERE' | 'CAMPUS'
+
+export interface TemplateRoleMembreRead {
+  id: string
+  membre_id: string
+  membre_nom: string
+  membre_username: string
+}
+
+export interface TemplateRoleWrite {
+  role_code: string
+  membres_suggeres_ids: string[]
+}
+
+export interface WarningIndispo {
+  membre_id: string
+  membre_nom: string
+  creneau_nom: string
+  role_code: string
+}
+
+export interface WarningMembreIgnore {
+  membre_id: string
+  membre_nom: string
+  role_code: string
+  raison: 'hors_ministere' | 'role_manquant' | 'introuvable'
+}
+
+export interface ApplyTemplateResult {
+  planning_id: string
+  affectations_creees: number
+  avertissements_indispo: WarningIndispo[]
+  membres_ignores: WarningMembreIgnore[]
+}
 
 export interface PlanningTemplateRoleRead {
   id: string
   role_code: string
+  membres_suggeres: TemplateRoleMembreRead[]
 }
 
 export interface PlanningTemplateSlotRead {
@@ -307,17 +345,54 @@ export interface PlanningTemplateRead {
   created_by_id: string
   created_at: string
   used_count: number
+  visibilite: VisibiliteTemplate
   slots: PlanningTemplateSlotRead[]
 }
+
+/** Alias pour clarté US-95 */
+export type PlanningTemplateReadFull = PlanningTemplateRead
 
 export interface SaveAsTemplateRequest {
   nom: string
   description?: string | null
+  visibilite?: VisibiliteTemplate
 }
 
 export interface PlanningTemplateUpdate {
   nom?: string | null
   description?: string | null
+}
+
+// ── US-95 : bibliothèque de templates ─────────────────────────────────────
+
+export interface PlanningTemplateListItem {
+  id: string
+  nom: string
+  description?: string | null
+  ministere_id: string
+  campus_id: string
+  activite_type?: string | null
+  nb_creneaux: number
+  usage_count: number
+  last_used_at: string | null
+  created_at: string
+  visibilite: VisibiliteTemplate
+  section: 'mes_templates' | 'ministere' | 'campus'
+}
+
+export interface PlanningTemplateSlotWrite {
+  nom_creneau: string
+  offset_debut_minutes: number
+  offset_fin_minutes: number
+  nb_personnes_requis: number
+  roles: TemplateRoleWrite[]
+}
+
+export interface PlanningTemplateFullUpdate {
+  nom: string
+  description?: string | null
+  visibilite?: VisibiliteTemplate | null
+  slots: PlanningTemplateSlotWrite[]
 }
 
 /** Item affectation dans le formulaire */
@@ -352,6 +427,42 @@ export interface ActiviteFormState {
   description: string
   campus_id: string
   ministere_organisateur_id: string
+}
+
+// ── US-98 : génération de plannings en série ───────────────────────────────
+
+export type SerieRecurrence = 'HEBDOMADAIRE' | 'MENSUELLE'
+
+export interface GenerateSeriesForm {
+  date_debut: string
+  date_fin: string
+  recurrence: SerieRecurrence
+  jour_semaine: number | null
+}
+
+export interface SeriesConflitDate {
+  date: string
+  planning_id: string
+  planning_titre: string
+}
+
+export interface SeriesPreviewResponse {
+  dates: string[]
+  total: number
+  conflits: SeriesConflitDate[]
+}
+
+export interface PlanningSerieItem {
+  id: string
+  titre: string
+  date_debut: string
+  statut: string
+}
+
+export interface GenerateSeriesResponse {
+  serie_id: string
+  total: number
+  plannings: PlanningSerieItem[]
 }
 
 /** Types d'activité disponibles */

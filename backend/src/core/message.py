@@ -94,6 +94,21 @@ class ErrorRegistry:
         message="Échec de la création du template de planning.",
         http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
+    TMPL_003 = ErrorDetail(
+        code="TMPL_003",
+        message="Template introuvable.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    TMPL_004 = ErrorDetail(
+        code="TMPL_004",
+        message="Accès refusé à ce template.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
+    TMPL_005 = ErrorDetail(
+        code="TMPL_005",
+        message="campus_id obligatoire pour ce rôle.",
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
 
     # --- DOMAINE SLOT ---
     SLOT_OUT_OF_BOUNDS = ErrorDetail(
@@ -188,6 +203,11 @@ class ErrorRegistry:
         message="Activité {id} introuvable.",
         http_status=status.HTTP_404_NOT_FOUND,
     )
+    ACTV_PAST_DATE = ErrorDetail(
+        code="ACTV_004",
+        message="La date de début doit être aujourd'hui ou ultérieure.",
+        http_status=status.HTTP_422_UNPROCESSABLE_CONTENT,
+    )
 
     # --- DOMAINE INDISPONIBILITÉ (INDISP) ---
     INDISP_INVALID_ISO_FORMAT = ErrorDetail(
@@ -219,6 +239,11 @@ class ErrorRegistry:
         code="INDISP_006",
         message="Indisponibilité introuvable.",
         http_status=status.HTTP_404_NOT_FOUND,
+    )
+    INDISP_PAST_DATE = ErrorDetail(
+        code="INDISP_007",
+        message="La date de début ne peut pas être dans le passé.",
+        http_status=status.HTTP_422_UNPROCESSABLE_CONTENT,
     )
 
     # --- DOMAINE CORE / GÉNÉRIQUE (CORE) ---
@@ -541,6 +566,23 @@ class ErrorRegistry:
     CONF_CATEGORIE_HAS_ROLES = ErrorDetail(
         code="CONF_006",
         message=("Cette catégorie contient {count} rôle(s), suppression impossible."),
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+
+    # --- DOMAINE SÉRIE DE PLANNINGS (SERIE) ---
+    SERIE_001 = ErrorDetail(
+        code="SERIE_001",
+        message="Limite de 52 plannings par lot dépassée",
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+    SERIE_002 = ErrorDetail(
+        code="SERIE_002",
+        message="Date de fin antérieure à la date de début",
+        http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+    )
+    SERIE_003 = ErrorDetail(
+        code="SERIE_003",
+        message="jour_semaine requis pour récurrence HEBDOMADAIRE",
         http_status=status.HTTP_422_UNPROCESSABLE_ENTITY,
     )
 

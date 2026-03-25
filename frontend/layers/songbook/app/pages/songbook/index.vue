@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { Library, Music, Plus, Clock } from 'lucide-vue-next'
-import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 
-const uiStore = useUIStore()
 const authStore = useAuthStore()
-const campusId = computed(() => uiStore.selectedCampusId ?? '')
 
 const { categories, chants, isLoading, loadCategories, loadChants } = useSongbook()
 
@@ -40,7 +37,7 @@ const recentChants = computed(() =>
     .slice(0, 6),
 )
 
-onMounted(() => Promise.all([loadCategories(), loadChants(campusId.value)]))
+onMounted(() => Promise.all([loadCategories(), loadChants()]))
 </script>
 
 <template>
@@ -56,7 +53,7 @@ onMounted(() => Promise.all([loadCategories(), loadChants(campusId.value)]))
         </p>
       </div>
       <NuxtLink
-        v-if="authStore.hasAdminAccess"
+        v-if="authStore.canManageChants"
         to="/songbook/new"
         class="inline-flex items-center gap-2 rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white hover:bg-(--color-primary-700)"
       >
@@ -85,7 +82,7 @@ onMounted(() => Promise.all([loadCategories(), loadChants(campusId.value)]))
       <p class="text-lg font-medium text-(--color-neutral-700)">Aucun chant dans le répertoire</p>
       <p class="text-sm text-(--color-neutral-400)">Commencez par ajouter vos premiers chants.</p>
       <NuxtLink
-        v-if="authStore.hasAdminAccess"
+        v-if="authStore.canManageChants"
         to="/songbook/new"
         class="inline-flex items-center gap-2 rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white hover:bg-(--color-primary-700)"
       >

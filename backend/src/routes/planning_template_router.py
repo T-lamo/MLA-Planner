@@ -1,17 +1,31 @@
 """Routes API pour les templates de planning."""
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
 from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker, get_current_active_user
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from models import DataListResponse, DataResponse, Utilisateur
 from models.planning_template_model import (
+    ApplyTemplateResultSchema,
+    PlanningTemplateFullUpdate,
+    PlanningTemplateListItem,
     PlanningTemplateRead,
     PlanningTemplateUpdate,
     SaveAsTemplateRequest,
 )
+from models.serie_model import (
+    GenerateSeriesPreviewRequest,
+    GenerateSeriesRequest,
+    GenerateSeriesResponse,
+    SeriesPreviewResponse,
+)
 from services.planning_template_service import PlanningTemplateSvc
+from services.serie_service import SerieService
 
 router = APIRouter(
     prefix="/planning-templates",
@@ -19,6 +33,78 @@ router = APIRouter(
 )
 
 _WRITE_ROLES = RoleChecker(["RESPONSABLE_MLA", "ADMIN", "Super Admin"])
+
+
+def _get_svc(db: Session = Depends(Database.get_db_for_route)) -> PlanningTemplateSvc:
+    """Factory d'injection du service template."""
+    return PlanningTemplateSvc(db)
+
+
+def _get_serie_svc(
+    db: Session = Depends(Database.get_db_for_route),
+) -> SerieService:
+    """Factory d'injection du service série."""
+    return SerieService(db)
+
+
+def _resolve_ministere_id(user: Utilisateur) -> Optional[str]:
+    """Extrait le premier ministère du membre courant, ou None pour les admins."""
+    membre = user.membre
+    if membre and membre.ministeres:
+        return str(membre.ministeres[0].id)
+    return None
+
+
+def _resolve_ministere_campus(user: Utilisateur) -> tuple[str, str]:
+    """Retourne (ministere_id, campus_id) depuis le membre courant."""
+    membre = user.membre
+    if not membre:
+        raise AppException(ErrorRegistry.TMPL_005)
+    ministere_id = str(membre.ministeres[0].id) if membre.ministeres else None
+    campus_id = membre.campus_principal_id
+    if not ministere_id or not campus_id:
+        raise AppException(ErrorRegistry.TMPL_005)
+    return ministere_id, campus_id
+
+
+@router.post(
+    "/preview-series",
+    response_model=SeriesPreviewResponse,
+    status_code=200,
+    summary="Prévisualiser les dates d'une série",
+    dependencies=[Depends(_WRITE_ROLES)],
+)
+def preview_series(
+    payload: GenerateSeriesPreviewRequest,
+    current_user: Utilisateur = Depends(get_current_active_user),
+    svc: SerieService = Depends(_get_serie_svc),
+) -> SeriesPreviewResponse:
+    """Calcule les dates selon la récurrence et détecte les conflits."""
+    ministere_id = _resolve_ministere_id(current_user)
+    return svc.get_series_preview(payload, ministere_id=ministere_id)
+
+
+@router.post(
+    "/generate-series",
+    response_model=GenerateSeriesResponse,
+    status_code=201,
+    summary="Générer une série de plannings depuis un template",
+    dependencies=[Depends(_WRITE_ROLES)],
+)
+def generate_series(
+    payload: GenerateSeriesRequest,
+    current_user: Utilisateur = Depends(get_current_active_user),
+    svc: SerieService = Depends(_get_serie_svc),
+) -> GenerateSeriesResponse:
+    """Crée N plannings en BROUILLON depuis un template avec un serie_id commun."""
+    ministere_id, campus_id = _resolve_ministere_campus(current_user)
+    created_by_id = str(current_user.membre_id or "")
+    return svc.generate_series(
+        payload,
+        created_by_id=created_by_id,
+        ministere_id=ministere_id,
+        campus_id=campus_id,
+    )
 
 
 @router.post(
@@ -72,17 +158,47 @@ def list_templates_by_ministere(
 
 
 @router.get(
+    "",
+    response_model=DataListResponse[PlanningTemplateListItem],
+    dependencies=[Depends(_WRITE_ROLES)],
+)
+def list_templates(
+    ministere_id: Optional[str] = None,
+    current_user: Utilisateur = Depends(get_current_active_user),
+    svc: PlanningTemplateSvc = Depends(_get_svc),
+) -> DataListResponse[PlanningTemplateListItem]:
+    """Liste des templates — bibliothèque US-95."""
+    items = svc.list_templates(current_user, ministere_id)
+    return DataListResponse(data=items)
+
+
+@router.get(
     "/{template_id}",
     response_model=DataResponse[PlanningTemplateRead],
     dependencies=[Depends(_WRITE_ROLES)],
 )
 def get_template(
     template_id: str,
-    db: Session = Depends(Database.get_db_for_route),
+    current_user: Utilisateur = Depends(get_current_active_user),
+    svc: PlanningTemplateSvc = Depends(_get_svc),
 ) -> DataResponse[PlanningTemplateRead]:
     """Récupère un template par son identifiant."""
-    svc = PlanningTemplateSvc(db)
-    return DataResponse(data=svc.get_template(template_id))
+    return DataResponse(data=svc.get_template_full(template_id, current_user))
+
+
+@router.put(
+    "/{template_id}",
+    response_model=DataResponse[PlanningTemplateRead],
+    dependencies=[Depends(_WRITE_ROLES)],
+)
+def update_template_full(
+    template_id: str,
+    body: PlanningTemplateFullUpdate,
+    current_user: Utilisateur = Depends(get_current_active_user),
+    svc: PlanningTemplateSvc = Depends(_get_svc),
+) -> DataResponse[PlanningTemplateRead]:
+    """Remplace complètement nom, description et créneaux du template."""
+    return DataResponse(data=svc.update_template_full(template_id, body, current_user))
 
 
 @router.patch(
@@ -100,6 +216,22 @@ def update_template(
     return DataResponse(data=svc.update_template(template_id, body))
 
 
+@router.post(
+    "/{template_id}/duplicate",
+    response_model=DataResponse[PlanningTemplateListItem],
+    dependencies=[Depends(_WRITE_ROLES)],
+    status_code=201,
+)
+def duplicate_template(
+    template_id: str,
+    current_user: Utilisateur = Depends(get_current_active_user),
+    svc: PlanningTemplateSvc = Depends(_get_svc),
+) -> DataResponse[PlanningTemplateListItem]:
+    """Duplique un template existant."""
+    copy = svc.duplicate_template(template_id, current_user)
+    return DataResponse(data=copy)
+
+
 @router.delete(
     "/{template_id}",
     status_code=204,
@@ -107,7 +239,28 @@ def update_template(
 )
 def delete_template(
     template_id: str,
-    db: Session = Depends(Database.get_db_for_route),
+    current_user: Utilisateur = Depends(get_current_active_user),
+    svc: PlanningTemplateSvc = Depends(_get_svc),
 ) -> None:
-    """Supprime un template (cascade sur créneaux et rôles)."""
-    PlanningTemplateSvc(db).delete_template(template_id)
+    """Supprime un template (nullifie les refs dans les plannings)."""
+    svc.delete_template_with_access(template_id, current_user)
+
+
+@router.post(
+    "/{template_id}/apply/{planning_id}",
+    response_model=ApplyTemplateResultSchema,
+    dependencies=[Depends(_WRITE_ROLES)],
+    status_code=200,
+)
+def apply_template(
+    template_id: str,
+    planning_id: str,
+    svc: PlanningTemplateSvc = Depends(_get_svc),
+) -> ApplyTemplateResultSchema:
+    """Applique un template sur un planning existant (US-96).
+
+    Crée des slots et des affectations PROPOSE pour chaque membre suggéré
+    éligible. Retourne les avertissements d'indisponibilité et membres ignorés.
+    """
+    result = svc.apply_to_planning(template_id, planning_id)
+    return ApplyTemplateResultSchema(**result)

@@ -1,3 +1,4 @@
+from datetime import date as DateType
 from typing import Optional
 
 from pydantic import ConfigDict, field_validator, model_validator
@@ -62,6 +63,14 @@ class IndisponibiliteBase(SQLModel):
 # -------------------------
 class IndisponibiliteCreate(IndisponibiliteBase):
     membre_id: str = Field(description="UUID du membre concerné")
+
+    @model_validator(mode="after")
+    def validate_not_past(self) -> "IndisponibiliteCreate":
+        if self.date_debut:
+            today = DateType.today().isoformat()
+            if self.date_debut < today:
+                raise AppException(ErrorRegistry.INDISP_PAST_DATE)
+        return self
 
 
 class IndisponibiliteRead(IndisponibiliteBase):
