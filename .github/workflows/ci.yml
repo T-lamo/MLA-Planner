@@ -12,7 +12,7 @@ jobs:
     name: Check ${{ matrix.component }} (${{ matrix.task }})
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: true 
+      fail-fast: true
       matrix:
         include:
           - component: ui-core
@@ -48,21 +48,21 @@ jobs:
         if: matrix.component != 'backend'
         uses: pnpm/action-setup@v3
         with:
-          version: 9 # Ou la version que vous utilisez localement
+          version: 9
 
       - name: Setup Backend
         if: matrix.component == 'backend'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: 'pip'
+          cache: "pip"
 
       - name: Setup Node (Frontend & UI)
         if: matrix.component == 'frontend' || matrix.component == 'ui-core'
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install Tools
         run: |
@@ -70,7 +70,6 @@ jobs:
             make -C backend install
             pip install pytest pytest-cov psycopg2-binary black isort mypy pylint
           else
-            # Pour le frontend, on a OBLIGATOIREMENT besoin de l'UI buildée
             if [ "${{ matrix.component }}" = "frontend" ]; then
               make -C packages/ui-core install
               make -C packages/ui-core build
@@ -92,16 +91,35 @@ jobs:
             if [ "${{ matrix.task }}" = "lint" ]; then
               make -C backend lint
             elif [ "${{ matrix.task }}" = "test" ]; then
-              make -C backend test DB_TEST_URL=$DATABASE_URL
+              cd backend/src && \
+                DATABASE_URL=$DATABASE_URL \
+                ENV=testing \
+                PYTHONPATH=. \
+                pytest \
+                  --log-cli-level=INFO \
+                  --cov=. \
+                  --cov-report=term-missing \
+                  --cov-report=xml:coverage.xml \
+                  -v
             fi
           elif [ "${{ matrix.component }}" = "frontend" ]; then
-            if [ "${{ matrix.task }}" = "lint-typecheck" ]; then 
+            if [ "${{ matrix.task }}" = "lint-typecheck" ]; then
               make -C frontend lint
-              make -C frontend typecheck 
-            elif [ "${{ matrix.task }}" = "test" ]; then 
+              make -C frontend typecheck
+            elif [ "${{ matrix.task }}" = "test" ]; then
               make -C frontend test
             fi
           fi
+
+      # Upload coverage vers Codecov uniquement pour le job backend/test
+      - name: Upload coverage to Codecov
+        if: matrix.component == 'backend' && matrix.task == 'test'
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: backend/src/coverage.xml
+          flags: backend
+          fail_ci_if_error: false
 
   # --- JOB 2 : BUILD ---
   build-frontend:
@@ -110,7 +128,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
@@ -120,7 +138,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Build UI & Frontend
         env:
@@ -129,7 +147,7 @@ jobs:
           make -C packages/ui-core install
           make -C packages/ui-core build
           cd frontend && pnpm install && pnpm nuxi generate
-          
+
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
@@ -142,21 +160,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Render deployment
-        run: curl -f "${{ secrets.RENDER_DEPLOY_HOOK }}"
+        run: |
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "⚠️  Secret RENDER_DEPLOY_HOOK non configuré — déploiement ignoré."
+            exit 0
+          fi
+          curl -f "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
       - name: Wait for backend health
         run: |
-          echo "Attente de la disponibilité du backend..."
-          for i in $(seq 1 10); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.BACKEND_URL }}/health" || echo "000")
+          if [ -z "${{ secrets.BACKEND_URL }}" ]; then
+            echo "⚠️  Secret BACKEND_URL non configuré — health check ignoré."
+            exit 0
+          fi
+          echo "Attente de la disponibilité du backend (max 15 min)..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              --connect-timeout 10 --max-time 20 \
+              "${{ secrets.BACKEND_URL }}/health") || STATUS="000"
             echo "Tentative $i — HTTP $STATUS"
             if [ "$STATUS" = "200" ]; then
-              echo "Backend opérationnel."
+              echo "✅ Backend opérationnel."
               exit 0
             fi
-            sleep 15
+            sleep 30
           done
-          echo "Timeout : le backend n'a pas répondu dans les temps."
+          echo "❌ Timeout : le backend n'a pas répondu dans les temps."
           exit 1
 
   # --- JOB 4 : DEPLOY FRONT ---
@@ -173,7 +202,7 @@ jobs:
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v3.0
         with:
-          publish-dir: './frontend/dist'
+          publish-dir: "./frontend/dist"
           production-deploy: ${{ github.ref == 'refs/heads/main' }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
         env:

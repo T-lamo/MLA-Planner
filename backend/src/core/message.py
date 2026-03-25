@@ -203,6 +203,11 @@ class ErrorRegistry:
         message="Activité {id} introuvable.",
         http_status=status.HTTP_404_NOT_FOUND,
     )
+    ACTV_PAST_DATE = ErrorDetail(
+        code="ACTV_004",
+        message="La date de début doit être aujourd'hui ou ultérieure.",
+        http_status=status.HTTP_422_UNPROCESSABLE_CONTENT,
+    )
 
     # --- DOMAINE INDISPONIBILITÉ (INDISP) ---
     INDISP_INVALID_ISO_FORMAT = ErrorDetail(
@@ -234,6 +239,11 @@ class ErrorRegistry:
         code="INDISP_006",
         message="Indisponibilité introuvable.",
         http_status=status.HTTP_404_NOT_FOUND,
+    )
+    INDISP_PAST_DATE = ErrorDetail(
+        code="INDISP_007",
+        message="La date de début ne peut pas être dans le passé.",
+        http_status=status.HTTP_422_UNPROCESSABLE_CONTENT,
     )
 
     # --- DOMAINE CORE / GÉNÉRIQUE (CORE) ---

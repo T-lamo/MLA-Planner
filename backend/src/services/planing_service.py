@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, List, Optional, Sequence, cast
 
 from fastapi import BackgroundTasks
@@ -457,11 +457,13 @@ class PlanningServiceSvc(
     ) -> List[PlanningFullRead]:
         """Retourne tous les plannings complets dont l'activité est organisée
         par un ministère donné, avec activite + slots + affectations chargés."""
+        cutoff = datetime.now() - timedelta(days=7)
         try:
             query = (
                 select(PlanningService)
                 .join(Activite)
                 .where(Activite.ministere_organisateur_id == ministere_id)
+                .where(Activite.date_debut >= cutoff)
                 .where(
                     PlanningService.deleted_at == None  # noqa: E711
                 )  # pylint: disable=C0121
@@ -490,12 +492,18 @@ class PlanningServiceSvc(
     ) -> List[PlanningFullRead]:
         """Retourne tous les plannings complets où l'utilisateur connecté
         est affecté dans au moins un slot (vue calendrier personnelle)."""
+        cutoff = datetime.now() - timedelta(days=7)
         try:
             query = (
                 select(PlanningService)
                 .join(cast(Any, PlanningService.slots))
                 .join(cast(Any, Slot.affectations))
+                .join(
+                    Activite,
+                    cast(Any, PlanningService.activite_id) == cast(Any, Activite.id),
+                )
                 .where(Affectation.membre_id == membre_id)
+                .where(Activite.date_debut >= cutoff)
                 .where(
                     PlanningService.deleted_at == None  # noqa: E711
                 )  # pylint: disable=C0121
@@ -510,11 +518,7 @@ class PlanningServiceSvc(
                 )
             )
             if campus_id:
-                query = query.join(
-                    Activite,
-                    col(cast(Any, PlanningService.activite_id))
-                    == col(cast(Any, Activite.id)),
-                ).where(Activite.campus_id == campus_id)
+                query = query.where(Activite.campus_id == campus_id)
             results = self.db.exec(query).unique().all()
             return self._enrich_plannings_list(results)
         except Exception as e:
@@ -524,11 +528,13 @@ class PlanningServiceSvc(
     def list_by_campus(self, campus_id: str) -> List[PlanningFullRead]:
         """Retourne tous les plannings complets dont l'activité se déroule
         sur un campus donné, avec activite + slots + affectations chargés."""
+        cutoff = datetime.now() - timedelta(days=7)
         try:
             query = (
                 select(PlanningService)
                 .join(Activite)
                 .where(Activite.campus_id == campus_id)
+                .where(Activite.date_debut >= cutoff)
                 .where(
                     PlanningService.deleted_at == None  # noqa: E711
                 )  # pylint: disable=C0121

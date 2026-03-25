@@ -49,6 +49,13 @@ class ActiviteBase(SQLModel):
 class ActiviteCreate(ActiviteBase):
     """Tous les champs sont obligatoires à la création"""
 
+    @model_validator(mode="after")
+    def validate_future_date(self) -> "ActiviteCreate":
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        if self.date_debut < today:
+            raise AppException(ErrorRegistry.ACTV_PAST_DATE)
+        return self
+
 
 class ActiviteUpdate(SQLModel):
     type: Optional[str] = Field(None, min_length=2, max_length=100)
