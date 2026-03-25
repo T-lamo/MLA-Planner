@@ -226,7 +226,7 @@ onMounted(() => Promise.all([loadCategories(), loadChants(campusId.value)]))
             />
           </div>
           <NuxtLink
-            v-if="authStore.hasAdminAccess"
+            v-if="authStore.canManageChants"
             to="/songbook/new"
             class="inline-flex items-center gap-1.5 rounded-lg bg-(--color-primary-600) px-3 py-1.5 text-sm font-medium text-white hover:bg-(--color-primary-700)"
           >
