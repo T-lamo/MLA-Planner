@@ -280,8 +280,10 @@ export interface CampusTeamRead {
 }
 
 // ============================================================
-// 7. PLANNING TEMPLATES — US-01 / US-95
+// 7. PLANNING TEMPLATES — US-01 / US-95 / US-99
 // ============================================================
+
+export type VisibiliteTemplate = 'PRIVE' | 'MINISTERE' | 'CAMPUS'
 
 export interface TemplateRoleMembreRead {
   id: string
@@ -342,6 +344,7 @@ export interface PlanningTemplateRead {
   created_by_id: string
   created_at: string
   used_count: number
+  visibilite: VisibiliteTemplate
   slots: PlanningTemplateSlotRead[]
 }
 
@@ -351,6 +354,7 @@ export type PlanningTemplateReadFull = PlanningTemplateRead
 export interface SaveAsTemplateRequest {
   nom: string
   description?: string | null
+  visibilite?: VisibiliteTemplate
 }
 
 export interface PlanningTemplateUpdate {
@@ -371,6 +375,8 @@ export interface PlanningTemplateListItem {
   usage_count: number
   last_used_at: string | null
   created_at: string
+  visibilite: VisibiliteTemplate
+  section: 'mes_templates' | 'ministere' | 'campus'
 }
 
 export interface PlanningTemplateSlotWrite {
@@ -384,6 +390,7 @@ export interface PlanningTemplateSlotWrite {
 export interface PlanningTemplateFullUpdate {
   nom: string
   description?: string | null
+  visibilite?: VisibiliteTemplate | null
   slots: PlanningTemplateSlotWrite[]
 }
 

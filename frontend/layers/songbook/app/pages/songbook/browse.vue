@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { Search, Plus, ChevronDown, SlidersHorizontal } from 'lucide-vue-next'
-import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import type { ChantRead, ChantCategorieRead } from '../../types/chant'
 
-const uiStore = useUIStore()
 const authStore = useAuthStore()
-const campusId = computed(() => uiStore.selectedCampusId ?? '')
 
 const { categories, chants, isLoading, loadCategories, loadChants } = useSongbook()
 
@@ -105,7 +102,7 @@ function clearFilters() {
   searchQuery.value = ''
 }
 
-onMounted(() => Promise.all([loadCategories(), loadChants(campusId.value)]))
+onMounted(() => Promise.all([loadCategories(), loadChants()]))
 </script>
 
 <template>
@@ -226,7 +223,7 @@ onMounted(() => Promise.all([loadCategories(), loadChants(campusId.value)]))
             />
           </div>
           <NuxtLink
-            v-if="authStore.hasAdminAccess"
+            v-if="authStore.canManageChants"
             to="/songbook/new"
             class="inline-flex items-center gap-1.5 rounded-lg bg-(--color-primary-600) px-3 py-1.5 text-sm font-medium text-white hover:bg-(--color-primary-700)"
           >

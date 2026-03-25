@@ -78,8 +78,8 @@ def template_fixture(session: Session, test_campus, test_ministere, test_membre)
 
 
 @pytest.fixture
-def template_other_campus(session: Session, test_pays, test_ministere, test_membre):
-    """Crée un template sur un campus différent."""
+def template_other_campus(session: Session, test_pays, test_ministere):
+    """Crée un template sur un campus différent, avec un créateur dédié."""
     other_campus = Campus(
         nom=f"Campus Autre {uuid4()}",
         ville="Autre",
@@ -88,6 +88,15 @@ def template_other_campus(session: Session, test_pays, test_ministere, test_memb
     )
     session.add(other_campus)
     session.flush()
+    other_membre = Membre(
+        nom="Autre",
+        prenom="Membre",
+        email=f"autre_{uuid4().hex[:6]}@test.com",
+        actif=True,
+        campus_principal_id=other_campus.id,
+    )
+    session.add(other_membre)
+    session.flush()
     tpl = PlanningTemplate(
         nom="Template Autre Campus",
         description=None,
@@ -95,7 +104,7 @@ def template_other_campus(session: Session, test_pays, test_ministere, test_memb
         duree_minutes=60,
         campus_id=other_campus.id,
         ministere_id=test_ministere.id,
-        created_by_id=test_membre.id,
+        created_by_id=other_membre.id,
     )
     session.add(tpl)
     session.flush()

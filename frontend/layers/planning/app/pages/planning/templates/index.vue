@@ -7,6 +7,7 @@ import { usePlanningTemplateStore } from '../../../stores/usePlanningTemplateSto
 import type {
   GenerateSeriesResponse,
   PlanningTemplateListItem,
+  VisibiliteTemplate,
 } from '../../../types/planning.types'
 
 const editingTemplateId = ref<string | null>(null)
@@ -77,6 +78,21 @@ function onSerieGenerated(_result: GenerateSeriesResponse) {
 }
 
 const canWrite = computed(() => authStore.canManageChants)
+
+const VISIBILITE_LABELS: Record<VisibiliteTemplate, string> = {
+  PRIVE: 'Privé',
+  MINISTERE: 'Ministère',
+  CAMPUS: 'Campus',
+}
+const VISIBILITE_CLASSES: Record<VisibiliteTemplate, string> = {
+  PRIVE: 'bg-slate-100 text-slate-600',
+  MINISTERE: 'bg-blue-50 text-blue-700',
+  CAMPUS: 'bg-emerald-50 text-emerald-700',
+}
+
+function visibiliteBadge(v: VisibiliteTemplate) {
+  return { label: VISIBILITE_LABELS[v] ?? v, cls: VISIBILITE_CLASSES[v] ?? '' }
+}
 </script>
 
 <template>
@@ -123,6 +139,7 @@ const canWrite = computed(() => authStore.canManageChants)
             <th class="px-4 py-3 text-left">Type activité</th>
             <th class="px-4 py-3 text-center">Créneaux</th>
             <th class="px-4 py-3 text-center">Utilisé</th>
+            <th class="px-4 py-3 text-left">Visibilité</th>
             <th class="px-4 py-3 text-left">Dernière utilisation</th>
             <th class="px-4 py-3 text-left">Créé le</th>
             <th v-if="canWrite" class="px-4 py-3 text-right">Actions</th>
@@ -143,6 +160,14 @@ const canWrite = computed(() => authStore.canManageChants)
               {{ tpl.nb_creneaux }}
             </td>
             <td class="px-4 py-3 text-center text-slate-700">{{ tpl.usage_count }}x</td>
+            <td class="px-4 py-3">
+              <span
+                :class="visibiliteBadge(tpl.visibilite).cls"
+                class="rounded-full px-2 py-0.5 text-xs font-medium"
+              >
+                {{ visibiliteBadge(tpl.visibilite).label }}
+              </span>
+            </td>
             <td class="px-4 py-3 text-slate-500">
               {{ relativeDate(tpl.last_used_at) }}
             </td>

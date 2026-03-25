@@ -28,7 +28,7 @@
 
     <!-- ── Sélecteur de template ────────────────────────────────────── -->
     <div
-      v-if="internalMode === 'create' && allAvailableTemplates.length > 0"
+      v-if="internalMode === 'create' && templateSections.length > 0"
       class="border-primary-200 bg-primary-50 rounded-xl border p-4"
     >
       <div class="mb-2 flex items-center gap-2">
@@ -45,19 +45,14 @@
       <select
         class="border-primary-300 focus:border-primary-500 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none"
         :value="selectedTemplateId ?? ''"
-        @change="
-          (e) => {
-            const id = (e.target as HTMLSelectElement).value
-            if (!id) return
-            const tpl = allAvailableTemplates.find((t) => t.id === id)
-            if (tpl) applyTemplate(tpl)
-          }
-        "
+        @change="handleTemplateSelect"
       >
         <option value="">Choisir un template…</option>
-        <option v-for="tpl in allAvailableTemplates" :key="tpl.id" :value="tpl.id">
-          {{ tpl.nom }}{{ tpl.used_count > 0 ? ` (utilisé ${tpl.used_count}×)` : '' }}
-        </option>
+        <optgroup v-for="section in templateSections" :key="section.key" :label="section.label">
+          <option v-for="tpl in section.items" :key="tpl.id" :value="tpl.id">
+            {{ tpl.nom }}{{ tpl.usage_count > 0 ? ` (utilisé ${tpl.usage_count}×)` : '' }}
+          </option>
+        </optgroup>
       </select>
 
       <p class="text-primary-600 mt-1.5 text-xs">
@@ -667,6 +662,7 @@ import {
 import FormSection from '~~/layers/base/app/components/FormSection.vue'
 import { planningFormKey } from '../composables/usePlanningForm'
 import { usePlanningTemplates } from '../composables/usePlanningTemplates'
+import { PlanningRepository } from '../repositories/PlanningRepository'
 import { ACTIVITE_TYPES } from '../types/planning.types'
 import type { AffectationStatus } from '../types/planning.types'
 import { useIndisponibiliteWarning } from '../composables/useIndisponibiliteWarning'
@@ -742,22 +738,23 @@ function setFinTime(t: string) {
   activiteForm.date_fin = (dateFinDate.value || new Date().toISOString().slice(0, 10)) + 'T' + t
 }
 
-const { allAvailableTemplates, loadByCampus, loadByMinistere } = usePlanningTemplates()
+const { templateSections, loadTemplates } = usePlanningTemplates()
+const repo = new PlanningRepository()
 
 watch(
   () => activiteForm.campus_id,
   (campusId) => {
-    if (campusId) loadByCampus(campusId)
+    if (campusId) loadTemplates()
   },
   { immediate: true },
 )
-watch(
-  () => activiteForm.ministere_organisateur_id,
-  (ministereId) => {
-    if (ministereId) loadByMinistere(ministereId)
-  },
-  { immediate: true },
-)
+
+async function handleTemplateSelect(e: Event): Promise<void> {
+  const id = (e.target as HTMLSelectElement).value
+  if (!id) return
+  const full = await repo.getTemplateFull(id)
+  applyTemplate(full)
+}
 
 // userCampuses est dans le shell (props) — le form a besoin de la liste pour le template.
 // On re-expose via le form composable qui expose campusMinisteres pour les ministères,
