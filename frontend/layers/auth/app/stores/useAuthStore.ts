@@ -1,6 +1,11 @@
 import { defineStore } from 'pinia'
 import type { AuthUser } from '../repositories/AuthRepository'
 
+export const ROLE_SUPER_ADMIN = 'Super Admin'
+export const ROLE_ADMIN = 'Admin'
+export const ROLE_RESPONSABLE_MLA = 'Responsable MLA'
+export const ROLE_MEMBRE_MLA = 'Membre MLA'
+
 export const useAuthStore = defineStore('auth', () => {
   // --- ÉTAT (STATE) ---
   // secure: true bloque les cookies sur HTTP (Docker local) — conditionnel au protocole
@@ -32,12 +37,20 @@ export const useAuthStore = defineStore('auth', () => {
 
   const currentUser = computed(() => user.value)
 
-  const isSuperAdmin = computed(() => user.value?.roles?.includes('Super Admin') ?? false)
-  const isAdmin = computed(() => user.value?.roles?.includes('Admin') ?? false)
-  const isResponsableMLA = computed(() => user.value?.roles?.includes('Responsable MLA') ?? false)
+  const isSuperAdmin = computed(() => user.value?.roles?.includes(ROLE_SUPER_ADMIN) ?? false)
+  const isAdmin = computed(() => user.value?.roles?.includes(ROLE_ADMIN) ?? false)
+  const isResponsableMLA = computed(
+    () => user.value?.roles?.includes(ROLE_RESPONSABLE_MLA) ?? false,
+  )
   const hasAdminAccess = computed(() => isSuperAdmin.value || isAdmin.value)
-  // Accès gestion des chants : Super Admin + Admin + Responsable MLA
+
+  /** Droits module Carnet de chants. */
   const canManageChants = computed(
+    () => isSuperAdmin.value || isAdmin.value || isResponsableMLA.value,
+  )
+
+  /** Droits module Planning — indépendant de canManageChants. */
+  const canManagePlanning = computed(
     () => isSuperAdmin.value || isAdmin.value || isResponsableMLA.value,
   )
 
@@ -148,6 +161,7 @@ export const useAuthStore = defineStore('auth', () => {
     isResponsableMLA,
     hasAdminAccess,
     canManageChants,
+    canManagePlanning,
     currentUser,
     login,
     logout,

@@ -4,22 +4,16 @@ import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 /**
  * Source de vérité unique pour les droits de la couche planning.
  *
- * Règles :
- *  - canWrite   : RESPONSABLE_MLA, ADMIN, Super Admin → créer / modifier / supprimer / changer statut
- *  - canViewCalendar : tout utilisateur connecté → lecture seule
+ * Délègue à useAuthStore.canManagePlanning — ne pas dupliquer la logique ici.
+ * Ne jamais lire les noms de rôles directement dans ce composable.
  *
  * Utilisation : importer dans chaque composant planning qui a besoin de droits.
- * Ne jamais dupliquer ces computed dans les templates.
  */
 export function usePlanningPermissions() {
   const authStore = useAuthStore()
 
   /** Peut créer, modifier, supprimer un planning et changer son statut. */
-  const canWrite = computed<boolean>(
-    () =>
-      authStore.hasAdminAccess ||
-      (authStore.currentUser?.roles?.some((r) => r.toLowerCase().includes('responsable')) ?? false),
-  )
+  const canWrite = computed<boolean>(() => authStore.canManagePlanning)
 
   /** Peut changer le statut d'un planning (sous-ensemble de canWrite). */
   const canChangeStatus = computed<boolean>(() => canWrite.value)
