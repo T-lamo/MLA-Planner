@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { LayoutTemplate } from 'lucide-vue-next'
+import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import { usePlanningTemplateStore } from '../../../stores/usePlanningTemplateStore'
 import type {
@@ -79,6 +80,17 @@ function onSerieGenerated(_result: GenerateSeriesResponse) {
 
 const canWrite = computed(() => authStore.canManageChants)
 
+const columns = computed(() => [
+  { key: 'nom', label: 'Nom' },
+  { key: 'activite_type', label: 'Type activité' },
+  { key: 'nb_creneaux', label: 'Créneaux', align: 'center' as const },
+  { key: 'usage_count', label: 'Utilisé', align: 'center' as const },
+  { key: 'visibilite', label: 'Visibilité' },
+  { key: 'last_used_at', label: 'Dernière utilisation' },
+  { key: 'created_at', label: 'Créé le' },
+  ...(canWrite.value ? [{ key: 'actions', label: '', align: 'right' as const }] : []),
+])
+
 const VISIBILITE_LABELS: Record<VisibiliteTemplate, string> = {
   PRIVE: 'Privé',
   MINISTERE: 'Ministère',
@@ -130,62 +142,66 @@ function visibiliteBadge(v: VisibiliteTemplate) {
 
     <!-- Table -->
     <div v-else class="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <table class="w-full text-sm">
-        <thead
-          class="border-b border-slate-100 bg-slate-50 text-xs font-semibold tracking-wider text-slate-500 uppercase"
-        >
-          <tr>
-            <th class="px-4 py-3 text-left">Nom</th>
-            <th class="px-4 py-3 text-left">Type activité</th>
-            <th class="px-4 py-3 text-center">Créneaux</th>
-            <th class="px-4 py-3 text-center">Utilisé</th>
-            <th class="px-4 py-3 text-left">Visibilité</th>
-            <th class="px-4 py-3 text-left">Dernière utilisation</th>
-            <th class="px-4 py-3 text-left">Créé le</th>
-            <th v-if="canWrite" class="px-4 py-3 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-100">
-          <tr v-for="tpl in templates" :key="tpl.id" class="transition-colors hover:bg-slate-50">
-            <td class="px-4 py-3 font-medium text-slate-800">
-              <div>{{ tpl.nom }}</div>
-              <div v-if="tpl.description" class="mt-0.5 text-xs text-slate-400">
-                {{ tpl.description }}
-              </div>
-            </td>
-            <td class="px-4 py-3 text-slate-600">
-              {{ tpl.activite_type ?? '—' }}
-            </td>
-            <td class="px-4 py-3 text-center text-slate-700">
-              {{ tpl.nb_creneaux }}
-            </td>
-            <td class="px-4 py-3 text-center text-slate-700">{{ tpl.usage_count }}x</td>
-            <td class="px-4 py-3">
-              <span
-                :class="visibiliteBadge(tpl.visibilite).cls"
-                class="rounded-full px-2 py-0.5 text-xs font-medium"
-              >
-                {{ visibiliteBadge(tpl.visibilite).label }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-slate-500">
-              {{ relativeDate(tpl.last_used_at) }}
-            </td>
-            <td class="px-4 py-3 text-slate-500">
-              {{ formatDate(tpl.created_at) }}
-            </td>
-            <td v-if="canWrite" class="px-4 py-3 text-right">
-              <TemplateActionMenu
-                :template="tpl"
-                @edit="editingTemplateId = tpl.id"
-                @duplicate="handleDuplicate(tpl.id)"
-                @generate-serie="openGenerateSerie(tpl)"
-                @delete="openDeleteDialog(tpl.id)"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <AppTable
+        :columns="columns"
+        :rows="templates as Record<string, unknown>[]"
+        emptyLabel="Aucun template disponible"
+      >
+        <template #cell-nom="{ row }">
+          <div class="font-medium text-slate-800">
+            {{ (row as unknown as PlanningTemplateListItem).nom }}
+          </div>
+          <div
+            v-if="(row as unknown as PlanningTemplateListItem).description"
+            class="mt-0.5 text-xs text-slate-400"
+          >
+            {{ (row as unknown as PlanningTemplateListItem).description }}
+          </div>
+        </template>
+
+        <template #cell-activite_type="{ value }">
+          <span class="text-slate-600">{{ (value as string | null) ?? '—' }}</span>
+        </template>
+
+        <template #cell-nb_creneaux="{ value }">
+          <span class="text-slate-700">{{ value as number }}</span>
+        </template>
+
+        <template #cell-usage_count="{ value }">
+          <span class="text-slate-700">{{ value as number }}x</span>
+        </template>
+
+        <template #cell-visibilite="{ row }">
+          <span
+            :class="visibiliteBadge((row as unknown as PlanningTemplateListItem).visibilite).cls"
+            class="rounded-full px-2 py-0.5 text-xs font-medium"
+          >
+            {{ visibiliteBadge((row as unknown as PlanningTemplateListItem).visibilite).label }}
+          </span>
+        </template>
+
+        <template #cell-last_used_at="{ row }">
+          <span class="text-slate-500">{{
+            relativeDate((row as unknown as PlanningTemplateListItem).last_used_at)
+          }}</span>
+        </template>
+
+        <template #cell-created_at="{ row }">
+          <span class="text-slate-500">{{
+            formatDate((row as unknown as PlanningTemplateListItem).created_at)
+          }}</span>
+        </template>
+
+        <template v-if="canWrite" #cell-actions="{ row }">
+          <TemplateActionMenu
+            :template="row as unknown as PlanningTemplateListItem"
+            @edit="editingTemplateId = (row as unknown as PlanningTemplateListItem).id"
+            @duplicate="handleDuplicate((row as unknown as PlanningTemplateListItem).id)"
+            @generate-serie="openGenerateSerie(row as unknown as PlanningTemplateListItem)"
+            @delete="openDeleteDialog((row as unknown as PlanningTemplateListItem).id)"
+          />
+        </template>
+      </AppTable>
     </div>
 
     <!-- Drawer édition -->
@@ -217,17 +233,8 @@ function visibiliteBadge(v: VisibiliteTemplate) {
               irréversible.
             </p>
             <div class="mt-6 flex justify-end gap-3">
-              <button
-                class="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
-                @click="cancelDelete"
-              >
-                Annuler
-              </button>
-              <button
-                class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-                :disabled="isDeleting"
-                @click="confirmDelete"
-              >
+              <button class="btn btn-secondary" @click="cancelDelete">Annuler</button>
+              <button class="btn btn-danger" :disabled="isDeleting" @click="confirmDelete">
                 {{ isDeleting ? 'Suppression…' : 'Supprimer' }}
               </button>
             </div>

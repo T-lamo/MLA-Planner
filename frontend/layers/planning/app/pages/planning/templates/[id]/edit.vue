@@ -179,7 +179,7 @@ async function handleSave() {
               type="text"
               maxlength="100"
               required
-              class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 transition-colors outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              class="form-input"
               placeholder="Nom du template"
             />
           </div>
@@ -191,7 +191,7 @@ async function handleSave() {
               id="tpl-desc"
               v-model="form.description"
               rows="3"
-              class="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 transition-colors outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              class="form-input resize-none"
               placeholder="Description facultative…"
             />
           </div>
@@ -202,11 +202,7 @@ async function handleSave() {
       <div class="rounded-xl border border-slate-200 bg-white p-6">
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-base font-semibold text-slate-800">Créneaux ({{ form.slots.length }})</h2>
-          <button
-            type="button"
-            class="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-            @click="addSlot"
-          >
+          <button type="button" class="btn btn-primary btn-sm" @click="addSlot">
             <Plus class="size-4" />
             Ajouter
           </button>
@@ -265,7 +261,7 @@ async function handleSave() {
                   type="text"
                   maxlength="100"
                   required
-                  class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                  class="form-input form-input-sm"
                   placeholder="Ex : Louange Matin"
                 />
               </div>
@@ -278,7 +274,7 @@ async function handleSave() {
                   v-model.number="slot.offset_debut_minutes"
                   type="number"
                   min="0"
-                  class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                  class="form-input form-input-sm"
                 />
               </div>
               <!-- Offset fin -->
@@ -290,7 +286,7 @@ async function handleSave() {
                   v-model.number="slot.offset_fin_minutes"
                   type="number"
                   min="1"
-                  class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                  class="form-input form-input-sm"
                 />
               </div>
               <!-- Nb personnes -->
@@ -302,7 +298,7 @@ async function handleSave() {
                   v-model.number="slot.nb_personnes_requis"
                   type="number"
                   min="1"
-                  class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                  class="form-input form-input-sm"
                 />
               </div>
             </div>
@@ -332,7 +328,7 @@ async function handleSave() {
                   <input
                     v-model="role.role_code"
                     type="text"
-                    class="w-32 rounded border border-slate-300 px-2 py-1 text-xs uppercase outline-none focus:border-blue-400"
+                    class="form-input form-input-sm w-32 uppercase"
                     placeholder="ROLE_CODE"
                   />
                   <button
@@ -367,30 +363,40 @@ async function handleSave() {
                   </div>
 
                   <!-- Select pour ajouter un membre -->
-                  <select
-                    v-if="membresDisponibles.length > 0"
-                    class="w-full rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 outline-none focus:border-blue-400"
-                    @change="
-                      (e) => {
-                        const val = (e.target as HTMLSelectElement).value
-                        if (val) {
-                          addSuggestedMember(role, val)
-                          ;(e.target as HTMLSelectElement).value = ''
+                  <div v-if="membresDisponibles.length > 0" class="form-select-wrapper">
+                    <select
+                      class="form-input form-input-sm form-select"
+                      @change="
+                        (e) => {
+                          const val = (e.target as HTMLSelectElement).value
+                          if (val) {
+                            addSuggestedMember(role, val)
+                            ;(e.target as HTMLSelectElement).value = ''
+                          }
                         }
-                      }
-                    "
-                  >
-                    <option value="">— Ajouter un membre —</option>
-                    <option
-                      v-for="m in membresDisponibles.filter(
-                        (x) => !role.membres_suggeres_ids.includes(x.id),
-                      )"
-                      :key="m.id"
-                      :value="m.id"
+                      "
                     >
-                      {{ m.prenom }} {{ m.nom }}
-                    </option>
-                  </select>
+                      <option value="">— Ajouter un membre —</option>
+                      <option
+                        v-for="m in membresDisponibles.filter(
+                          (x) => !role.membres_suggeres_ids.includes(x.id),
+                        )"
+                        :key="m.id"
+                        :value="m.id"
+                      >
+                        {{ m.prenom }} {{ m.nom }}
+                      </option>
+                    </select>
+                    <svg
+                      class="form-select-chevron"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M3 5l4 4 4-4" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
@@ -400,17 +406,8 @@ async function handleSave() {
 
       <!-- Actions -->
       <div class="flex justify-end gap-3">
-        <NuxtLink
-          to="/planning/templates"
-          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-        >
-          Annuler
-        </NuxtLink>
-        <button
-          type="submit"
-          :disabled="isSaving || !form.nom.trim()"
-          class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
-        >
+        <NuxtLink to="/planning/templates" class="btn btn-secondary">Annuler</NuxtLink>
+        <button type="submit" :disabled="isSaving || !form.nom.trim()" class="btn btn-primary">
           {{ isSaving ? 'Sauvegarde…' : 'Sauvegarder' }}
         </button>
       </div>

@@ -18,7 +18,7 @@
         <input
           id="cc-min-nom"
           v-model="ministereForm.nom"
-          class="cc-input"
+          class="form-input"
           type="text"
           placeholder="Ex : Louange, Accueil…"
           required
@@ -32,7 +32,7 @@
         <textarea
           id="cc-min-desc"
           v-model="ministereForm.description"
-          class="cc-input resize-none"
+          class="form-input resize-none"
           rows="3"
           placeholder="Description optionnelle"
         />
@@ -67,7 +67,7 @@
         <input
           id="cc-cat-nom"
           v-model="categorieForm.nom"
-          class="cc-input"
+          class="form-input"
           type="text"
           placeholder="Ex : Chant, Musiciens…"
           required
@@ -81,7 +81,7 @@
         <textarea
           id="cc-cat-desc"
           v-model="categorieForm.description"
-          class="cc-input resize-none"
+          class="form-input resize-none"
           rows="3"
           placeholder="Description optionnelle"
         />
@@ -111,7 +111,7 @@
           v-else
           id="cc-role-code"
           v-model="roleForm.code"
-          class="cc-input font-mono uppercase"
+          class="form-input font-mono uppercase"
           type="text"
           placeholder="Ex : SOPRANO, PIANISTE"
           required
@@ -148,7 +148,7 @@
         <input
           id="cc-role-libelle"
           v-model="roleForm.libelle"
-          class="cc-input"
+          class="form-input"
           type="text"
           placeholder="Ex : Voix Soprano"
           required
@@ -161,7 +161,7 @@
         <textarea
           id="cc-role-desc"
           v-model="roleForm.description"
-          class="cc-input resize-none"
+          class="form-input resize-none"
           rows="2"
           placeholder="Description optionnelle"
         />
@@ -170,12 +170,12 @@
 
     <template #footer>
       <div class="flex justify-end gap-3">
-        <button type="button" class="cc-btn-secondary" @click="closeDrawer">Annuler</button>
+        <button type="button" class="btn btn-secondary" @click="closeDrawer">Annuler</button>
         <button
           type="submit"
           :form="activeFormId"
           :disabled="isSubmitting || (!isEditMode && (!!conflictingRole || !!conflictingMinistere))"
-          class="cc-btn-primary flex items-center gap-2"
+          class="btn btn-primary"
         >
           <Loader2 v-if="isSubmitting" class="size-4 animate-spin" />
           {{ isEditMode ? 'Modifier' : 'Ajouter' }}
@@ -275,19 +275,3 @@ async function handleLinkMinistere(): Promise<void> {
   }
 }
 </script>
-
-<style scoped>
-@reference "../../assets/css/main.css";
-
-.cc-input {
-  @apply w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-colors outline-none focus:border-(--color-primary-400) focus:ring-2 focus:ring-(--color-primary-100);
-}
-
-.cc-btn-primary {
-  @apply rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-(--color-primary-700) active:scale-95 disabled:cursor-not-allowed disabled:opacity-60;
-}
-
-.cc-btn-secondary {
-  @apply rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50;
-}
-</style>
