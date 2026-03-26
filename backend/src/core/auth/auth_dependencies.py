@@ -1,4 +1,5 @@
 # core/auth/auth_dependencies.py
+from datetime import date
 from enum import Enum
 
 import jwt
@@ -78,8 +79,21 @@ def get_current_active_user(
     return user
 
 
+def _affectation_valide(aff: object) -> bool:
+    """True si l'affectation est active et dans sa fenêtre de validité."""
+    today = date.today()
+    return (
+        bool(getattr(aff, "active", True))
+        and (
+            getattr(aff, "dateDebut", None) is None
+            or getattr(aff, "dateDebut") <= today
+        )
+        and (getattr(aff, "dateFin", None) is None or getattr(aff, "dateFin") >= today)
+    )
+
+
 class RoleChecker:
-    """Vérifie si l'utilisateur possède un rôle spécifique"""
+    """Vérifie si l'utilisateur possède un rôle actif et valide temporellement."""
 
     def __init__(self, allowed_roles: list[str]):
         self.allowed_roles = allowed_roles
@@ -97,7 +111,7 @@ class RoleChecker:
         user_roles = [
             _role_name(aff.role.libelle)
             for aff in user.affectations
-            if aff.role and aff.role.libelle is not None
+            if aff.role and aff.role.libelle is not None and _affectation_valide(aff)
         ]
 
         # Superadmin bypass — accès total sans restriction de rôle
