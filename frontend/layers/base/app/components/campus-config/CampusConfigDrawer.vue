@@ -18,7 +18,7 @@
         <input
           id="cc-min-nom"
           v-model="ministereForm.nom"
-          class="cc-input"
+          class="form-input"
           type="text"
           placeholder="Ex : Louange, Accueil…"
           required
@@ -32,7 +32,7 @@
         <textarea
           id="cc-min-desc"
           v-model="ministereForm.description"
-          class="cc-input resize-none"
+          class="form-input resize-none"
           rows="3"
           placeholder="Description optionnelle"
         />
@@ -67,7 +67,7 @@
         <input
           id="cc-cat-nom"
           v-model="categorieForm.nom"
-          class="cc-input"
+          class="form-input"
           type="text"
           placeholder="Ex : Chant, Musiciens…"
           required
@@ -81,7 +81,7 @@
         <textarea
           id="cc-cat-desc"
           v-model="categorieForm.description"
-          class="cc-input resize-none"
+          class="form-input resize-none"
           rows="3"
           placeholder="Description optionnelle"
         />
@@ -111,7 +111,7 @@
           v-else
           id="cc-role-code"
           v-model="roleForm.code"
-          class="cc-input font-mono uppercase"
+          class="form-input font-mono uppercase"
           type="text"
           placeholder="Ex : SOPRANO, PIANISTE"
           required
@@ -148,7 +148,7 @@
         <input
           id="cc-role-libelle"
           v-model="roleForm.libelle"
-          class="cc-input"
+          class="form-input"
           type="text"
           placeholder="Ex : Voix Soprano"
           required
@@ -161,7 +161,7 @@
         <textarea
           id="cc-role-desc"
           v-model="roleForm.description"
-          class="cc-input resize-none"
+          class="form-input resize-none"
           rows="2"
           placeholder="Description optionnelle"
         />
@@ -275,11 +275,3 @@ async function handleLinkMinistere(): Promise<void> {
   }
 }
 </script>
-
-<style scoped>
-@reference "../../assets/css/main.css";
-
-.cc-input {
-  @apply w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-colors outline-none focus:border-(--color-primary-400) focus:ring-2 focus:ring-(--color-primary-100);
-}
-</style>

@@ -168,7 +168,7 @@ const isFormValid = computed(
       >
         <div class="field min-w-36">
           <label class="field-label">Ministère</label>
-          <select v-model="store.filters.ministere_id" class="field-input" @change="applyFilters">
+          <select v-model="store.filters.ministere_id" class="form-input" @change="applyFilters">
             <option value="">Tous</option>
             <option v-for="m in campusMinisteres" :key="m.id" :value="m.id">{{ m.nom }}</option>
           </select>
@@ -178,7 +178,7 @@ const isFormValid = computed(
           <input
             v-model="store.filters.date_debut"
             type="date"
-            class="field-input"
+            class="form-input"
             @change="applyFilters"
           />
         </div>
@@ -187,7 +187,7 @@ const isFormValid = computed(
           <input
             v-model="store.filters.date_fin"
             type="date"
-            class="field-input"
+            class="form-input"
             @change="applyFilters"
           />
         </div>
@@ -488,9 +488,5 @@ const isFormValid = computed(
 
 .field-label {
   @apply text-xs font-medium text-slate-600;
-}
-
-.field-input {
-  @apply rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 transition-all outline-none focus:border-(--color-primary-400) focus:bg-white focus:ring-2 focus:ring-(--color-primary-100);
 }
 </style>

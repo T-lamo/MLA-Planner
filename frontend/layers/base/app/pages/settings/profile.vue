@@ -64,12 +64,12 @@
         >
           <div class="form-group">
             <label>Mot de passe actuel</label>
-            <div class="input-wrapper">
-              <Lock class="input-icon" />
+            <div class="form-input-wrapper">
+              <span class="form-input-icon"><Lock class="size-3.5" /></span>
               <input
                 v-model="pwForm.current"
                 type="password"
-                class="input-field with-icon"
+                class="form-input has-leading-icon"
                 placeholder="••••••••"
                 required
               />
@@ -78,12 +78,12 @@
 
           <div class="form-group">
             <label>Nouveau mot de passe</label>
-            <div class="input-wrapper">
-              <Lock class="input-icon" />
+            <div class="form-input-wrapper">
+              <span class="form-input-icon"><Lock class="size-3.5" /></span>
               <input
                 v-model="pwForm.next"
                 type="password"
-                class="input-field with-icon"
+                class="form-input has-leading-icon"
                 placeholder="Min. 6 caractères"
                 minlength="6"
                 required
@@ -99,12 +99,12 @@
 
           <div class="form-group">
             <label>Confirmer le nouveau mot de passe</label>
-            <div class="input-wrapper">
-              <Lock class="input-icon" />
+            <div class="form-input-wrapper">
+              <span class="form-input-icon"><Lock class="size-3.5" /></span>
               <input
                 v-model="pwForm.confirm"
                 type="password"
-                class="input-field with-icon"
+                class="form-input has-leading-icon"
                 :class="{ 'border-red-300': pwForm.confirm && pwForm.next !== pwForm.confirm }"
                 placeholder="••••••••"
                 required
@@ -128,11 +128,7 @@
           </div>
 
           <div class="flex flex-wrap gap-2">
-            <button
-              type="submit"
-              :disabled="pwLoading"
-              class="btn-primary flex-1 justify-center sm:flex-none"
-            >
+            <button type="submit" :disabled="pwLoading" class="btn btn-primary flex-1 sm:flex-none">
               <span v-if="pwLoading" class="flex items-center gap-1.5">
                 <span class="loading-dot" />Enregistrement...
               </span>
@@ -140,7 +136,7 @@
             </button>
             <button
               type="button"
-              class="btn-secondary flex-1 justify-center sm:flex-none"
+              class="btn btn-secondary flex-1 sm:flex-none"
               @click="cancelPasswordForm"
             >
               Annuler
@@ -150,7 +146,7 @@
 
         <button
           v-else
-          class="btn-secondary mx-auto w-full justify-center sm:w-auto"
+          class="btn btn-secondary mx-auto w-full sm:w-auto"
           @click="showPasswordForm = true"
         >
           <KeyRound class="size-3.5" />
@@ -273,22 +269,22 @@
               <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div class="form-group">
                   <label>Prénom</label>
-                  <input v-model="infoForm.prenom" type="text" class="input-field" required />
+                  <input v-model="infoForm.prenom" type="text" class="form-input" required />
                 </div>
                 <div class="form-group">
                   <label>Nom</label>
-                  <input v-model="infoForm.nom" type="text" class="input-field" required />
+                  <input v-model="infoForm.nom" type="text" class="form-input" required />
                 </div>
                 <div class="form-group">
                   <label>Email</label>
-                  <input v-model="infoForm.email" type="email" class="input-field" required />
+                  <input v-model="infoForm.email" type="email" class="form-input" required />
                 </div>
                 <div class="form-group">
                   <label>Téléphone</label>
                   <input
                     v-model="infoForm.telephone"
                     type="tel"
-                    class="input-field"
+                    class="form-input"
                     placeholder="Ex: +33 6 00 00 00 00"
                   />
                 </div>
@@ -298,10 +294,12 @@
                 <span>{{ infoError }}</span>
               </div>
               <div class="flex gap-2">
-                <button type="submit" :disabled="infoLoading" class="btn-primary">
+                <button type="submit" :disabled="infoLoading" class="btn btn-primary">
                   {{ infoLoading ? 'Enregistrement...' : 'Enregistrer' }}
                 </button>
-                <button type="button" class="btn-secondary" @click="cancelEditInfo">Annuler</button>
+                <button type="button" class="btn btn-secondary" @click="cancelEditInfo">
+                  Annuler
+                </button>
               </div>
             </form>
           </div>
@@ -436,12 +434,12 @@
               >
                 <div class="form-group">
                   <label>Mot de passe actuel</label>
-                  <div class="input-wrapper">
-                    <Lock class="input-icon" />
+                  <div class="form-input-wrapper">
+                    <span class="form-input-icon"><Lock class="size-3.5" /></span>
                     <input
                       v-model="pwForm.current"
                       type="password"
-                      class="input-field with-icon"
+                      class="form-input has-leading-icon"
                       placeholder="••••••••"
                       required
                     />
@@ -450,12 +448,12 @@
 
                 <div class="form-group">
                   <label>Nouveau mot de passe</label>
-                  <div class="input-wrapper">
-                    <Lock class="input-icon" />
+                  <div class="form-input-wrapper">
+                    <span class="form-input-icon"><Lock class="size-3.5" /></span>
                     <input
                       v-model="pwForm.next"
                       type="password"
-                      class="input-field with-icon"
+                      class="form-input has-leading-icon"
                       placeholder="Min. 6 caractères"
                       minlength="6"
                       required
@@ -477,12 +475,12 @@
 
                 <div class="form-group">
                   <label>Confirmer le nouveau mot de passe</label>
-                  <div class="input-wrapper">
-                    <Lock class="input-icon" />
+                  <div class="form-input-wrapper">
+                    <span class="form-input-icon"><Lock class="size-3.5" /></span>
                     <input
                       v-model="pwForm.confirm"
                       type="password"
-                      class="input-field with-icon"
+                      class="form-input has-leading-icon"
                       :class="{
                         'border-red-300': pwForm.confirm && pwForm.next !== pwForm.confirm,
                       }"
@@ -509,20 +507,20 @@
                 </div>
 
                 <div class="flex gap-2">
-                  <button type="submit" :disabled="pwLoading" class="btn-primary">
+                  <button type="submit" :disabled="pwLoading" class="btn btn-primary">
                     <span v-if="pwLoading" class="flex items-center gap-1.5">
                       <span class="loading-dot" />Enregistrement...
                     </span>
                     <span v-else>Enregistrer</span>
                   </button>
-                  <button type="button" class="btn-secondary" @click="cancelPasswordForm">
+                  <button type="button" class="btn btn-secondary" @click="cancelPasswordForm">
                     Annuler
                   </button>
                 </div>
               </form>
 
               <!-- Bouton déclencheur -->
-              <button v-else class="btn-secondary" @click="showPasswordForm = true">
+              <button v-else class="btn btn-secondary" @click="showPasswordForm = true">
                 <KeyRound class="size-3.5" />
                 Changer le mot de passe
               </button>
@@ -1000,36 +998,6 @@ const handleChangePassword = async () => {
 .form-group label {
   @apply text-[10px] font-bold tracking-widest text-slate-500 uppercase;
 }
-.input-wrapper {
-  @apply relative flex items-center;
-}
-.input-icon {
-  @apply pointer-events-none absolute left-3 size-3.5 text-slate-400;
-}
-.input-field {
-  @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 transition-all outline-none hover:border-slate-300;
-}
-.input-field:focus {
-  border-color: var(--color-primary-600);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-600) 12%, transparent);
-}
-.input-field.with-icon {
-  @apply pl-9;
-}
-
-/* ── Boutons ── */
-.btn-primary {
-  @apply flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-xs font-bold text-white transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50;
-  background-color: var(--color-primary-600);
-}
-.btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-700);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary-600) 25%, transparent);
-}
-.btn-secondary {
-  @apply flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition-all hover:bg-slate-50 hover:text-slate-800 active:scale-95;
-}
-
 /* ── Loading dot ── */
 .loading-dot {
   @apply size-2 rounded-full bg-white/70;

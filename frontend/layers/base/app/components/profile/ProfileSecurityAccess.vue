@@ -8,21 +8,24 @@
     <Transition name="form-expand">
       <div v-if="modelValue" class="space-y-4 border-t border-slate-200/60 pt-4">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div class="form-group">
-            <label>Utilisateur</label>
-            <input v-model="modelValue.username" type="text" class="input-field" />
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <div class="input-wrapper">
-              <Lock class="input-icon" />
-              <input v-model="modelValue.password" type="password" class="input-field with-icon" />
-            </div>
-          </div>
+          <AppField id="psa-username" label="Utilisateur">
+            <input id="psa-username" v-model="modelValue.username" type="text" class="form-input" />
+          </AppField>
+          <AppField id="psa-password" label="Password">
+            <template #leading-icon>
+              <Lock class="size-3.5" />
+            </template>
+            <input
+              id="psa-password"
+              v-model="modelValue.password"
+              type="password"
+              class="form-input has-leading-icon"
+            />
+          </AppField>
         </div>
 
-        <div class="form-group">
-          <label>Rôles</label>
+        <div class="flex flex-col gap-1.5">
+          <label class="ml-0.5 text-[10px] font-bold text-slate-500 uppercase">Rôles</label>
           <div v-if="roleStore.loading" class="text-[11px] text-slate-400">Chargement...</div>
           <div v-else class="flex flex-wrap gap-3">
             <label v-for="role in roleStore.items" :key="role.id" class="role-checkbox-label">
@@ -46,6 +49,7 @@
 import { watch } from 'vue'
 import { Lock } from 'lucide-vue-next'
 import { useRoleStore } from '~~/layers/base/app/stores/useRoleStore'
+import AppField from '../ui/AppField.vue'
 import type { UtilisateurWrite } from '~~/layers/base/types/utilisateur'
 
 const props = defineProps<{ existingRoles?: string[] }>()
@@ -88,52 +92,14 @@ const toggleRole = (roleId: string) => {
 <style scoped>
 @reference "../../assets/css/main.css";
 
-/* Conteneur de sécurité */
 .security-box {
   @apply rounded-xl border border-slate-200 bg-slate-50/50 p-4 transition-all;
 }
 
-.security-content {
-  @apply mt-2 border-t border-slate-200/60 pt-4;
-}
-
-/* Typographie & Formulaire */
-.form-group {
-  @apply flex flex-col gap-1.5;
-}
-
-.form-group label {
-  @apply ml-0.5 text-[10px] font-bold text-slate-500 uppercase;
-}
-
-/* Inputs */
-.input-field {
-  @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition-all outline-none hover:border-slate-300;
-}
-
-.input-field:focus {
-  border-color: var(--color-primary-600);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-600) 15%, transparent);
-}
-
-.input-wrapper {
-  @apply relative flex items-center;
-}
-
-.input-icon {
-  @apply pointer-events-none absolute left-3 size-3.5 text-slate-400;
-}
-
-.input-field.with-icon {
-  @apply pl-9;
-}
-
-/* Role checkboxes */
 .role-checkbox-label {
   @apply flex cursor-pointer items-center gap-1.5 text-sm text-slate-700;
 }
 
-/* Animation Expand */
 .form-expand-enter-active,
 .form-expand-leave-active {
   transition: all 0.3s ease-in-out;
