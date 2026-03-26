@@ -24,8 +24,14 @@ function getApiConfig() {
   const route = useRoute()
   const { notifyError } = useErrorHandler()
 
+  // Côté serveur (Nitro), on utilise la variable privée pour atteindre le backend
+  // via le réseau interne Docker (http://backend:8000) plutôt que localhost.
+  const baseURL = import.meta.server
+    ? config.apiBase || config.public.apiBase || 'http://localhost:8000'
+    : config.public.apiBase || 'http://localhost:8000'
+
   return {
-    baseURL: config.public.apiBase || 'http://localhost:8000',
+    baseURL,
     onRequest({ options }: RequestInterceptorCtx) {
       if (authStore.token) {
         options.headers = {
