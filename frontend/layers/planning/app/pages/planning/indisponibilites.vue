@@ -11,10 +11,12 @@ import {
 } from 'lucide-vue-next'
 import AppDrawer from '~~/layers/base/app/components/AppDrawer.vue'
 import AppSelect from '~~/layers/base/app/components/ui/AppSelect.vue'
+import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
 import { useIndisponibiliteStore } from '~~/layers/base/app/stores/useIndisponibiliteStore'
 import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import type { MinistereSimple } from '~~/layers/base/types/ministere'
+import type { IndisponibiliteReadFull } from '~~/layers/base/types/indisponibilites'
 import { ProfileRepository } from '~~/layers/base/app/repositories/ProfileRepository'
 
 const store = useIndisponibiliteStore()
@@ -114,6 +116,16 @@ function formatDate(d: string | null) {
 }
 
 const hasCampus = computed(() => !!uiStore.selectedCampusId)
+
+const adminColumns = [
+  { key: 'membre', label: 'Membre' },
+  { key: 'ministere_libelle', label: 'Ministère' },
+  { key: 'date_debut', label: 'Du' },
+  { key: 'date_fin', label: 'Au' },
+  { key: 'motif', label: 'Motif' },
+  { key: 'validee', label: 'Statut' },
+  { key: 'actions', label: 'Actions' },
+]
 const isFormValid = computed(
   () => newForm.date_debut && newForm.date_fin && newForm.date_fin >= newForm.date_debut,
 )
@@ -229,112 +241,80 @@ const isFormValid = computed(
         <p class="text-sm">Aucune indisponibilité pour cette sélection</p>
       </div>
 
-      <!-- Tableau desktop / cartes mobile -->
-      <div v-else>
-        <div
-          class="hidden overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm sm:block"
+      <!-- Tableau admin (responsive via .data-table) -->
+      <div v-else class="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+        <AppTable
+          :columns="adminColumns"
+          :rows="store.adminIndisponibilites as unknown as Record<string, unknown>[]"
+          :loading="store.loading"
+          emptyLabel="Aucune indisponibilité"
         >
-          <table class="w-full text-sm">
-            <thead
-              class="border-b border-slate-100 bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase"
-            >
-              <tr>
-                <th class="px-4 py-3 text-left">Membre</th>
-                <th class="px-4 py-3 text-left">Ministère</th>
-                <th class="px-4 py-3 text-left">Du</th>
-                <th class="px-4 py-3 text-left">Au</th>
-                <th class="px-4 py-3 text-left">Motif</th>
-                <th class="px-4 py-3 text-left">Statut</th>
-                <th class="px-4 py-3 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-50">
-              <tr
-                v-for="item in store.adminIndisponibilites"
-                :key="item.id"
-                class="transition-colors hover:bg-slate-50/60"
-              >
-                <td class="px-4 py-3 font-medium text-slate-800">
-                  {{ item.membre_prenom }} {{ item.membre_nom }}
-                </td>
-                <td class="px-4 py-3 text-slate-600">{{ item.ministere_libelle ?? 'Global' }}</td>
-                <td class="px-4 py-3 text-slate-600">{{ formatDate(item.date_debut) }}</td>
-                <td class="px-4 py-3 text-slate-600">{{ formatDate(item.date_fin) }}</td>
-                <td class="max-w-48 px-4 py-3 text-slate-500">
-                  <span class="line-clamp-1">{{ item.motif ?? '—' }}</span>
-                </td>
-                <td class="px-4 py-3">
-                  <span :class="['badge', item.validee ? 'badge-green' : 'badge-amber']">
-                    <component :is="item.validee ? CheckCircle2 : AlertCircle" class="size-3" />
-                    {{ item.validee ? 'Validée' : 'En attente' }}
-                  </span>
-                </td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-1">
-                    <button
-                      v-if="!item.validee"
-                      class="btn btn-ghost btn-icon text-emerald-600 hover:bg-emerald-50"
-                      title="Valider"
-                      @click="handleValider(item.id)"
-                    >
-                      <CheckCheck class="size-4" />
-                    </button>
-                    <button
-                      class="btn btn-ghost btn-icon text-red-500 hover:bg-red-50"
-                      title="Supprimer"
-                      @click="handleDelete(item.id)"
-                    >
-                      <Trash2 class="size-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          <template #cell-membre="{ row }">
+            <span class="font-medium text-slate-800">
+              {{ (row as unknown as IndisponibiliteReadFull).membre_prenom }}
+              {{ (row as unknown as IndisponibiliteReadFull).membre_nom }}
+            </span>
+          </template>
 
-        <!-- Cartes mobile -->
-        <div class="space-y-3 sm:hidden">
-          <div
-            v-for="item in store.adminIndisponibilites"
-            :key="item.id"
-            class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
-          >
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex-1 space-y-1">
-                <p class="font-medium text-slate-800">
-                  {{ item.membre_prenom }} {{ item.membre_nom }}
-                </p>
-                <p class="text-xs text-slate-500">{{ item.ministere_libelle ?? 'Global' }}</p>
-                <p class="text-sm text-slate-700">
-                  {{ formatDate(item.date_debut) }} → {{ formatDate(item.date_fin) }}
-                </p>
-                <p v-if="item.motif" class="line-clamp-2 text-xs text-slate-500">
-                  {{ item.motif }}
-                </p>
-                <span :class="['badge', item.validee ? 'badge-green' : 'badge-amber']">
-                  <component :is="item.validee ? CheckCircle2 : AlertCircle" class="size-3" />
-                  {{ item.validee ? 'Validée' : 'En attente' }}
-                </span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <button
-                  v-if="!item.validee"
-                  class="btn btn-ghost btn-icon text-emerald-600 hover:bg-emerald-50"
-                  @click="handleValider(item.id)"
-                >
-                  <CheckCheck class="size-4" />
-                </button>
-                <button
-                  class="btn btn-ghost btn-icon text-red-500 hover:bg-red-50"
-                  @click="handleDelete(item.id)"
-                >
-                  <Trash2 class="size-4" />
-                </button>
-              </div>
+          <template #cell-ministere_libelle="{ value }">
+            <span class="text-slate-600">{{ (value as string | null) ?? 'Global' }}</span>
+          </template>
+
+          <template #cell-date_debut="{ row }">
+            <span class="text-slate-600">{{
+              formatDate((row as unknown as IndisponibiliteReadFull).date_debut)
+            }}</span>
+          </template>
+
+          <template #cell-date_fin="{ row }">
+            <span class="text-slate-600">{{
+              formatDate((row as unknown as IndisponibiliteReadFull).date_fin)
+            }}</span>
+          </template>
+
+          <template #cell-motif="{ value }">
+            <span class="line-clamp-1 max-w-48 text-slate-500">{{
+              (value as string | null) ?? '—'
+            }}</span>
+          </template>
+
+          <template #cell-validee="{ row }">
+            <span
+              :class="[
+                'badge',
+                (row as unknown as IndisponibiliteReadFull).validee ? 'badge-green' : 'badge-amber',
+              ]"
+            >
+              <component
+                :is="
+                  (row as unknown as IndisponibiliteReadFull).validee ? CheckCircle2 : AlertCircle
+                "
+                class="size-3"
+              />
+              {{ (row as unknown as IndisponibiliteReadFull).validee ? 'Validée' : 'En attente' }}
+            </span>
+          </template>
+
+          <template #cell-actions="{ row }">
+            <div class="flex items-center gap-1">
+              <button
+                v-if="!(row as unknown as IndisponibiliteReadFull).validee"
+                class="btn btn-ghost btn-icon text-emerald-600 hover:bg-emerald-50"
+                title="Valider"
+                @click="handleValider((row as unknown as IndisponibiliteReadFull).id)"
+              >
+                <CheckCheck class="size-4" />
+              </button>
+              <button
+                class="btn btn-ghost btn-icon text-red-500 hover:bg-red-50"
+                title="Supprimer"
+                @click="handleDelete((row as unknown as IndisponibiliteReadFull).id)"
+              >
+                <Trash2 class="size-4" />
+              </button>
             </div>
-          </div>
-        </div>
+          </template>
+        </AppTable>
       </div>
     </template>
 
