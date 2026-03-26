@@ -10,6 +10,7 @@ import {
   CalendarOff,
 } from 'lucide-vue-next'
 import AppDrawer from '~~/layers/base/app/components/AppDrawer.vue'
+import AppSelect from '~~/layers/base/app/components/ui/AppSelect.vue'
 import { useIndisponibiliteStore } from '~~/layers/base/app/stores/useIndisponibiliteStore'
 import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
@@ -167,11 +168,15 @@ const isFormValid = computed(
         class="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
       >
         <div class="field min-w-36">
-          <label class="field-label">Ministère</label>
-          <select v-model="store.filters.ministere_id" class="form-input" @change="applyFilters">
-            <option value="">Tous</option>
-            <option v-for="m in campusMinisteres" :key="m.id" :value="m.id">{{ m.nom }}</option>
-          </select>
+          <AppSelect
+            v-model="store.filters.ministere_id"
+            label="Ministère"
+            :options="[
+              { label: 'Tous', value: '' },
+              ...campusMinisteres.map((m) => ({ label: m.nom, value: m.id })),
+            ]"
+            @update:model-value="applyFilters"
+          />
         </div>
         <div class="field min-w-36">
           <label class="field-label">Du</label>
@@ -424,18 +429,15 @@ const isFormValid = computed(
         </div>
 
         <!-- Ministère (optionnel) -->
-        <div v-if="campusMinisteres.length > 0">
-          <label class="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase">
-            Ministère <span class="font-normal text-slate-400 normal-case">(optionnel)</span>
-          </label>
-          <select
-            v-model="newForm.ministere_id"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
-          >
-            <option value="">Tous mes ministères</option>
-            <option v-for="m in campusMinisteres" :key="m.id" :value="m.id">{{ m.nom }}</option>
-          </select>
-        </div>
+        <AppSelect
+          v-if="campusMinisteres.length > 0"
+          v-model="newForm.ministere_id"
+          label="Ministère (optionnel)"
+          :options="[
+            { label: 'Tous mes ministères', value: '' },
+            ...campusMinisteres.map((m) => ({ label: m.nom, value: m.id })),
+          ]"
+        />
 
         <!-- Motif -->
         <div>
