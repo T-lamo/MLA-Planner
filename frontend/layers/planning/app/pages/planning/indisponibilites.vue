@@ -10,10 +10,13 @@ import {
   CalendarOff,
 } from 'lucide-vue-next'
 import AppDrawer from '~~/layers/base/app/components/AppDrawer.vue'
+import AppSelect from '~~/layers/base/app/components/ui/AppSelect.vue'
+import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
 import { useIndisponibiliteStore } from '~~/layers/base/app/stores/useIndisponibiliteStore'
 import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import type { MinistereSimple } from '~~/layers/base/types/ministere'
+import type { IndisponibiliteReadFull } from '~~/layers/base/types/indisponibilites'
 import { ProfileRepository } from '~~/layers/base/app/repositories/ProfileRepository'
 
 const store = useIndisponibiliteStore()
@@ -113,6 +116,16 @@ function formatDate(d: string | null) {
 }
 
 const hasCampus = computed(() => !!uiStore.selectedCampusId)
+
+const adminColumns = [
+  { key: 'membre', label: 'Membre' },
+  { key: 'ministere_libelle', label: 'Ministère' },
+  { key: 'date_debut', label: 'Du' },
+  { key: 'date_fin', label: 'Au' },
+  { key: 'motif', label: 'Motif' },
+  { key: 'validee', label: 'Statut' },
+  { key: 'actions', label: 'Actions' },
+]
 const isFormValid = computed(
   () => newForm.date_debut && newForm.date_fin && newForm.date_fin >= newForm.date_debut,
 )
@@ -149,11 +162,7 @@ const isFormValid = computed(
         </div>
 
         <!-- Bouton déclarer -->
-        <button
-          class="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all active:scale-95"
-          style="background-color: var(--color-primary-600)"
-          @click="drawerOpen = true"
-        >
+        <button class="btn btn-primary" @click="drawerOpen = true">
           <Plus class="size-4" />
           Déclarer
         </button>
@@ -167,18 +176,22 @@ const isFormValid = computed(
         class="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
       >
         <div class="field min-w-36">
-          <label class="field-label">Ministère</label>
-          <select v-model="store.filters.ministere_id" class="field-input" @change="applyFilters">
-            <option value="">Tous</option>
-            <option v-for="m in campusMinisteres" :key="m.id" :value="m.id">{{ m.nom }}</option>
-          </select>
+          <AppSelect
+            v-model="store.filters.ministere_id"
+            label="Ministère"
+            :options="[
+              { label: 'Tous', value: '' },
+              ...campusMinisteres.map((m) => ({ label: m.nom, value: m.id })),
+            ]"
+            @update:model-value="applyFilters"
+          />
         </div>
         <div class="field min-w-36">
           <label class="field-label">Du</label>
           <input
             v-model="store.filters.date_debut"
             type="date"
-            class="field-input"
+            class="form-input"
             @change="applyFilters"
           />
         </div>
@@ -187,7 +200,7 @@ const isFormValid = computed(
           <input
             v-model="store.filters.date_fin"
             type="date"
-            class="field-input"
+            class="form-input"
             @change="applyFilters"
           />
         </div>
@@ -224,112 +237,80 @@ const isFormValid = computed(
         <p class="text-sm">Aucune indisponibilité pour cette sélection</p>
       </div>
 
-      <!-- Tableau desktop / cartes mobile -->
-      <div v-else>
-        <div
-          class="hidden overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm sm:block"
+      <!-- Tableau admin (responsive via .data-table) -->
+      <div v-else class="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+        <AppTable
+          :columns="adminColumns"
+          :rows="store.adminIndisponibilites as unknown as Record<string, unknown>[]"
+          :loading="store.loading"
+          emptyLabel="Aucune indisponibilité"
         >
-          <table class="w-full text-sm">
-            <thead
-              class="border-b border-slate-100 bg-slate-50 text-xs font-semibold tracking-wide text-slate-500 uppercase"
-            >
-              <tr>
-                <th class="px-4 py-3 text-left">Membre</th>
-                <th class="px-4 py-3 text-left">Ministère</th>
-                <th class="px-4 py-3 text-left">Du</th>
-                <th class="px-4 py-3 text-left">Au</th>
-                <th class="px-4 py-3 text-left">Motif</th>
-                <th class="px-4 py-3 text-left">Statut</th>
-                <th class="px-4 py-3 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-50">
-              <tr
-                v-for="item in store.adminIndisponibilites"
-                :key="item.id"
-                class="transition-colors hover:bg-slate-50/60"
-              >
-                <td class="px-4 py-3 font-medium text-slate-800">
-                  {{ item.membre_prenom }} {{ item.membre_nom }}
-                </td>
-                <td class="px-4 py-3 text-slate-600">{{ item.ministere_libelle ?? 'Global' }}</td>
-                <td class="px-4 py-3 text-slate-600">{{ formatDate(item.date_debut) }}</td>
-                <td class="px-4 py-3 text-slate-600">{{ formatDate(item.date_fin) }}</td>
-                <td class="max-w-48 px-4 py-3 text-slate-500">
-                  <span class="line-clamp-1">{{ item.motif ?? '—' }}</span>
-                </td>
-                <td class="px-4 py-3">
-                  <span :class="['badge', item.validee ? 'badge-green' : 'badge-amber']">
-                    <component :is="item.validee ? CheckCircle2 : AlertCircle" class="size-3" />
-                    {{ item.validee ? 'Validée' : 'En attente' }}
-                  </span>
-                </td>
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-1">
-                    <button
-                      v-if="!item.validee"
-                      class="action-btn text-emerald-600 hover:bg-emerald-50"
-                      title="Valider"
-                      @click="handleValider(item.id)"
-                    >
-                      <CheckCheck class="size-4" />
-                    </button>
-                    <button
-                      class="action-btn text-red-500 hover:bg-red-50"
-                      title="Supprimer"
-                      @click="handleDelete(item.id)"
-                    >
-                      <Trash2 class="size-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          <template #cell-membre="{ row }">
+            <span class="font-medium text-slate-800">
+              {{ (row as unknown as IndisponibiliteReadFull).membre_prenom }}
+              {{ (row as unknown as IndisponibiliteReadFull).membre_nom }}
+            </span>
+          </template>
 
-        <!-- Cartes mobile -->
-        <div class="space-y-3 sm:hidden">
-          <div
-            v-for="item in store.adminIndisponibilites"
-            :key="item.id"
-            class="rounded-xl border border-slate-100 bg-white p-4 shadow-sm"
-          >
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex-1 space-y-1">
-                <p class="font-medium text-slate-800">
-                  {{ item.membre_prenom }} {{ item.membre_nom }}
-                </p>
-                <p class="text-xs text-slate-500">{{ item.ministere_libelle ?? 'Global' }}</p>
-                <p class="text-sm text-slate-700">
-                  {{ formatDate(item.date_debut) }} → {{ formatDate(item.date_fin) }}
-                </p>
-                <p v-if="item.motif" class="line-clamp-2 text-xs text-slate-500">
-                  {{ item.motif }}
-                </p>
-                <span :class="['badge', item.validee ? 'badge-green' : 'badge-amber']">
-                  <component :is="item.validee ? CheckCircle2 : AlertCircle" class="size-3" />
-                  {{ item.validee ? 'Validée' : 'En attente' }}
-                </span>
-              </div>
-              <div class="flex flex-col gap-1">
-                <button
-                  v-if="!item.validee"
-                  class="action-btn text-emerald-600 hover:bg-emerald-50"
-                  @click="handleValider(item.id)"
-                >
-                  <CheckCheck class="size-4" />
-                </button>
-                <button
-                  class="action-btn text-red-500 hover:bg-red-50"
-                  @click="handleDelete(item.id)"
-                >
-                  <Trash2 class="size-4" />
-                </button>
-              </div>
+          <template #cell-ministere_libelle="{ value }">
+            <span class="text-slate-600">{{ (value as string | null) ?? 'Global' }}</span>
+          </template>
+
+          <template #cell-date_debut="{ row }">
+            <span class="text-slate-600">{{
+              formatDate((row as unknown as IndisponibiliteReadFull).date_debut)
+            }}</span>
+          </template>
+
+          <template #cell-date_fin="{ row }">
+            <span class="text-slate-600">{{
+              formatDate((row as unknown as IndisponibiliteReadFull).date_fin)
+            }}</span>
+          </template>
+
+          <template #cell-motif="{ value }">
+            <span class="line-clamp-1 max-w-48 text-slate-500">{{
+              (value as string | null) ?? '—'
+            }}</span>
+          </template>
+
+          <template #cell-validee="{ row }">
+            <span
+              :class="[
+                'badge',
+                (row as unknown as IndisponibiliteReadFull).validee ? 'badge-green' : 'badge-amber',
+              ]"
+            >
+              <component
+                :is="
+                  (row as unknown as IndisponibiliteReadFull).validee ? CheckCircle2 : AlertCircle
+                "
+                class="size-3"
+              />
+              {{ (row as unknown as IndisponibiliteReadFull).validee ? 'Validée' : 'En attente' }}
+            </span>
+          </template>
+
+          <template #cell-actions="{ row }">
+            <div class="flex items-center gap-1">
+              <button
+                v-if="!(row as unknown as IndisponibiliteReadFull).validee"
+                class="btn btn-ghost btn-icon text-emerald-600 hover:bg-emerald-50"
+                title="Valider"
+                @click="handleValider((row as unknown as IndisponibiliteReadFull).id)"
+              >
+                <CheckCheck class="size-4" />
+              </button>
+              <button
+                class="btn btn-ghost btn-icon text-red-500 hover:bg-red-50"
+                title="Supprimer"
+                @click="handleDelete((row as unknown as IndisponibiliteReadFull).id)"
+              >
+                <Trash2 class="size-4" />
+              </button>
             </div>
-          </div>
-        </div>
+          </template>
+        </AppTable>
       </div>
     </template>
 
@@ -345,11 +326,7 @@ const isFormValid = computed(
       >
         <CalendarOff class="size-10 opacity-40" />
         <p class="text-sm">Aucune indisponibilité déclarée</p>
-        <button
-          class="mt-1 rounded-lg px-4 py-2 text-sm font-medium text-white"
-          style="background-color: var(--color-primary-600)"
-          @click="drawerOpen = true"
-        >
+        <button class="btn btn-primary mt-1" @click="drawerOpen = true">
           Déclarer une indisponibilité
         </button>
       </div>
@@ -378,7 +355,7 @@ const isFormValid = computed(
           </span>
           <button
             v-if="!item.validee"
-            class="action-btn text-red-400 hover:bg-red-50"
+            class="btn btn-ghost btn-icon text-red-400 hover:bg-red-50"
             title="Supprimer"
             @click="handleDeleteMine(item.id)"
           >
@@ -407,12 +384,7 @@ const isFormValid = computed(
             <label class="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase"
               >Du *</label
             >
-            <input
-              v-model="newForm.date_debut"
-              type="date"
-              :min="todayDate"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
-            />
+            <input v-model="newForm.date_debut" type="date" :min="todayDate" class="form-input" />
           </div>
           <div>
             <label class="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase"
@@ -422,24 +394,21 @@ const isFormValid = computed(
               v-model="newForm.date_fin"
               type="date"
               :min="newForm.date_debut || todayDate"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
+              class="form-input"
             />
           </div>
         </div>
 
         <!-- Ministère (optionnel) -->
-        <div v-if="campusMinisteres.length > 0">
-          <label class="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase">
-            Ministère <span class="font-normal text-slate-400 normal-case">(optionnel)</span>
-          </label>
-          <select
-            v-model="newForm.ministere_id"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
-          >
-            <option value="">Tous mes ministères</option>
-            <option v-for="m in campusMinisteres" :key="m.id" :value="m.id">{{ m.nom }}</option>
-          </select>
-        </div>
+        <AppSelect
+          v-if="campusMinisteres.length > 0"
+          v-model="newForm.ministere_id"
+          label="Ministère (optionnel)"
+          :options="[
+            { label: 'Tous mes ministères', value: '' },
+            ...campusMinisteres.map((m) => ({ label: m.nom, value: m.id })),
+          ]"
+        />
 
         <!-- Motif -->
         <div>
@@ -450,23 +419,17 @@ const isFormValid = computed(
             v-model="newForm.motif"
             rows="3"
             placeholder="Vacances, maladie, déplacement..."
-            class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 focus:border-blue-400 focus:outline-none"
+            class="form-input resize-none"
           />
         </div>
       </div>
 
       <template #footer>
         <div class="flex gap-3">
-          <button
-            class="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
-            @click="drawerOpen = false"
-          >
-            Annuler
-          </button>
+          <button class="btn btn-secondary flex-1" @click="drawerOpen = false">Annuler</button>
           <button
             :disabled="!isFormValid || store.loading"
-            class="flex-1 rounded-lg py-2 text-sm font-semibold text-white transition-all active:scale-95 disabled:opacity-40"
-            style="background-color: var(--color-primary-600)"
+            class="btn btn-primary flex-1"
             @click="handleSubmit"
           >
             {{ store.loading ? 'Enregistrement…' : 'Déclarer' }}
@@ -492,19 +455,11 @@ const isFormValid = computed(
   @apply bg-amber-50 text-amber-700;
 }
 
-.action-btn {
-  @apply rounded-lg p-1.5 transition-colors;
-}
-
 .field {
   @apply flex flex-col gap-1;
 }
 
 .field-label {
   @apply text-xs font-medium text-slate-600;
-}
-
-.field-input {
-  @apply rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 transition-all outline-none focus:border-(--color-primary-400) focus:bg-white focus:ring-2 focus:ring-(--color-primary-100);
 }
 </style>

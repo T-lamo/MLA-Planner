@@ -250,7 +250,7 @@ const getPaysNom = (paysId: string): string => {
         <h2 class="text-base font-semibold text-slate-800">Organisations</h2>
         <button
           v-if="!isOrgFormOpen"
-          class="flex items-center gap-1.5 rounded-lg bg-(--color-primary-600) px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-(--color-primary-700) active:scale-95 disabled:opacity-50"
+          class="btn btn-primary btn-sm"
           :disabled="isFetchingOrgs"
           @click="openOrgCreate"
         >
@@ -273,28 +273,23 @@ const getPaysNom = (paysId: string): string => {
               v-model="orgForm.nom"
               type="text"
               placeholder="Nom (ex: Nouvelle organisation)"
-              class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-(--color-primary-400) focus:ring-1 focus:ring-(--color-primary-200)"
+              class="form-input flex-1"
             />
             <input
               v-if="!editingOrg"
               v-model="orgForm.date_creation"
               type="date"
-              class="w-44 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-(--color-primary-400) focus:ring-1 focus:ring-(--color-primary-200)"
+              class="form-input w-44"
             />
             <div class="flex gap-2">
               <button
-                class="rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-(--color-primary-700) disabled:opacity-50"
+                class="btn btn-primary"
                 :disabled="isSubmittingOrg || !orgForm.nom.trim()"
                 @click="handleOrgSubmit"
               >
                 Enregistrer
               </button>
-              <button
-                class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
-                @click="cancelOrgForm"
-              >
-                Annuler
-              </button>
+              <button class="btn btn-secondary" @click="cancelOrgForm">Annuler</button>
             </div>
           </div>
         </div>
@@ -355,7 +350,7 @@ const getPaysNom = (paysId: string): string => {
         </div>
         <button
           v-if="!isPaysFormOpen"
-          class="flex items-center gap-1.5 rounded-lg bg-(--color-primary-600) px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-(--color-primary-700) active:scale-95 disabled:opacity-50"
+          class="btn btn-primary btn-sm"
           :disabled="isFetchingPays || organisations.length === 0"
           @click="openPaysCreate"
         >
@@ -379,28 +374,36 @@ const getPaysNom = (paysId: string): string => {
                 v-model="paysForm.nom"
                 type="text"
                 placeholder="Nom (ex: France)"
-                class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-(--color-primary-400) focus:ring-1 focus:ring-(--color-primary-200)"
+                class="form-input flex-1"
               />
               <input
                 v-model="paysForm.code"
                 type="text"
                 placeholder="Code ISO (ex: FR)"
-                class="w-28 rounded-lg border border-slate-200 px-3 py-2 text-sm uppercase outline-none focus:border-(--color-primary-400) focus:ring-1 focus:ring-(--color-primary-200)"
+                class="form-input w-28 uppercase"
               />
             </div>
             <div class="flex flex-col gap-3 sm:flex-row">
-              <select
-                v-model="paysForm.organisation_id"
-                class="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-(--color-primary-400) focus:ring-1 focus:ring-(--color-primary-200)"
-              >
-                <option value="" disabled>Sélectionner une organisation</option>
-                <option v-for="org in organisations" :key="org.id" :value="org.id">
-                  {{ org.nom }}
-                </option>
-              </select>
+              <div class="form-select-wrapper flex-1">
+                <select v-model="paysForm.organisation_id" class="form-input form-select">
+                  <option value="" disabled>Sélectionner une organisation</option>
+                  <option v-for="org in organisations" :key="org.id" :value="org.id">
+                    {{ org.nom }}
+                  </option>
+                </select>
+                <svg
+                  class="form-select-chevron"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M3 5l4 4 4-4" />
+                </svg>
+              </div>
               <div class="flex gap-2">
                 <button
-                  class="rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-(--color-primary-700) disabled:opacity-50"
+                  class="btn btn-primary"
                   :disabled="
                     isSubmittingPays ||
                     !paysForm.nom.trim() ||
@@ -411,12 +414,7 @@ const getPaysNom = (paysId: string): string => {
                 >
                   Enregistrer
                 </button>
-                <button
-                  class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
-                  @click="cancelPaysForm"
-                >
-                  Annuler
-                </button>
+                <button class="btn btn-secondary" @click="cancelPaysForm">Annuler</button>
               </div>
             </div>
           </div>
@@ -474,7 +472,7 @@ const getPaysNom = (paysId: string): string => {
       <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
         <h2 class="text-base font-semibold text-slate-800">Campuses</h2>
         <button
-          class="flex items-center gap-1.5 rounded-lg bg-(--color-primary-600) px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-(--color-primary-700) active:scale-95 disabled:opacity-50"
+          class="btn btn-primary btn-sm"
           :disabled="isFetchingCampuses"
           @click="openCampusCreate"
         >
@@ -503,10 +501,7 @@ const getPaysNom = (paysId: string): string => {
               Créez le premier campus pour démarrer la configuration.
             </p>
           </div>
-          <button
-            class="mt-1 flex items-center gap-1.5 rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-(--color-primary-700)"
-            @click="openCampusCreate"
-          >
+          <button class="btn btn-primary mt-1" @click="openCampusCreate">
             <Plus class="size-4" />
             Créer un campus
           </button>
@@ -590,7 +585,7 @@ const getPaysNom = (paysId: string): string => {
                     v-model="campusForm.nom"
                     type="text"
                     placeholder="Ex: Campus Paris"
-                    class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-(--color-primary-400) focus:ring-1 focus:ring-(--color-primary-200)"
+                    class="form-input"
                   />
                 </div>
 
@@ -602,7 +597,7 @@ const getPaysNom = (paysId: string): string => {
                     v-model="campusForm.ville"
                     type="text"
                     placeholder="Ex: Paris"
-                    class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-(--color-primary-400) focus:ring-1 focus:ring-(--color-primary-200)"
+                    class="form-input"
                   />
                 </div>
 
@@ -610,27 +605,43 @@ const getPaysNom = (paysId: string): string => {
                   <label class="mb-1 block text-sm font-medium text-slate-700">
                     Fuseau horaire
                   </label>
-                  <select
-                    v-model="campusForm.timezone"
-                    class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-(--color-primary-400) focus:ring-1 focus:ring-(--color-primary-200)"
-                  >
-                    <option v-for="tz in TIMEZONES" :key="tz" :value="tz">{{ tz }}</option>
-                  </select>
+                  <div class="form-select-wrapper">
+                    <select v-model="campusForm.timezone" class="form-input form-select">
+                      <option v-for="tz in TIMEZONES" :key="tz" :value="tz">{{ tz }}</option>
+                    </select>
+                    <svg
+                      class="form-select-chevron"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M3 5l4 4 4-4" />
+                    </svg>
+                  </div>
                 </div>
 
                 <div>
                   <label class="mb-1 block text-sm font-medium text-slate-700">
                     Pays <span class="text-red-500">*</span>
                   </label>
-                  <select
-                    v-model="campusForm.pays_id"
-                    class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-(--color-primary-400) focus:ring-1 focus:ring-(--color-primary-200)"
-                  >
-                    <option value="" disabled>Sélectionner un pays</option>
-                    <option v-for="p in allPays" :key="p.id" :value="p.id">
-                      {{ p.nom }} ({{ p.code }})
-                    </option>
-                  </select>
+                  <div class="form-select-wrapper">
+                    <select v-model="campusForm.pays_id" class="form-input form-select">
+                      <option value="" disabled>Sélectionner un pays</option>
+                      <option v-for="p in allPays" :key="p.id" :value="p.id">
+                        {{ p.nom }} ({{ p.code }})
+                      </option>
+                    </select>
+                    <svg
+                      class="form-select-chevron"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M3 5l4 4 4-4" />
+                    </svg>
+                  </div>
                 </div>
               </div>
             </div>
@@ -638,14 +649,9 @@ const getPaysNom = (paysId: string): string => {
             <!-- Drawer footer -->
             <div class="border-t border-slate-100 px-6 py-4">
               <div class="flex justify-end gap-3">
+                <button class="btn btn-secondary" @click="closeCampusDrawer">Annuler</button>
                 <button
-                  class="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                  @click="closeCampusDrawer"
-                >
-                  Annuler
-                </button>
-                <button
-                  class="rounded-lg bg-(--color-primary-600) px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-(--color-primary-700) disabled:opacity-50"
+                  class="btn btn-primary"
                   :disabled="isSubmittingCampus || !campusForm.nom.trim() || !campusForm.pays_id"
                   @click="handleCampusSubmit"
                 >

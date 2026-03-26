@@ -317,12 +317,14 @@ const handleSubmit = () => {
 
     <template #footer>
       <div class="flex w-full items-center gap-3">
-        <button type="button" class="footer-btn-secondary" @click="handleCancel">Annuler</button>
+        <button type="button" class="btn btn-secondary btn-lg flex-1" @click="handleCancel">
+          Annuler
+        </button>
         <button
           type="submit"
           form="profileForm"
           :disabled="isSubmitting"
-          class="footer-btn-primary"
+          class="btn btn-primary btn-lg flex-1"
         >
           <span v-if="isSubmitting">Traitement...</span>
           <span v-else>{{
@@ -340,21 +342,6 @@ const handleSubmit = () => {
 /* Conteneur principal du formulaire avec padding horizontal */
 #profileForm {
   @apply px-2;
-}
-
-/* Boutons de Footer */
-.footer-btn-primary {
-  @apply flex-1 rounded-xl py-3 text-xs font-bold text-white transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
-  background-color: var(--color-primary-600);
-}
-
-.footer-btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-700);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary-600) 25%, transparent);
-}
-
-.footer-btn-secondary {
-  @apply flex-1 rounded-xl border border-slate-200 py-3 text-xs font-bold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700;
 }
 
 /* On garde les utilitaires de scroll au cas où le contenu déborde */

@@ -225,7 +225,7 @@ onMounted(() => Promise.all([loadCategories(), loadChants()]))
           <NuxtLink
             v-if="authStore.canManageChants"
             to="/songbook/new"
-            class="inline-flex items-center gap-1.5 rounded-lg bg-(--color-primary-600) px-3 py-1.5 text-sm font-medium text-white hover:bg-(--color-primary-700)"
+            class="btn btn-primary btn-sm"
           >
             <Plus class="h-4 w-4" />
             <span class="hidden sm:inline">Nouveau</span>
