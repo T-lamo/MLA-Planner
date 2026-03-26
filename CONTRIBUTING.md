@@ -4,31 +4,52 @@ Ce guide s'adresse aux développeurs qui rejoignent le projet. Lisez-le entière
 
 ---
 
-## Prérequis
+## Option A — Lancer avec Docker (recommandé pour démarrer vite)
+
+Seul prérequis : **[Docker Desktop](https://www.docker.com/products/docker-desktop/)**.
+
+```bash
+git clone https://github.com/T-lamo/MLA-Planner.git
+cd MLA-Planner/mla-app
+docker compose up --build
+```
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| API + Swagger | http://localhost:8000/docs |
+
+Les données de démonstration (campus, ministères, membres, plannings) sont créées automatiquement.
+
+> Docker n'est pas recommandé pour le développement actif car chaque modification du code source nécessite un rebuild. Utilisez l'option B pour coder.
+
+---
+
+## Option B — Installation locale (développement actif)
+
+### Prérequis
 
 | Outil | Version minimale | Installation |
 |---|---|---|
 | Python | 3.12 | [python.org](https://www.python.org/downloads/) |
-| Node.js | 20 LTS | [nodejs.org](https://nodejs.org/) |
+| Node.js | 22 LTS | [nodejs.org](https://nodejs.org/) |
 | pnpm | 9+ | `npm install -g pnpm` |
-| PostgreSQL | 16 | [postgresql.org](https://www.postgresql.org/download/) |
+| PostgreSQL | 15+ | [postgresql.org](https://www.postgresql.org/download/) |
 | Make | — | Natif Linux/macOS · `choco install make` Windows |
 
----
-
-## Installation
+### Installation
 
 ```bash
 # 1. Cloner le dépôt
-git clone <url-du-repo>
-cd mla-app
+git clone https://github.com/T-lamo/MLA-Planner.git
+cd MLA-Planner/mla-app
 
 # 2. Installer toutes les dépendances (backend + frontend)
 make install-all
 
 # 3. Configurer les variables d'environnement backend
-cp backend/.env.example backend/.env
-# Renseigner DATABASE_URL, JWT_SECRET_KEY, ALLOWED_ORIGINS
+cp .env.example .env
+# Ajuster DATABASE_URL pour pointer vers votre PostgreSQL local
 
 # 4. Initialiser la base de données (reset + migrations + seed)
 make db-setup-back

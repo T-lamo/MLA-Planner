@@ -3,11 +3,16 @@ import type { AuthUser } from '../repositories/AuthRepository'
 
 export const useAuthStore = defineStore('auth', () => {
   // --- ÉTAT (STATE) ---
+  // secure: true bloque les cookies sur HTTP (Docker local) — conditionnel au protocole
+  const isSecure = import.meta.server
+    ? useRequestURL().protocol === 'https:'
+    : location.protocol === 'https:'
+
   const cookieOptions = {
     maxAge: 60 * 60 * 24 * 7,
     path: '/',
     sameSite: 'strict' as const,
-    secure: true,
+    secure: isSecure,
   }
 
   const token = useCookie<string | null>('auth_token', cookieOptions)
