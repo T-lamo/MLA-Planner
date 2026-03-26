@@ -20,7 +20,7 @@ const emit = defineEmits(['update:searchQuery', 'update:activeCampusId'])
         :value="searchQuery"
         type="text"
         placeholder="Rechercher par nom, email..."
-        class="input-field w-full bg-white pl-10"
+        class="form-input w-full bg-white pl-10"
         @input="emit('update:searchQuery', ($event.target as HTMLInputElement).value)"
       />
     </div>

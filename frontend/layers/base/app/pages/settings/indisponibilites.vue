@@ -123,7 +123,7 @@ function formatDate(d: string | null) {
           <p class="text-sm text-slate-500">Déclarez vos périodes d'indisponibilité</p>
         </div>
       </div>
-      <button class="btn-primary flex items-center gap-2" @click="openForm">
+      <button class="btn btn-primary" @click="openForm">
         <Plus class="size-4" />
         Déclarer
       </button>
@@ -210,7 +210,7 @@ function formatDate(d: string | null) {
             <!-- Date début -->
             <div class="field">
               <label class="field-label">Date de début *</label>
-              <input v-model="form.date_debut" type="date" required class="field-input" />
+              <input v-model="form.date_debut" type="date" required class="form-input" />
             </div>
 
             <!-- Date fin -->
@@ -221,14 +221,14 @@ function formatDate(d: string | null) {
                 type="date"
                 required
                 :min="form.date_debut || undefined"
-                class="field-input"
+                class="form-input"
               />
             </div>
 
             <!-- Ministère -->
             <div class="field">
               <label class="field-label">Ministère</label>
-              <select v-model="form.ministere_id" class="field-input">
+              <select v-model="form.ministere_id" class="form-input">
                 <option :value="null">Global / Tous les ministères</option>
                 <option v-for="m in myMinisteres" :key="m.id" :value="m.id">
                   {{ m.nom }}
@@ -243,14 +243,14 @@ function formatDate(d: string | null) {
                 v-model="form.motif"
                 rows="3"
                 placeholder="Raison de l'indisponibilité..."
-                class="field-input resize-none"
+                class="form-input resize-none"
               />
             </div>
 
             <button
               type="submit"
               :disabled="isSubmitting"
-              class="btn-primary w-full justify-center disabled:opacity-60"
+              class="btn btn-primary w-full justify-center"
             >
               <span v-if="isSubmitting">Enregistrement…</span>
               <span v-else>Enregistrer</span>
@@ -291,14 +291,6 @@ function formatDate(d: string | null) {
 
 .field-label {
   @apply text-xs font-medium text-slate-600;
-}
-
-.field-input {
-  @apply rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 transition-all outline-none focus:border-(--color-primary-400) focus:bg-white focus:ring-2 focus:ring-(--color-primary-100);
-}
-
-.btn-primary {
-  @apply flex items-center gap-2 rounded-xl bg-(--color-primary-600) px-4 py-2 font-semibold text-white shadow-sm transition-all hover:bg-(--color-primary-700) active:scale-95;
 }
 
 /* Transitions liste */
