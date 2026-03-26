@@ -14,6 +14,7 @@ import {
 } from 'lucide-vue-next'
 import { useMyAffectationsStore } from '../../stores/useMyAffectationsStore'
 import type { AffectationMemberRead, AffectationStatus } from '../../types/planning.types'
+import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -126,6 +127,15 @@ function formatDateCompact(iso: string) {
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 }
+
+const affColumns = [
+  { key: 'date', label: 'Date' },
+  { key: 'activite_type', label: 'Activité' },
+  { key: 'slot_nom', label: 'Créneau' },
+  { key: 'ministere_nom', label: 'Ministère', width: 'hidden lg:table-cell' },
+  { key: 'statut_affectation_code', label: 'Statut' },
+  { key: 'actions', label: '' },
+]
 </script>
 
 <template>
@@ -236,125 +246,92 @@ function formatTime(iso: string) {
         <div
           class="hidden overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm sm:block"
         >
-          <table class="w-full text-sm">
-            <thead class="border-b border-slate-100 bg-slate-50">
-              <tr>
-                <th class="px-4 py-2.5 text-left">
-                  <button
-                    class="flex items-center gap-1 text-xs font-semibold tracking-wide text-slate-500 uppercase hover:text-slate-700"
-                    @click="sortAsc = !sortAsc"
-                  >
-                    Date
-                    <component :is="sortAsc ? ArrowUp : ArrowDown" class="size-3" />
-                  </button>
-                </th>
-                <th
-                  class="px-4 py-2.5 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                >
-                  Activité
-                </th>
-                <th
-                  class="px-4 py-2.5 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                >
-                  Créneau
-                </th>
-                <th
-                  class="hidden px-4 py-2.5 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase lg:table-cell"
-                >
-                  Ministère
-                </th>
-                <th
-                  class="px-4 py-2.5 text-left text-xs font-semibold tracking-wide text-slate-500 uppercase"
-                >
-                  Statut
-                </th>
-                <th class="px-4 py-2.5"></th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-50">
-              <tr
-                v-for="aff in filtered"
-                :key="aff.id"
-                class="transition-colors hover:bg-slate-50/60"
-                :class="aff.statut_affectation_code === 'PROPOSE' ? 'bg-amber-50/30' : ''"
+          <AppTable
+            :columns="affColumns"
+            :rows="filtered as unknown as Record<string, unknown>[]"
+            :loading="store.loading"
+            emptyLabel="Aucune affectation"
+          >
+            <template #header-date>
+              <button
+                class="flex items-center gap-1 hover:text-slate-700"
+                @click="sortAsc = !sortAsc"
               >
-                <!-- Date -->
-                <td class="px-4 py-3 whitespace-nowrap">
-                  <p class="text-sm font-medium text-slate-800">
-                    {{ formatDateCompact(aff.slot_debut) }}
-                  </p>
-                  <p class="flex items-center gap-1 text-xs text-slate-400">
-                    <Clock class="size-3 shrink-0" />
-                    {{ formatTime(aff.slot_debut) }}
-                  </p>
-                </td>
+                Date
+                <component :is="sortAsc ? ArrowUp : ArrowDown" class="size-3" />
+              </button>
+            </template>
 
-                <!-- Activité -->
-                <td class="px-4 py-3">
-                  <p class="text-sm font-semibold text-slate-800">{{ aff.activite_type ?? '—' }}</p>
-                  <p v-if="aff.lieu" class="flex items-center gap-1 text-xs text-slate-400">
-                    <MapPin class="size-3 shrink-0" />
-                    {{ aff.lieu }}
-                  </p>
-                </td>
+            <template #cell-date="{ row }">
+              <p class="font-medium whitespace-nowrap text-slate-800">
+                {{ formatDateCompact((row as unknown as AffectationMemberRead).slot_debut) }}
+              </p>
+              <p class="flex items-center gap-1 text-xs text-slate-400">
+                <Clock class="size-3 shrink-0" />
+                {{ formatTime((row as unknown as AffectationMemberRead).slot_debut) }}
+              </p>
+            </template>
 
-                <!-- Créneau -->
-                <td class="px-4 py-3">
-                  <span
-                    class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
-                  >
-                    {{ aff.slot_nom || '—' }}
-                  </span>
-                </td>
+            <template #cell-activite_type="{ row }">
+              <p class="font-semibold text-slate-800">
+                {{ (row as unknown as AffectationMemberRead).activite_type ?? '—' }}
+              </p>
+              <p
+                v-if="(row as unknown as AffectationMemberRead).lieu"
+                class="flex items-center gap-1 text-xs text-slate-400"
+              >
+                <MapPin class="size-3 shrink-0" />
+                {{ (row as unknown as AffectationMemberRead).lieu }}
+              </p>
+            </template>
 
-                <!-- Ministère -->
-                <td class="hidden px-4 py-3 lg:table-cell">
-                  <span
-                    v-if="aff.ministere_nom"
-                    class="flex items-center gap-1 text-xs text-slate-500"
-                  >
-                    <Users class="size-3 shrink-0" />
-                    {{ aff.ministere_nom }}
-                  </span>
-                  <span v-else class="text-xs text-slate-300">—</span>
-                </td>
+            <template #cell-slot_nom="{ value }">
+              <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                {{ (value as string | null) || '—' }}
+              </span>
+            </template>
 
-                <!-- Statut -->
-                <td class="px-4 py-3">
-                  <span
-                    class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
-                    :class="STATUS_CONFIG[aff.statut_affectation_code as AffectationStatus].badge"
-                  >
-                    {{ STATUS_CONFIG[aff.statut_affectation_code as AffectationStatus].label }}
-                  </span>
-                </td>
+            <template #cell-ministere_nom="{ value }">
+              <span v-if="value" class="flex items-center gap-1 text-xs text-slate-500">
+                <Users class="size-3 shrink-0" />
+                {{ value as string }}
+              </span>
+              <span v-else class="text-xs text-slate-300">—</span>
+            </template>
 
-                <!-- Actions PROPOSE -->
-                <td class="px-4 py-3">
-                  <div
-                    v-if="aff.statut_affectation_code === 'PROPOSE'"
-                    class="flex items-center gap-1.5"
-                  >
-                    <button
-                      class="flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50"
-                      @click="store.refuseAffectation(aff.id)"
-                    >
-                      <XCircle class="size-3.5" />
-                      Refuser
-                    </button>
-                    <button
-                      class="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-white transition-all active:scale-95"
-                      style="background-color: var(--color-primary-600)"
-                      @click="store.acceptAffectation(aff.id)"
-                    >
-                      <CheckCircle2 class="size-3.5" />
-                      Accepter
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+            <template #cell-statut_affectation_code="{ value }">
+              <span
+                class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                :class="STATUS_CONFIG[value as AffectationStatus].badge"
+              >
+                {{ STATUS_CONFIG[value as AffectationStatus].label }}
+              </span>
+            </template>
+
+            <template #cell-actions="{ row }">
+              <div
+                v-if="
+                  (row as unknown as AffectationMemberRead).statut_affectation_code === 'PROPOSE'
+                "
+                class="flex items-center gap-1.5"
+              >
+                <button
+                  class="flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                  @click="store.refuseAffectation((row as unknown as AffectationMemberRead).id)"
+                >
+                  <XCircle class="size-3.5" />
+                  Refuser
+                </button>
+                <button
+                  class="btn btn-primary btn-sm"
+                  @click="store.acceptAffectation((row as unknown as AffectationMemberRead).id)"
+                >
+                  <CheckCircle2 class="size-3.5" />
+                  Accepter
+                </button>
+              </div>
+            </template>
+          </AppTable>
         </div>
 
         <!-- Cartes mobile -->
