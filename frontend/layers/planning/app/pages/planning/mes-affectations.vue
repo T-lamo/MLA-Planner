@@ -195,11 +195,7 @@ const affColumns = [
           <div class="flex items-center gap-1.5">
             <CalendarDays class="size-3.5 shrink-0 text-slate-400" />
             <span class="w-5 shrink-0 text-xs text-slate-500">Du</span>
-            <input
-              v-model="filterDateDebut"
-              type="date"
-              class="form-input form-input-sm flex-1 sm:flex-none"
-            />
+            <input v-model="filterDateDebut" type="date" class="form-input form-input-sm w-36" />
           </div>
           <div class="flex items-center gap-1.5">
             <span class="w-5 shrink-0 text-xs text-slate-500">Au</span>
@@ -207,7 +203,7 @@ const affColumns = [
               v-model="filterDateFin"
               type="date"
               :min="filterDateDebut"
-              class="form-input form-input-sm flex-1 sm:flex-none"
+              class="form-input form-input-sm w-36"
             />
           </div>
         </div>
