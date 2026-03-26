@@ -149,13 +149,13 @@ function visibiliteBadge(v: VisibiliteTemplate) {
       >
         <template #cell-nom="{ row }">
           <div class="font-medium text-slate-800">
-            {{ (row as PlanningTemplateListItem).nom }}
+            {{ (row as unknown as PlanningTemplateListItem).nom }}
           </div>
           <div
-            v-if="(row as PlanningTemplateListItem).description"
+            v-if="(row as unknown as PlanningTemplateListItem).description"
             class="mt-0.5 text-xs text-slate-400"
           >
-            {{ (row as PlanningTemplateListItem).description }}
+            {{ (row as unknown as PlanningTemplateListItem).description }}
           </div>
         </template>
 
@@ -173,32 +173,32 @@ function visibiliteBadge(v: VisibiliteTemplate) {
 
         <template #cell-visibilite="{ row }">
           <span
-            :class="visibiliteBadge((row as PlanningTemplateListItem).visibilite).cls"
+            :class="visibiliteBadge((row as unknown as PlanningTemplateListItem).visibilite).cls"
             class="rounded-full px-2 py-0.5 text-xs font-medium"
           >
-            {{ visibiliteBadge((row as PlanningTemplateListItem).visibilite).label }}
+            {{ visibiliteBadge((row as unknown as PlanningTemplateListItem).visibilite).label }}
           </span>
         </template>
 
         <template #cell-last_used_at="{ row }">
           <span class="text-slate-500">{{
-            relativeDate((row as PlanningTemplateListItem).last_used_at)
+            relativeDate((row as unknown as PlanningTemplateListItem).last_used_at)
           }}</span>
         </template>
 
         <template #cell-created_at="{ row }">
           <span class="text-slate-500">{{
-            formatDate((row as PlanningTemplateListItem).created_at)
+            formatDate((row as unknown as PlanningTemplateListItem).created_at)
           }}</span>
         </template>
 
         <template v-if="canWrite" #cell-actions="{ row }">
           <TemplateActionMenu
-            :template="row as PlanningTemplateListItem"
-            @edit="editingTemplateId = (row as PlanningTemplateListItem).id"
-            @duplicate="handleDuplicate((row as PlanningTemplateListItem).id)"
-            @generate-serie="openGenerateSerie(row as PlanningTemplateListItem)"
-            @delete="openDeleteDialog((row as PlanningTemplateListItem).id)"
+            :template="row as unknown as PlanningTemplateListItem"
+            @edit="editingTemplateId = (row as unknown as PlanningTemplateListItem).id"
+            @duplicate="handleDuplicate((row as unknown as PlanningTemplateListItem).id)"
+            @generate-serie="openGenerateSerie(row as unknown as PlanningTemplateListItem)"
+            @delete="openDeleteDialog((row as unknown as PlanningTemplateListItem).id)"
           />
         </template>
       </AppTable>

@@ -37,7 +37,7 @@ import { ChevronDown } from 'lucide-vue-next'
 
 withDefaults(
   defineProps<{
-    modelValue: string | number | null
+    modelValue: string | number | null | undefined
     options: { label: string; value: string | number | null }[]
     placeholder?: string
     label?: string
