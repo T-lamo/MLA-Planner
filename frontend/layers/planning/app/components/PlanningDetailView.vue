@@ -161,18 +161,13 @@
       </p>
       <div class="flex gap-2">
         <button
-          class="flex-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          class="btn btn-danger btn-sm flex-1"
           :disabled="isUpdating"
           @click="executeStatusChange('ANNULE')"
         >
           {{ isUpdating ? 'Annulation...' : "Confirmer l'annulation" }}
         </button>
-        <button
-          class="px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-800"
-          @click="confirmingCancel = false"
-        >
-          Non
-        </button>
+        <button class="btn btn-ghost btn-sm" @click="confirmingCancel = false">Non</button>
       </div>
     </div>
 
@@ -184,18 +179,13 @@
       </p>
       <div class="flex gap-2">
         <button
-          class="flex-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+          class="btn btn-danger btn-sm flex-1"
           :disabled="isDeleting"
           @click="executeDelete()"
         >
           {{ isDeleting ? 'Suppression...' : 'Confirmer la suppression' }}
         </button>
-        <button
-          class="px-3 py-2 text-xs font-medium text-slate-600 hover:text-slate-800"
-          @click="confirmingDelete = false"
-        >
-          Non
-        </button>
+        <button class="btn btn-ghost btn-sm" @click="confirmingDelete = false">Non</button>
       </div>
     </div>
 

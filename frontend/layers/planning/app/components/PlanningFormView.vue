@@ -42,18 +42,29 @@
         </span>
       </div>
 
-      <select
-        class="border-primary-300 focus:border-primary-500 w-full rounded-lg border bg-white px-3 py-2 text-sm focus:outline-none"
-        :value="selectedTemplateId ?? ''"
-        @change="handleTemplateSelect"
-      >
-        <option value="">Choisir un template…</option>
-        <optgroup v-for="section in templateSections" :key="section.key" :label="section.label">
-          <option v-for="tpl in section.items" :key="tpl.id" :value="tpl.id">
-            {{ tpl.nom }}{{ tpl.usage_count > 0 ? ` (utilisé ${tpl.usage_count}×)` : '' }}
-          </option>
-        </optgroup>
-      </select>
+      <div class="form-select-wrapper">
+        <select
+          class="form-input form-select"
+          :value="selectedTemplateId ?? ''"
+          @change="handleTemplateSelect"
+        >
+          <option value="">Choisir un template…</option>
+          <optgroup v-for="section in templateSections" :key="section.key" :label="section.label">
+            <option v-for="tpl in section.items" :key="tpl.id" :value="tpl.id">
+              {{ tpl.nom }}{{ tpl.usage_count > 0 ? ` (utilisé ${tpl.usage_count}×)` : '' }}
+            </option>
+          </optgroup>
+        </select>
+        <svg
+          class="form-select-chevron"
+          viewBox="0 0 14 14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M3 5l4 4 4-4" />
+        </svg>
+      </div>
 
       <p class="text-primary-600 mt-1.5 text-xs">
         Le type d'activité et les créneaux seront pré-remplis. Tous les champs restent modifiables.
@@ -106,13 +117,13 @@
             :value="dateDebutDate"
             type="date"
             :min="todayDate"
-            class="mb-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
+            class="form-input mb-1"
             @change="setDebutDate(($event.target as HTMLInputElement).value)"
           />
           <input
             :value="dateDebutTime"
             type="time"
-            class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
+            class="form-input"
             @change="setDebutTime(($event.target as HTMLInputElement).value)"
           />
         </div>
@@ -123,16 +134,16 @@
           <input
             :value="dateFinDate"
             type="date"
-            class="mb-1 w-full rounded-lg border px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
-            :class="dateError ? 'border-red-300 bg-red-50' : 'border-slate-200'"
+            class="form-input mb-1"
+            :class="dateError ? 'is-error' : ''"
             :min="dateDebutDate"
             @change="setFinDate(($event.target as HTMLInputElement).value)"
           />
           <input
             :value="dateFinTime"
             type="time"
-            class="w-full rounded-lg border px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
-            :class="dateError ? 'border-red-300 bg-red-50' : 'border-slate-200'"
+            class="form-input"
+            :class="dateError ? 'is-error' : ''"
             @change="setFinTime(($event.target as HTMLInputElement).value)"
           />
           <p v-if="dateError" class="mt-1 text-xs text-red-500">{{ dateError }}</p>
@@ -148,7 +159,7 @@
           v-model="activiteForm.lieu"
           type="text"
           placeholder="Ex : Salle principale, Auditorium..."
-          class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 focus:border-blue-400 focus:outline-none"
+          class="form-input"
         />
       </div>
 
@@ -232,7 +243,7 @@
           v-model="activiteForm.description"
           rows="2"
           placeholder="Notes, instructions particulières..."
-          class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 focus:border-blue-400 focus:outline-none"
+          class="form-input resize-none"
         ></textarea>
       </div>
     </FormSection>
@@ -281,28 +292,18 @@
                 v-model="slot.nom_creneau"
                 type="text"
                 placeholder="Ex : Équipe Louange, Accueil..."
-                class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 focus:border-blue-400 focus:outline-none"
+                class="form-input"
               />
             </div>
 
             <div class="mb-3 grid grid-cols-2 gap-3">
               <div>
                 <label class="mb-1 block text-xs font-medium text-slate-500">Heure début</label>
-                <input
-                  v-model="slot.heure_debut"
-                  type="time"
-                  step="60"
-                  class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
-                />
+                <input v-model="slot.heure_debut" type="time" step="60" class="form-input" />
               </div>
               <div>
                 <label class="mb-1 block text-xs font-medium text-slate-500">Heure fin</label>
-                <input
-                  v-model="slot.heure_fin"
-                  type="time"
-                  step="60"
-                  class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
-                />
+                <input v-model="slot.heure_fin" type="time" step="60" class="form-input" />
               </div>
             </div>
 
@@ -367,19 +368,27 @@
                   <span class="flex-1 text-xs font-medium text-slate-700">
                     {{ aff.membre_prenom }} {{ aff.membre_nom }}
                   </span>
-                  <select
-                    v-model="aff.role_code"
-                    class="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600 focus:border-blue-400 focus:outline-none"
-                  >
-                    <option value="" disabled>Rôle...</option>
-                    <option
-                      v-for="role in rolesForMembre(aff.membre_id)"
-                      :key="role.code"
-                      :value="role.code"
+                  <div class="form-select-wrapper">
+                    <select v-model="aff.role_code" class="form-input form-input-sm form-select">
+                      <option value="" disabled>Rôle...</option>
+                      <option
+                        v-for="role in rolesForMembre(aff.membre_id)"
+                        :key="role.code"
+                        :value="role.code"
+                      >
+                        {{ role.libelle }}
+                      </option>
+                    </select>
+                    <svg
+                      class="form-select-chevron"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
                     >
-                      {{ role.libelle }}
-                    </option>
-                  </select>
+                      <path d="M3 5l4 4 4-4" />
+                    </svg>
+                  </div>
                   <span
                     v-if="aff.statut_affectation_code && formTargetStatus !== 'PUBLIE'"
                     class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
@@ -393,19 +402,32 @@
                     }"
                     >{{ aff.statut_affectation_code }}</span
                   >
-                  <select
+                  <div
                     v-if="aff.id && formTargetStatus === 'PUBLIE'"
-                    v-model="aff.statut_affectation_code"
-                    class="shrink-0 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] text-slate-600 focus:border-blue-400 focus:outline-none"
-                    @change="handleStatusChange(aff.id!, aff.statut_affectation_code!)"
+                    class="form-select-wrapper shrink-0"
                   >
-                    <option value="PROPOSE">En attente</option>
-                    <option value="CONFIRME">Confirmé</option>
-                    <option value="REFUSE">Refusé</option>
-                    <option value="PRESENT">Présent</option>
-                    <option value="ABSENT">Absent</option>
-                    <option value="RETARD">En retard</option>
-                  </select>
+                    <select
+                      v-model="aff.statut_affectation_code"
+                      class="form-input form-input-sm form-select"
+                      @change="handleStatusChange(aff.id!, aff.statut_affectation_code!)"
+                    >
+                      <option value="PROPOSE">En attente</option>
+                      <option value="CONFIRME">Confirmé</option>
+                      <option value="REFUSE">Refusé</option>
+                      <option value="PRESENT">Présent</option>
+                      <option value="ABSENT">Absent</option>
+                      <option value="RETARD">En retard</option>
+                    </select>
+                    <svg
+                      class="form-select-chevron"
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M3 5l4 4 4-4" />
+                    </svg>
+                  </div>
                   <button
                     type="button"
                     class="shrink-0 rounded-full p-1 text-slate-300 transition-colors hover:bg-red-50 hover:text-red-400"
@@ -468,7 +490,7 @@
                       v-model="slotPickers[si].memberQuery"
                       type="text"
                       placeholder="Rechercher..."
-                      class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs focus:border-blue-300 focus:outline-none"
+                      class="form-input form-input-sm"
                     />
                     <div class="mt-1 max-h-36 space-y-0.5 overflow-y-auto">
                       <button
@@ -523,31 +545,42 @@
                         {{ slotPickers[si].memberNom }}
                       </span>
                     </div>
-                    <select
-                      v-model="slotPickers[si].roleCode"
-                      class="w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs focus:border-blue-300 focus:outline-none"
-                    >
-                      <option value="" disabled>Choisir un rôle...</option>
-                      <option
-                        v-for="role in pickerMemberRoles(si)"
-                        :key="role.code"
-                        :value="role.code"
+                    <div class="form-select-wrapper">
+                      <select
+                        v-model="slotPickers[si].roleCode"
+                        class="form-input form-input-sm form-select"
                       >
-                        {{ role.libelle }}
-                      </option>
-                    </select>
+                        <option value="" disabled>Choisir un rôle...</option>
+                        <option
+                          v-for="role in pickerMemberRoles(si)"
+                          :key="role.code"
+                          :value="role.code"
+                        >
+                          {{ role.libelle }}
+                        </option>
+                      </select>
+                      <svg
+                        class="form-select-chevron"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M3 5l4 4 4-4" />
+                      </svg>
+                    </div>
                     <div class="mt-1 flex gap-2">
                       <button
                         type="button"
                         :disabled="!slotPickers[si].roleCode"
-                        class="flex-1 rounded-md bg-blue-500 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-600 disabled:opacity-40"
+                        class="btn btn-primary btn-sm flex-1"
                         @click="confirmAffectation(si)"
                       >
                         Confirmer
                       </button>
                       <button
                         type="button"
-                        class="rounded-md border border-slate-200 px-3 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                        class="btn btn-secondary btn-sm"
                         @click="resetPicker(si)"
                       >
                         Annuler

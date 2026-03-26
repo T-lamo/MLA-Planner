@@ -195,16 +195,10 @@ const handleDelete = async (id: string) => {
           v-model="searchQuery"
           type="text"
           placeholder="Rechercher un membre..."
-          class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm transition-colors outline-none placeholder:text-slate-400 focus:border-(--color-primary-400) sm:w-64"
+          class="form-input w-full sm:w-64"
         />
 
-        <button
-          class="shrink-0 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all active:scale-95"
-          style="background-color: var(--color-primary-600)"
-          @click="handleOpenCreate"
-        >
-          + Nouveau
-        </button>
+        <button class="btn btn-primary shrink-0" @click="handleOpenCreate">+ Nouveau</button>
       </div>
     </div>
 
