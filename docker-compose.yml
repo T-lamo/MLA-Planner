@@ -1,0 +1,80 @@
+services:
+
+  # ── Base de données PostgreSQL ────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: mla
+      POSTGRES_PASSWORD: mla
+      POSTGRES_DB: mla_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mla -d mla_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # ── API FastAPI ───────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    # Override du CMD Render : ajoute le seed de démo avant uvicorn
+    # PYTHONPATH=/app/src est déjà positionné dans le Dockerfile → module = "main"
+    command: >-
+      sh -c "alembic upgrade head
+      && python scripts/db_admin.py seed
+      && uvicorn main:app --host 0.0.0.0 --port 8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg2://mla:mla@db:5432/mla_db
+      ENV: development
+      PORT: "8000"
+      JWT_SECRET_KEY: docker-local-dev-key-change-in-production
+      # IPv4 localhost + IPv6 [::] — Docker peut binder sur l'un ou l'autre selon l'OS
+      ALLOWED_ORIGINS: http://localhost:3000,http://[::]:3000
+      SUPERADMIN_USERNAME: superadmin
+      SUPERADMIN_PASSWORD: demo123!
+      # Email désactivé en local (laisser vide)
+      SMTP_HOST: ""
+      SMTP_PORT: "587"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      EMAIL_FROM: noreply@planning-mla.com
+      EMAIL_FROM_NAME: MLA Planner
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      # Utilise Python (déjà dans l'image slim) — pas besoin de curl
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      # Laisse le temps à alembic + seed de tourner avant de compter les échecs
+      start_period: 60s
+    restart: unless-stopped
+
+  # ── Frontend Nuxt (serveur SSR Nitro) ────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      PORT: "3000"
+      # URL de l'API côté navigateur (réseau hôte, port exposé)
+      NUXT_PUBLIC_API_BASE: http://localhost:8000
+      # URL de l'API côté serveur Nitro (réseau Docker interne)
+      NUXT_API_BASE: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

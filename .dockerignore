@@ -1,0 +1,39 @@
+# ── Dépendances ──────────────────────────────────────────────
+node_modules
+**/node_modules
+**/.pnpm-store
+.venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.mypy_cache
+**/.pytest_cache
+
+# ── Build artifacts ──────────────────────────────────────────
+frontend/dist
+frontend/.output
+frontend/.nuxt
+packages/ui-core/dist
+backend/logs
+
+# ── Environnement ─────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Git & IDE ─────────────────────────────────────────────────
+.git
+.gitignore
+.github
+.vscode
+.idea
+
+# ── Tests & CI ────────────────────────────────────────────────
+backend/src/coverage.xml
+**/.coverage
+
+# ── Divers ───────────────────────────────────────────────────
+*.md
+!README.md
+*.log
+.DS_Store
