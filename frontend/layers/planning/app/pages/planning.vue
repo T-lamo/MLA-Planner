@@ -1,35 +1,10 @@
 <template>
-  <div class="space-y-6">
-    <div class="flex justify-end">
-      <div class="flex w-fit rounded-lg bg-slate-100 p-1">
-        <NuxtLink
-          to="/planning/calendar"
-          class="flex items-center gap-2 rounded-md px-4 py-1.5 text-sm transition-all"
-          activeClass="bg-white shadow-sm text-(--color-primary-700) font-bold"
-        >
-          <CalendarDays class="size-4" />
-          <span>Calendrier</span>
-        </NuxtLink>
-        <NuxtLink
-          to="/planning/list"
-          class="flex items-center gap-2 rounded-md px-4 py-1.5 text-sm transition-all"
-          activeClass="bg-white shadow-sm text-(--color-primary-700) font-bold"
-        >
-          <ListTodo class="size-4" />
-          <span>Liste</span>
-        </NuxtLink>
-      </div>
-    </div>
-
-    <div class="relative">
-      <NuxtPage />
-    </div>
+  <div class="relative">
+    <NuxtPage />
   </div>
 </template>
 
-<script setup lang="ts">
-import { CalendarDays, ListTodo } from 'lucide-vue-next'
-</script>
+<script setup lang="ts"></script>
 
 <style>
 .page-enter-active,
