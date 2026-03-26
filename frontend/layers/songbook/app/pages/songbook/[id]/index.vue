@@ -128,12 +128,7 @@ onMounted(async () => {
     <div v-else-if="notFound" class="flex flex-col items-center gap-4 py-20 text-center">
       <p class="text-lg font-semibold text-(--color-neutral-700)">Chant introuvable</p>
       <p class="text-sm text-(--color-neutral-400)">Ce chant n'existe pas ou a été supprimé.</p>
-      <NuxtLink
-        to="/songbook/browse"
-        class="inline-flex items-center gap-2 rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white hover:bg-(--color-primary-700)"
-      >
-        Retour au répertoire
-      </NuxtLink>
+      <NuxtLink to="/songbook/browse" class="btn btn-primary"> Retour au répertoire </NuxtLink>
     </div>
 
     <!-- ── Contenu du chant ───────────────────────────────────────────── -->

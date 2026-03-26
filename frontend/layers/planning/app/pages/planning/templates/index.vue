@@ -233,17 +233,8 @@ function visibiliteBadge(v: VisibiliteTemplate) {
               irréversible.
             </p>
             <div class="mt-6 flex justify-end gap-3">
-              <button
-                class="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
-                @click="cancelDelete"
-              >
-                Annuler
-              </button>
-              <button
-                class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-                :disabled="isDeleting"
-                @click="confirmDelete"
-              >
+              <button class="btn btn-secondary" @click="cancelDelete">Annuler</button>
+              <button class="btn btn-danger" :disabled="isDeleting" @click="confirmDelete">
                 {{ isDeleting ? 'Suppression…' : 'Supprimer' }}
               </button>
             </div>

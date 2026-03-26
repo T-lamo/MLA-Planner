@@ -143,11 +143,8 @@ const affColumns = [
     <!-- ── En-tête ── -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2.5">
-        <div
-          class="flex size-8 items-center justify-center rounded-lg"
-          style="background-color: var(--color-primary-50)"
-        >
-          <Bell class="size-4" style="color: var(--color-primary-600)" />
+        <div class="bg-primary-50 flex size-8 items-center justify-center rounded-lg">
+          <Bell class="text-primary-600 size-4" />
         </div>
         <div>
           <h1 class="text-lg font-bold text-slate-900">Mes affectations</h1>
@@ -201,7 +198,7 @@ const affColumns = [
             <input
               v-model="filterDateDebut"
               type="date"
-              class="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-700 focus:border-blue-400 focus:outline-none sm:flex-none"
+              class="form-input form-input-sm flex-1 sm:flex-none"
             />
           </div>
           <div class="flex items-center gap-1.5">
@@ -210,7 +207,7 @@ const affColumns = [
               v-model="filterDateFin"
               type="date"
               :min="filterDateDebut"
-              class="flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-700 focus:border-blue-400 focus:outline-none sm:flex-none"
+              class="form-input form-input-sm flex-1 sm:flex-none"
             />
           </div>
         </div>
@@ -389,8 +386,7 @@ const affColumns = [
                       <XCircle class="size-4" />
                     </button>
                     <button
-                      class="rounded-lg p-1.5 text-white"
-                      style="background-color: var(--color-primary-600)"
+                      class="btn btn-primary btn-icon"
                       @click="store.acceptAffectation(aff.id)"
                     >
                       <CheckCircle2 class="size-4" />

@@ -162,11 +162,7 @@ const isFormValid = computed(
         </div>
 
         <!-- Bouton déclarer -->
-        <button
-          class="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all active:scale-95"
-          style="background-color: var(--color-primary-600)"
-          @click="drawerOpen = true"
-        >
+        <button class="btn btn-primary" @click="drawerOpen = true">
           <Plus class="size-4" />
           Déclarer
         </button>
@@ -388,12 +384,7 @@ const isFormValid = computed(
             <label class="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase"
               >Du *</label
             >
-            <input
-              v-model="newForm.date_debut"
-              type="date"
-              :min="todayDate"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
-            />
+            <input v-model="newForm.date_debut" type="date" :min="todayDate" class="form-input" />
           </div>
           <div>
             <label class="mb-1.5 block text-xs font-semibold tracking-wide text-slate-500 uppercase"
@@ -403,7 +394,7 @@ const isFormValid = computed(
               v-model="newForm.date_fin"
               type="date"
               :min="newForm.date_debut || todayDate"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:border-blue-400 focus:outline-none"
+              class="form-input"
             />
           </div>
         </div>
@@ -428,7 +419,7 @@ const isFormValid = computed(
             v-model="newForm.motif"
             rows="3"
             placeholder="Vacances, maladie, déplacement..."
-            class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 focus:border-blue-400 focus:outline-none"
+            class="form-input resize-none"
           />
         </div>
       </div>
