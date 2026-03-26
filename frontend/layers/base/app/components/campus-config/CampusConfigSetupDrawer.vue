@@ -157,12 +157,12 @@
 
     <template #footer>
       <div class="flex justify-end gap-3">
-        <button type="button" class="su-btn-secondary" @click="setup.close()">Annuler</button>
+        <button type="button" class="btn btn-secondary" @click="setup.close()">Annuler</button>
         <button
           type="submit"
           form="campus-setup-form"
           :disabled="setup.isSubmitting.value"
-          class="su-btn-primary flex items-center gap-2"
+          class="btn btn-primary"
         >
           <Loader2 v-if="setup.isSubmitting.value" class="size-4 animate-spin" />
           <Zap v-else class="size-4" />
@@ -203,13 +203,5 @@ async function handleSubmit(): Promise<void> {
 
 .su-input-sm {
   @apply rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-900 placeholder-slate-400 transition-colors outline-none focus:border-(--color-primary-400) focus:ring-1 focus:ring-(--color-primary-100);
-}
-
-.su-btn-primary {
-  @apply rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-(--color-primary-700) active:scale-95 disabled:cursor-not-allowed disabled:opacity-60;
-}
-
-.su-btn-secondary {
-  @apply rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50;
 }
 </style>

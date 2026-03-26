@@ -463,12 +463,12 @@ const handleSubmit = () => {
 
     <template #footer>
       <div class="flex w-full items-center gap-3">
-        <button class="footer-btn-secondary" @click="emit('close')">Annuler</button>
+        <button class="btn btn-secondary btn-lg flex-1" @click="emit('close')">Annuler</button>
         <button
           type="submit"
           form="profileForm"
           :disabled="isSubmitting"
-          class="footer-btn-primary"
+          class="btn btn-primary btn-lg flex-1"
         >
           {{ isSubmitting ? 'Envoi...' : editingProfile ? 'Mettre à jour' : 'Créer le profil' }}
         </button>
@@ -551,15 +551,6 @@ const handleSubmit = () => {
 }
 .security-box {
   @apply rounded-xl border border-slate-200 bg-slate-50/50 p-4;
-}
-
-/* Footer */
-.footer-btn-primary {
-  @apply flex-1 rounded-xl py-3 text-xs font-bold text-white transition-all disabled:opacity-50;
-  background-color: var(--color-primary-600);
-}
-.footer-btn-secondary {
-  @apply flex-1 rounded-xl border border-slate-200 py-3 text-xs font-bold text-slate-500 hover:bg-slate-50;
 }
 
 /* Animations */
