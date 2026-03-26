@@ -344,6 +344,39 @@
     color: var(--color-text-tertiary);
   }
 
+  /* ══════════════════════════════════════════════════════════════════════
+     SYSTÈME DE SELECT UNIFIÉ
+     Usage : <AppSelect> ou <select class="form-input form-select">
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* ── Wrapper positionné pour le chevron custom ─────────────────────────── */
+  .form-select-wrapper {
+    position: relative;
+  }
+
+  /* ── Efface le chevron natif + espace pour le custom ───────────────────── */
+  .form-select {
+    appearance: none;
+    padding-right: 32px;
+    cursor: pointer;
+  }
+
+  .form-select:disabled {
+    cursor: not-allowed;
+  }
+
+  /* ── Chevron positionné en absolu ──────────────────────────────────────── */
+  .form-select-chevron {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    width: 14px;
+    height: 14px;
+    color: var(--color-text-tertiary);
+  }
+
   /* ── Carte de planning — conservée et améliorée ────────────────────────── */
   .planning-card {
     border-left: 4px solid var(--color-accent);

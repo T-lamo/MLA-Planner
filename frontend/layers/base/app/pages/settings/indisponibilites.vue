@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { CalendarOff, Plus, Trash2, X, AlertCircle, CheckCircle2 } from 'lucide-vue-next'
+import AppSelect from '../../components/ui/AppSelect.vue'
 import { useIndisponibiliteStore } from '../../stores/useIndisponibiliteStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import type { IndisponibiliteCreate } from '~~/layers/base/types/indisponibilites'
@@ -226,15 +227,14 @@ function formatDate(d: string | null) {
             </div>
 
             <!-- Ministère -->
-            <div class="field">
-              <label class="field-label">Ministère</label>
-              <select v-model="form.ministere_id" class="form-input">
-                <option :value="null">Global / Tous les ministères</option>
-                <option v-for="m in myMinisteres" :key="m.id" :value="m.id">
-                  {{ m.nom }}
-                </option>
-              </select>
-            </div>
+            <AppSelect
+              v-model="form.ministere_id"
+              label="Ministère"
+              :options="[
+                { label: 'Global / Tous les ministères', value: null },
+                ...myMinisteres.map((m) => ({ label: m.nom, value: m.id })),
+              ]"
+            />
 
             <!-- Motif -->
             <div class="field">
