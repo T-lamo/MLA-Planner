@@ -27,7 +27,7 @@
     </div>
 
     <div class="flex items-center gap-2 md:gap-4">
-      <button class="btn-primary flex items-center justify-center gap-2 px-3 py-2 md:px-4">
+      <button class="btn btn-primary px-3 md:px-4">
         <Plus class="size-5 md:size-4" />
         <span class="hidden md:inline">Créer Planning</span>
       </button>
@@ -110,11 +110,3 @@ const breadcrumb = computed(() => {
   return { section: sectionLabel, page }
 })
 </script>
-
-<style scoped>
-@reference "../assets/css/main.css";
-
-.btn-primary {
-  @apply rounded-lg bg-(--color-primary-600) font-semibold text-white shadow-sm transition-all hover:bg-(--color-primary-700) active:scale-95;
-}
-</style>

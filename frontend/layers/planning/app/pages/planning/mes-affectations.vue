@@ -216,10 +216,7 @@ function formatTime(iso: string) {
           </button>
 
           <!-- Tri date -->
-          <button
-            class="flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
-            @click="sortAsc = !sortAsc"
-          >
+          <button class="btn btn-secondary btn-sm" @click="sortAsc = !sortAsc">
             <component :is="sortAsc ? ArrowUp : ArrowDown" class="size-3.5" />
             {{ sortAsc ? 'Plus proche' : 'Plus récent' }}
           </button>

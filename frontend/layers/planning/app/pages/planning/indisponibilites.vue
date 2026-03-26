@@ -268,14 +268,14 @@ const isFormValid = computed(
                   <div class="flex items-center gap-1">
                     <button
                       v-if="!item.validee"
-                      class="action-btn text-emerald-600 hover:bg-emerald-50"
+                      class="btn btn-ghost btn-icon text-emerald-600 hover:bg-emerald-50"
                       title="Valider"
                       @click="handleValider(item.id)"
                     >
                       <CheckCheck class="size-4" />
                     </button>
                     <button
-                      class="action-btn text-red-500 hover:bg-red-50"
+                      class="btn btn-ghost btn-icon text-red-500 hover:bg-red-50"
                       title="Supprimer"
                       @click="handleDelete(item.id)"
                     >
@@ -315,13 +315,13 @@ const isFormValid = computed(
               <div class="flex flex-col gap-1">
                 <button
                   v-if="!item.validee"
-                  class="action-btn text-emerald-600 hover:bg-emerald-50"
+                  class="btn btn-ghost btn-icon text-emerald-600 hover:bg-emerald-50"
                   @click="handleValider(item.id)"
                 >
                   <CheckCheck class="size-4" />
                 </button>
                 <button
-                  class="action-btn text-red-500 hover:bg-red-50"
+                  class="btn btn-ghost btn-icon text-red-500 hover:bg-red-50"
                   @click="handleDelete(item.id)"
                 >
                   <Trash2 class="size-4" />
@@ -345,11 +345,7 @@ const isFormValid = computed(
       >
         <CalendarOff class="size-10 opacity-40" />
         <p class="text-sm">Aucune indisponibilité déclarée</p>
-        <button
-          class="mt-1 rounded-lg px-4 py-2 text-sm font-medium text-white"
-          style="background-color: var(--color-primary-600)"
-          @click="drawerOpen = true"
-        >
+        <button class="btn btn-primary mt-1" @click="drawerOpen = true">
           Déclarer une indisponibilité
         </button>
       </div>
@@ -378,7 +374,7 @@ const isFormValid = computed(
           </span>
           <button
             v-if="!item.validee"
-            class="action-btn text-red-400 hover:bg-red-50"
+            class="btn btn-ghost btn-icon text-red-400 hover:bg-red-50"
             title="Supprimer"
             @click="handleDeleteMine(item.id)"
           >
@@ -457,16 +453,10 @@ const isFormValid = computed(
 
       <template #footer>
         <div class="flex gap-3">
-          <button
-            class="flex-1 rounded-lg border border-slate-200 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
-            @click="drawerOpen = false"
-          >
-            Annuler
-          </button>
+          <button class="btn btn-secondary flex-1" @click="drawerOpen = false">Annuler</button>
           <button
             :disabled="!isFormValid || store.loading"
-            class="flex-1 rounded-lg py-2 text-sm font-semibold text-white transition-all active:scale-95 disabled:opacity-40"
-            style="background-color: var(--color-primary-600)"
+            class="btn btn-primary flex-1"
             @click="handleSubmit"
           >
             {{ store.loading ? 'Enregistrement…' : 'Déclarer' }}
@@ -490,10 +480,6 @@ const isFormValid = computed(
 
 .badge-amber {
   @apply bg-amber-50 text-amber-700;
-}
-
-.action-btn {
-  @apply rounded-lg p-1.5 transition-colors;
 }
 
 .field {

@@ -170,12 +170,12 @@
 
     <template #footer>
       <div class="flex justify-end gap-3">
-        <button type="button" class="cc-btn-secondary" @click="closeDrawer">Annuler</button>
+        <button type="button" class="btn btn-secondary" @click="closeDrawer">Annuler</button>
         <button
           type="submit"
           :form="activeFormId"
           :disabled="isSubmitting || (!isEditMode && (!!conflictingRole || !!conflictingMinistere))"
-          class="cc-btn-primary flex items-center gap-2"
+          class="btn btn-primary"
         >
           <Loader2 v-if="isSubmitting" class="size-4 animate-spin" />
           {{ isEditMode ? 'Modifier' : 'Ajouter' }}
@@ -281,13 +281,5 @@ async function handleLinkMinistere(): Promise<void> {
 
 .cc-input {
   @apply w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition-colors outline-none focus:border-(--color-primary-400) focus:ring-2 focus:ring-(--color-primary-100);
-}
-
-.cc-btn-primary {
-  @apply rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-(--color-primary-700) active:scale-95 disabled:cursor-not-allowed disabled:opacity-60;
-}
-
-.cc-btn-secondary {
-  @apply rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50;
 }
 </style>
