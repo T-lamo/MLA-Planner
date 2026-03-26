@@ -64,6 +64,13 @@ function getApiConfig() {
         return
       }
 
+      // 403 : le rôle a peut-être expiré depuis la dernière connexion (RBAC-1).
+      // Re-sync silencieux des droits → les computed canManagePlanning / hasAdminAccess
+      // se mettront à jour réactivement et masqueront les boutons non autorisés.
+      if (response.status === 403 && !isLoginRequest) {
+        await authStore.fetchMe().catch(() => {})
+      }
+
       const errorPayload: EnhancedApiError = {
         name: 'ApiError',
         message: response.statusText,

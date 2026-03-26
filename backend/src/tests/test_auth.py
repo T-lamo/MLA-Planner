@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import date, timedelta
 
 import pytest
 from fastapi import status
@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from jose import jwt
 from sqlmodel import Session
 
+from core.auth.auth_dependencies import _affectation_valide
 from core.auth.security import create_access_token
 from core.settings import settings as stng
 from mla_enum import RoleName
@@ -232,3 +233,44 @@ def test_logout_and_token_invalidation(client: TestClient, test_user: Utilisateu
     revoked_res = client.get("/auth/users/me", headers=headers)
     assert revoked_res.status_code == 401
     assert revoked_res.json()["detail"] == "Cette session a été fermée (déconnexion)"
+
+
+# --- TESTS UNITAIRES : _affectation_valide ---
+
+
+class _Aff:
+    """Stub minimal pour tester _affectation_valide sans SQLModel."""
+
+    def __init__(
+        self,
+        active: bool = True,
+        date_debut: date | None = None,
+        date_fin: date | None = None,
+    ) -> None:
+        self.active = active
+        self.dateDebut = date_debut  # pylint: disable=invalid-name
+        self.dateFin = date_fin  # pylint: disable=invalid-name
+
+
+def test_affectation_valide_inactive() -> None:
+    assert _affectation_valide(_Aff(active=False)) is False
+
+
+def test_affectation_valide_date_fin_passee() -> None:
+    hier = date.today() - timedelta(days=1)
+    assert _affectation_valide(_Aff(date_fin=hier)) is False
+
+
+def test_affectation_valide_date_debut_future() -> None:
+    demain = date.today() + timedelta(days=1)
+    assert _affectation_valide(_Aff(date_debut=demain)) is False
+
+
+def test_affectation_valide_sans_dates() -> None:
+    assert _affectation_valide(_Aff()) is True
+
+
+def test_affectation_valide_dans_fenetre() -> None:
+    hier = date.today() - timedelta(days=1)
+    demain = date.today() + timedelta(days=1)
+    assert _affectation_valide(_Aff(date_debut=hier, date_fin=demain)) is True
