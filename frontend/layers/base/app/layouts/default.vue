@@ -77,14 +77,6 @@
                   class="pl-9"
                 />
                 <SidebarLink
-                  to="/planning/list"
-                  :icon="ListTodo"
-                  label="Liste des Plannings"
-                  :collapsed="false"
-                  :badge="planningStore.draftCount"
-                  class="pl-9"
-                />
-                <SidebarLink
                   to="/planning/mes-affectations"
                   :icon="Bell"
                   label="Mes affectations"
@@ -131,14 +123,6 @@
                       :icon="CalendarDays"
                       label="Vue Calendrier"
                       :collapsed="false"
-                      @click="closePopup"
-                    />
-                    <SidebarLink
-                      to="/planning/list"
-                      :icon="ListTodo"
-                      label="Liste des Plannings"
-                      :collapsed="false"
-                      :badge="planningStore.draftCount"
                       @click="closePopup"
                     />
                     <SidebarLink
@@ -491,7 +475,6 @@ import {
   ChevronRight,
   LayoutTemplate,
   Library,
-  ListTodo,
   Music,
   Plus,
   Settings2,
@@ -526,8 +509,6 @@ const isPlanningOpen = ref(true)
 const isPopupVisible = ref(false)
 const triggerRef = ref<HTMLElement | null>(null)
 const popupTop = ref(0)
-const planningStore = { draftCount: 5 }
-
 const pendingAffectationsCount = computed(() => myAffectationsStore.pendingCount)
 
 let closeTimer: ReturnType<typeof setTimeout> | null = null

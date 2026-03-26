@@ -62,7 +62,10 @@ const onLogin = async (event: LoginEvent) => {
         return
       }
 
-      const redirectPath = (route.query.redirect as string) || '/planning/calendar'
+      const rawRedirect = (route.query.redirect as string) || '/planning/calendar'
+      // Si redirect=/ on va directement au calendrier pour éviter la double-navigation
+      // index.vue → navigateTo() qui laisserait la page login visible.
+      const redirectPath = rawRedirect === '/' ? '/planning/calendar' : rawRedirect
       await router.push(redirectPath)
     } catch (error: unknown) {
       const err = error as EnhancedApiError
