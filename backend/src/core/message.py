@@ -399,6 +399,11 @@ class ErrorRegistry:
         message="Le campus principal doit être parmi les campus affectés au membre.",
         http_status=status.HTTP_400_BAD_REQUEST,
     )
+    PROFIL_MINISTERE_ACCESS_DENIED = ErrorDetail(
+        code="PROF_005",
+        message="Accès refusé : vous n'appartenez pas à ce ministère.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
 
     # --- DOMAINE CORE / GÉNÉRIQUE (CORE) ---
     CORE_RESOURCE_NOT_FOUND = ErrorDetail(
