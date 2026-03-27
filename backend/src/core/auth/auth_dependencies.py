@@ -7,12 +7,15 @@ import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError as JWTError
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from conf.db.database import Database
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from core.settings import settings as stng
 from mla_enum import RoleName
 from models import Utilisateur
+from models.schema_db_model import MembreCampusLink
 
 from .auth_repository import AuthRepository
 
@@ -183,3 +186,41 @@ class ScopedRoleChecker:
                 detail="Droits insuffisants pour cette action",
             )
         return granted
+
+
+def _is_super_admin(user: Utilisateur) -> bool:
+    """True si l'utilisateur possède un rôle Super Admin actif et valide."""
+    return any(
+        _role_name(aff.role.libelle) == RoleName.SUPER_ADMIN.name
+        for aff in user.affectations
+        if aff.role and aff.role.libelle is not None and _affectation_valide(aff)
+    )
+
+
+def get_active_campus(
+    request: Request,
+    db: Session = Depends(Database.get_session),
+    user: Utilisateur = Depends(get_current_active_user),
+) -> str:
+    """Résout et valide le campus actif de la requête.
+
+    Priorité : header X-Campus-Id > campus_principal_id du membre.
+    Super Admin bypass le check d'appartenance.
+    """
+    campus_id: Optional[str] = request.headers.get("X-Campus-Id") or (
+        user.membre.campus_principal_id if user.membre else None
+    )
+    if campus_id is None:
+        raise AppException(ErrorRegistry.AUTH_CAMPUS_REQUIRED)
+    if _is_super_admin(user):
+        return campus_id
+    if not user.membre_id:
+        raise AppException(ErrorRegistry.AUTH_CAMPUS_FORBIDDEN)
+    link = db.exec(
+        select(MembreCampusLink)
+        .where(MembreCampusLink.membre_id == user.membre_id)
+        .where(MembreCampusLink.campus_id == campus_id)
+    ).first()
+    if not link:
+        raise AppException(ErrorRegistry.AUTH_CAMPUS_FORBIDDEN)
+    return campus_id

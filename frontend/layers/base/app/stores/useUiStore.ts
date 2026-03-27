@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { ProfileRepository } from '~~/layers/base/app/repositories/ProfileRepository'
 import type { CampusRead } from '~~/layers/base/types/campus'
 
 export const useUIStore = defineStore('ui', () => {
@@ -27,6 +26,8 @@ export const useUIStore = defineStore('ui', () => {
    */
   async function initializeUI() {
     try {
+      const { ProfileRepository } =
+        await import('~~/layers/base/app/repositories/ProfileRepository')
       const profileRepo = new ProfileRepository()
       myCampuses.value = await profileRepo.getMyCampuses()
     } catch {

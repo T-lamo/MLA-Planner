@@ -7,8 +7,13 @@ from fastapi.testclient import TestClient
 from jose import jwt
 from sqlmodel import Session
 
-from core.auth.auth_dependencies import ScopedRoleChecker, _affectation_valide
+from core.auth.auth_dependencies import (
+    ScopedRoleChecker,
+    _affectation_valide,
+    get_active_campus,
+)
 from core.auth.security import create_access_token
+from core.exceptions.app_exception import AppException
 from core.settings import settings as stng
 from mla_enum import RoleName
 from models import Utilisateur
@@ -286,9 +291,11 @@ class _FakeRequest:
         self,
         path_params: dict | None = None,
         query_params: dict | None = None,
+        headers: dict | None = None,
     ) -> None:
         self.path_params = path_params or {}
         self.query_params = query_params or {}
+        self.headers = headers or {}
 
 
 class _FakeRole:
@@ -322,6 +329,8 @@ class _FakeAff:
 class _FakeUser:
     def __init__(self, affectations: list) -> None:
         self.affectations = affectations
+        self.membre_id: str | None = None
+        self.membre: object = None
 
 
 def test_scoped_checker_global_role_no_contexte() -> None:
@@ -372,3 +381,71 @@ def test_scoped_checker_no_ministere_id_in_request() -> None:
     req = _FakeRequest()
     result = checker(req, user)  # type: ignore[arg-type]
     assert "RESPONSABLE_MLA" in result
+
+
+# --- TESTS UNITAIRES/INTÉGRATION : get_active_campus ---
+
+
+def test_get_active_campus_from_header(
+    session: Session, test_campus, test_membre, test_user
+):
+    """Header X-Campus-Id présent + membre lié → retourne campus_id."""
+    test_user.membre_id = test_membre.id
+    session.add(test_user)
+    session.flush()
+
+    req = _FakeRequest(headers={"X-Campus-Id": test_campus.id})
+    campus_id = get_active_campus(req, db=session, user=test_user)  # type: ignore[arg-type]
+    assert campus_id == test_campus.id
+
+
+def test_get_active_campus_from_principal(
+    session: Session, test_campus, test_membre, test_user
+):
+    """Pas de header, campus_principal_id défini + membre lié → retourne campus_id."""
+    test_membre.campus_principal_id = test_campus.id
+    test_user.membre_id = test_membre.id
+    test_user.membre = test_membre
+    session.add(test_membre)
+    session.add(test_user)
+    session.flush()
+
+    req = _FakeRequest()
+    campus_id = get_active_campus(req, db=session, user=test_user)  # type: ignore[arg-type]
+    assert campus_id == test_campus.id
+
+
+def test_get_active_campus_no_campus_raises_400() -> None:
+    """Ni header ni campus_principal_id → AppException AUTH_007 (400)."""
+    user = _FakeUser([])
+    user.membre_id = None
+    user.membre = None
+    req = _FakeRequest()
+    with pytest.raises(AppException) as exc:
+        get_active_campus(req, db=None, user=user)  # type: ignore[arg-type]
+    assert exc.value.http_status == 400
+
+
+def test_get_active_campus_unlinked_member_raises_403(
+    session: Session, test_campus, test_membre, test_user
+):
+    """Campus fourni mais membre non lié → AppException AUTH_008 (403)."""
+    other_campus_id = "campus-not-linked"
+    test_user.membre_id = test_membre.id
+    session.add(test_user)
+    session.flush()
+
+    req = _FakeRequest(headers={"X-Campus-Id": other_campus_id})
+    with pytest.raises(AppException) as exc:
+        get_active_campus(req, db=session, user=test_user)  # type: ignore[arg-type]
+    assert exc.value.http_status == 403
+
+
+def test_get_active_campus_super_admin_bypass() -> None:
+    """Super Admin avec campus non lié → bypass, retourne campus_id."""
+    user = _FakeUser([_FakeAff(RoleName.SUPER_ADMIN)])
+    user.membre_id = None
+    user.membre = None
+    req = _FakeRequest(headers={"X-Campus-Id": "campus-xyz"})
+    campus_id = get_active_campus(req, db=None, user=user)  # type: ignore[arg-type]
+    assert campus_id == "campus-xyz"

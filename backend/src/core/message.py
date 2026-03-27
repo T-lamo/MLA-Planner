@@ -300,6 +300,19 @@ class ErrorRegistry:
         message="Token de rafraîchissement invalide ou expiré.",
         http_status=status.HTTP_401_UNAUTHORIZED,
     )
+    AUTH_CAMPUS_REQUIRED = ErrorDetail(
+        code="AUTH_007",
+        message=(
+            "Campus actif requis. Passez X-Campus-Id en header "
+            "ou configurez un campus principal dans votre profil."
+        ),
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    AUTH_CAMPUS_FORBIDDEN = ErrorDetail(
+        code="AUTH_008",
+        message="Vous n'êtes pas autorisé à accéder à ce campus.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
 
     # --- DOMAINE RÔLES ET CATÉGORIES (ROLE) ---
     ROLE_CAT_INVALID_CODE = ErrorDetail(
