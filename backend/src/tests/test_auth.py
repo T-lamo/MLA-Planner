@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 
+import casbin  # type: ignore[import-untyped]
 import pytest
 from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
@@ -7,7 +8,9 @@ from fastapi.testclient import TestClient
 from jose import jwt
 from sqlmodel import Session
 
+from core.auth import casbin_enforcer as _casbin_mod
 from core.auth.auth_dependencies import (
+    CasbinGuard,
     ScopedRoleChecker,
     _affectation_valide,
     get_active_campus,
@@ -329,6 +332,7 @@ class _FakeAff:
 class _FakeUser:
     def __init__(self, affectations: list) -> None:
         self.affectations = affectations
+        self.id: str = ""
         self.membre_id: str | None = None
         self.membre: object = None
 
@@ -395,7 +399,9 @@ def test_get_active_campus_from_header(
     session.flush()
 
     req = _FakeRequest(headers={"X-Campus-Id": test_campus.id})
-    campus_id = get_active_campus(req, db=session, user=test_user)  # type: ignore[arg-type]
+    campus_id = get_active_campus(
+        req, db=session, user=test_user  # type: ignore[arg-type]
+    )
     assert campus_id == test_campus.id
 
 
@@ -411,7 +417,9 @@ def test_get_active_campus_from_principal(
     session.flush()
 
     req = _FakeRequest()
-    campus_id = get_active_campus(req, db=session, user=test_user)  # type: ignore[arg-type]
+    campus_id = get_active_campus(
+        req, db=session, user=test_user  # type: ignore[arg-type]
+    )
     assert campus_id == test_campus.id
 
 
@@ -449,3 +457,56 @@ def test_get_active_campus_super_admin_bypass() -> None:
     req = _FakeRequest(headers={"X-Campus-Id": "campus-xyz"})
     campus_id = get_active_campus(req, db=None, user=user)  # type: ignore[arg-type]
     assert campus_id == "campus-xyz"
+
+
+# --- TESTS UNITAIRES : CasbinGuard ---
+
+
+def _make_test_enforcer() -> casbin.Enforcer:
+    """Enforcer Casbin en mémoire (pas de DB) pour les tests unitaires."""
+    enf = casbin.Enforcer(_casbin_mod.CONF_PATH)
+    enf.add_policy(RoleName.ADMIN.name, "*", "chants", "write")
+    enf.add_policy(RoleName.MEMBRE_MLA.name, "*", "chants", "read")
+    enf.add_grouping_policy("user-admin", RoleName.ADMIN.name, "*")
+    enf.add_grouping_policy("user-membre", RoleName.MEMBRE_MLA.name, "*")
+    return enf
+
+
+def test_casbin_guard_allows_matching_policy(monkeypatch) -> None:  # type: ignore
+    """Policy correspondante → accès accordé, user.id retourné."""
+    monkeypatch.setattr(_casbin_mod, "get_enforcer", _make_test_enforcer)
+    user = _FakeUser([])
+    user.id = "user-admin"
+    guard = CasbinGuard("chants", "write")
+    result = guard(_FakeRequest(), user)  # type: ignore[arg-type]
+    assert "user-admin" in result
+
+
+def test_casbin_guard_denies_missing_policy(monkeypatch) -> None:  # type: ignore
+    """Policy absente pour la ressource/action → 403."""
+    monkeypatch.setattr(_casbin_mod, "get_enforcer", _make_test_enforcer)
+    user = _FakeUser([])
+    user.id = "user-membre"
+    guard = CasbinGuard("chants", "write")
+    with pytest.raises(HTTPException) as exc:
+        guard(_FakeRequest(), user)  # type: ignore[arg-type]
+    assert exc.value.status_code == 403
+
+
+def test_casbin_guard_fallback_when_enforcer_none(monkeypatch) -> None:  # type: ignore
+    """Enforcer non initialisé → délègue au RoleChecker (fallback_roles)."""
+    monkeypatch.setattr(_casbin_mod, "get_enforcer", lambda: None)
+    user = _FakeUser([_FakeAff(RoleName.ADMIN)])
+    guard = CasbinGuard("chants", "write", fallback_roles=["ADMIN"])
+    result = guard(_FakeRequest(), user)  # type: ignore[arg-type]
+    assert "ADMIN" in result
+
+
+def test_casbin_guard_super_admin_bypass(monkeypatch) -> None:  # type: ignore
+    """Super Admin bypass Casbin même sans policy explicite."""
+    monkeypatch.setattr(_casbin_mod, "get_enforcer", _make_test_enforcer)
+    user = _FakeUser([_FakeAff(RoleName.SUPER_ADMIN)])
+    user.id = "super-admin"
+    guard = CasbinGuard("chants", "write")
+    result = guard(_FakeRequest(), user)  # type: ignore[arg-type]
+    assert result == [RoleName.SUPER_ADMIN.name]
