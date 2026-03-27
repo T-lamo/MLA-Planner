@@ -290,12 +290,6 @@ function actionLabel(code: string): string {
 
 // ─── Drawer création ────────────────────────────────────────────────
 const drawerOpen = ref(false)
-const drawerMode = ref<'role' | 'capability'>('role')
-
-function openDrawer(mode: 'role' | 'capability') {
-  drawerMode.value = mode
-  drawerOpen.value = true
-}
 
 // ─── Suppression ────────────────────────────────────────────────────
 const deleteError = ref('')
@@ -308,16 +302,6 @@ async function confirmDeleteRole(roleId: string) {
     if (openRole.value === roleId) openRole.value = null
   } catch {
     deleteError.value = 'Suppression impossible : ce rôle est peut-être utilisé.'
-  }
-}
-
-async function confirmDeleteCapability(capId: string, code: string) {
-  if (!window.confirm(`Supprimer la capability "${code}" ? Cette action est irréversible.`)) return
-  deleteError.value = ''
-  try {
-    await roleStore.deleteCapability(capId)
-  } catch {
-    deleteError.value = 'Suppression impossible : cette capability est peut-être utilisée.'
   }
 }
 </script>
@@ -340,24 +324,14 @@ async function confirmDeleteCapability(capId: string, code: string) {
           </p>
         </div>
         <CanGuard capability="ROLE_MANAGE">
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              class="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
-              @click="openDrawer('capability')"
-            >
-              <Plus class="size-4" />
-              Nouvelle capability
-            </button>
-            <button
-              type="button"
-              class="bg-primary-600 hover:bg-primary-700 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all"
-              @click="openDrawer('role')"
-            >
-              <Plus class="size-4" />
-              Nouveau rôle
-            </button>
-          </div>
+          <button
+            type="button"
+            class="bg-primary-600 hover:bg-primary-700 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all"
+            @click="drawerOpen = true"
+          >
+            <Plus class="size-4" />
+            Nouveau rôle
+          </button>
         </CanGuard>
       </div>
     </div>
@@ -412,21 +386,6 @@ async function confirmDeleteCapability(capId: string, code: string) {
                   :class="catMeta(prefix).chipClass"
                 >
                   {{ code }}
-                  <CanGuard capability="ROLE_MANAGE">
-                    <button
-                      type="button"
-                      class="ml-0.5 rounded-full p-0.5 opacity-50 transition-opacity hover:opacity-100"
-                      :title="`Supprimer ${code}`"
-                      @click="
-                        confirmDeleteCapability(
-                          roleStore.capabilities.find((c) => c.code === code)?.id ?? '',
-                          code,
-                        )
-                      "
-                    >
-                      <Trash2 class="size-3" />
-                    </button>
-                  </CanGuard>
                 </span>
               </div>
             </div>
@@ -620,11 +579,6 @@ async function confirmDeleteCapability(capId: string, code: string) {
       </template>
     </div>
 
-    <RoleDrawer
-      :isOpen="drawerOpen"
-      :mode="drawerMode"
-      @close="drawerOpen = false"
-      @created="drawerOpen = false"
-    />
+    <RoleDrawer :isOpen="drawerOpen" @close="drawerOpen = false" @created="drawerOpen = false" />
   </div>
 </template>
