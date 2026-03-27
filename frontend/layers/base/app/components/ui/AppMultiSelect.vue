@@ -18,6 +18,7 @@ const props = withDefaults(
 const emit = defineEmits<{ 'update:modelValue': [value: string[]] }>()
 
 const wrapperRef = ref<HTMLElement | null>(null)
+const dropdownRef = ref<HTMLElement | null>(null)
 const searchInputRef = ref<HTMLInputElement | null>(null)
 const isOpen = ref(false)
 const search = ref('')
@@ -53,10 +54,12 @@ function close() {
 }
 
 // ── Click outside ────────────────────────────────────────────────────
+// Le dropdown est téléporté dans <body> → il faut vérifier les DEUX refs
 function onMouseDown(e: MouseEvent) {
-  if (wrapperRef.value && !wrapperRef.value.contains(e.target as Node)) {
-    close()
-  }
+  const t = e.target as Node
+  const insideTrigger = wrapperRef.value?.contains(t) ?? false
+  const insideDropdown = dropdownRef.value?.contains(t) ?? false
+  if (!insideTrigger && !insideDropdown) close()
 }
 onMounted(() => document.addEventListener('mousedown', onMouseDown))
 onUnmounted(() => document.removeEventListener('mousedown', onMouseDown))
@@ -164,10 +167,11 @@ function remove(val: string) {
       >
         <ul
           v-if="isOpen"
+          ref="dropdownRef"
           role="listbox"
           :aria-multiselectable="true"
           :style="dropdownStyle"
-          class="custom-scrollbar fixed z-[9999] max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl"
+          class="custom-scrollbar fixed z-10001 max-h-52 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl"
         >
           <li
             v-for="opt in filteredOptions"
