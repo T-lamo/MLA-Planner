@@ -3,11 +3,12 @@
     <!-- <header class="section-header sticky top-0 z-10 bg-white py-2">
       <Building2 class="size-3.5" /><span>Ministères & Pôles</span>
     </header> -->
-    <div class="input-wrapper mb-4">
-      <Search class="input-icon" /><input
+    <div class="form-input-wrapper mb-4">
+      <span class="form-input-icon"><Search class="size-3.5" /></span>
+      <input
         v-model="search"
         type="text"
-        class="input-field with-icon"
+        class="form-input has-leading-icon"
         placeholder="Filtrer..."
       />
     </div>
@@ -127,21 +128,6 @@ const toggleAccordion = (id: string) =>
 </script>
 <style scoped>
 @reference "../../assets/css/main.css";
-.section-header {
-  @apply flex items-center gap-2 border-b border-slate-100 pb-1.5 text-[10px] font-black tracking-widest text-slate-400 uppercase;
-}
-.input-field {
-  @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition-all outline-none hover:border-slate-300;
-}
-.input-wrapper {
-  @apply relative flex items-center;
-}
-.input-icon {
-  @apply pointer-events-none absolute left-3 size-3.5 text-slate-400;
-}
-.input-field.with-icon {
-  @apply pl-9;
-}
 
 .ministere-accordion {
   @apply overflow-hidden rounded-xl border border-slate-200 bg-white transition-all duration-200;

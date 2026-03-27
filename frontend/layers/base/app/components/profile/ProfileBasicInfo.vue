@@ -1,43 +1,49 @@
 <template>
   <section class="space-y-4">
-    <!-- <header class="section-header">
-      <User class="size-3.5" /><span>Informations Personnelles</span>
-    </header> -->
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <div class="form-group">
-        <label>Nom</label>
+      <AppField id="pbi-nom" label="Nom">
         <input
+          id="pbi-nom"
           v-model="modelValue.nom"
           type="text"
           required
-          class="input-field"
+          class="form-input"
           placeholder="Ex: MARTIN"
         />
-      </div>
-      <div class="form-group">
-        <label>Prénom</label>
+      </AppField>
+      <AppField id="pbi-prenom" label="Prénom">
         <input
+          id="pbi-prenom"
           v-model="modelValue.prenom"
           type="text"
           required
-          class="input-field"
+          class="form-input"
           placeholder="Ex: Lucas"
         />
-      </div>
-      <div class="form-group">
-        <label>Email</label>
-        <div class="input-wrapper">
-          <Mail class="input-icon" />
-          <input v-model="modelValue.email" type="email" required class="input-field with-icon" />
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Téléphone</label>
-        <div class="input-wrapper">
-          <Phone class="input-icon" />
-          <input v-model="modelValue.telephone" type="tel" class="input-field with-icon" />
-        </div>
-      </div>
+      </AppField>
+      <AppField id="pbi-email" label="Email">
+        <template #leading-icon>
+          <Mail class="size-3.5" />
+        </template>
+        <input
+          id="pbi-email"
+          v-model="modelValue.email"
+          type="email"
+          required
+          class="form-input has-leading-icon"
+        />
+      </AppField>
+      <AppField id="pbi-tel" label="Téléphone">
+        <template #leading-icon>
+          <Phone class="size-3.5" />
+        </template>
+        <input
+          id="pbi-tel"
+          v-model="modelValue.telephone"
+          type="tel"
+          class="form-input has-leading-icon"
+        />
+      </AppField>
     </div>
     <div
       class="status-toggle-card group cursor-pointer"
@@ -58,37 +64,13 @@
 
 <script setup lang="ts">
 import { Mail, Phone } from 'lucide-vue-next'
+import AppField from '../ui/AppField.vue'
 import type { ProfilCreateFull } from '~~/layers/base/types/profiles'
 const modelValue = defineModel<ProfilCreateFull>({ required: true })
 </script>
 
 <style scoped>
 @reference "../../assets/css/main.css";
-.section-header {
-  @apply flex items-center gap-2 border-b border-slate-100 pb-1.5 text-[10px] font-black tracking-widest text-slate-400 uppercase;
-}
-.form-group {
-  @apply flex flex-col gap-1.5;
-}
-.form-group label {
-  @apply ml-0.5 text-[10px] font-bold text-slate-500 uppercase;
-}
-.input-field {
-  @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 transition-all outline-none hover:border-slate-300;
-}
-.input-field:focus {
-  border-color: var(--color-primary-600);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-600) 15%, transparent);
-}
-.input-wrapper {
-  @apply relative flex items-center;
-}
-.input-icon {
-  @apply pointer-events-none absolute left-3 size-3.5 text-slate-400;
-}
-.input-field.with-icon {
-  @apply pl-9;
-}
 .status-toggle-card {
   @apply flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3.5;
 }
@@ -99,6 +81,7 @@ const modelValue = defineModel<ProfilCreateFull>({ required: true })
   background-color: #10b981;
 }
 .toggle-circle {
-  @apply absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow-md transition-transform duration-200;
+  @apply absolute top-0.5 left-0.5 size-4 rounded-full bg-white transition-transform duration-200;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.2);
 }
 </style>

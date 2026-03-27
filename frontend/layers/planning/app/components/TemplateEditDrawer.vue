@@ -231,7 +231,7 @@ async function handleSave() {
                 type="text"
                 maxlength="100"
                 required
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 transition-colors outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                class="form-input"
                 placeholder="Nom du template"
               />
             </div>
@@ -243,7 +243,7 @@ async function handleSave() {
                 id="drawer-tpl-desc"
                 v-model="form.description"
                 rows="3"
-                class="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 transition-colors outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                class="form-input resize-none"
                 placeholder="Description facultative…"
               />
             </div>
@@ -254,15 +254,26 @@ async function handleSave() {
               >
                 Visibilité
               </label>
-              <select
-                id="drawer-tpl-visibilite"
-                v-model="form.visibilite"
-                class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="PRIVE">Privé — visible par moi uniquement</option>
-                <option value="MINISTERE">Ministère — tous les membres du ministère</option>
-                <option value="CAMPUS">Campus — tous les campus</option>
-              </select>
+              <div class="form-select-wrapper">
+                <select
+                  id="drawer-tpl-visibilite"
+                  v-model="form.visibilite"
+                  class="form-input form-select"
+                >
+                  <option value="PRIVE">Privé — visible par moi uniquement</option>
+                  <option value="MINISTERE">Ministère — tous les membres du ministère</option>
+                  <option value="CAMPUS">Campus — tous les campus</option>
+                </select>
+                <svg
+                  class="form-select-chevron"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M3 5l4 4 4-4" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -273,11 +284,7 @@ async function handleSave() {
             <h3 class="text-sm font-semibold tracking-wide text-slate-700 uppercase">
               Créneaux ({{ form.slots.length }})
             </h3>
-            <button
-              type="button"
-              class="flex items-center gap-1.5 rounded-lg bg-(--color-primary-600) px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-(--color-primary-700)"
-              @click="addSlot"
-            >
+            <button type="button" class="btn btn-primary btn-sm" @click="addSlot">
               <Plus class="size-4" />
               Ajouter
             </button>
@@ -334,7 +341,7 @@ async function handleSave() {
                     type="text"
                     maxlength="100"
                     required
-                    class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                    class="form-input form-input-sm"
                     placeholder="Ex : Louange Matin"
                   />
                 </div>
@@ -344,7 +351,7 @@ async function handleSave() {
                     v-model.number="slot.offset_debut_minutes"
                     type="number"
                     min="0"
-                    class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                    class="form-input form-input-sm"
                   />
                 </div>
                 <div>
@@ -353,7 +360,7 @@ async function handleSave() {
                     v-model.number="slot.offset_fin_minutes"
                     type="number"
                     min="1"
-                    class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                    class="form-input form-input-sm"
                   />
                 </div>
                 <div>
@@ -364,7 +371,7 @@ async function handleSave() {
                     v-model.number="slot.nb_personnes_requis"
                     type="number"
                     min="1"
-                    class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                    class="form-input form-input-sm"
                   />
                 </div>
               </div>
@@ -393,16 +400,27 @@ async function handleSave() {
                 >
                   <!-- Code rôle + supprimer -->
                   <div class="mb-2 flex items-center gap-2">
-                    <select
-                      v-model="role.role_code"
-                      class="flex-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 outline-none focus:border-blue-400"
-                      @change="clearRoleError(idx, rIdx)"
-                    >
-                      <option value="">— Choisir un rôle —</option>
-                      <option v-for="rc in rolesCompetences" :key="rc.code" :value="rc.code">
-                        {{ rc.libelle }}
-                      </option>
-                    </select>
+                    <div class="form-select-wrapper flex-1">
+                      <select
+                        v-model="role.role_code"
+                        class="form-input form-input-sm form-select"
+                        @change="clearRoleError(idx, rIdx)"
+                      >
+                        <option value="">— Choisir un rôle —</option>
+                        <option v-for="rc in rolesCompetences" :key="rc.code" :value="rc.code">
+                          {{ rc.libelle }}
+                        </option>
+                      </select>
+                      <svg
+                        class="form-select-chevron"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M3 5l4 4 4-4" />
+                      </svg>
+                    </div>
                     <button
                       type="button"
                       class="shrink-0 text-slate-400 hover:text-red-500"
@@ -435,41 +453,51 @@ async function handleSave() {
                     </div>
 
                     <!-- Select pour ajouter un membre -->
-                    <select
-                      v-if="membresDisponibles.length > 0"
-                      class="w-full rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 outline-none focus:border-blue-400"
-                      @change="
-                        (e) => {
-                          const val = (e.target as HTMLSelectElement).value
-                          if (val) {
-                            addSuggestedMember(role, val, idx, rIdx)
-                            ;(e.target as HTMLSelectElement).value = ''
-                          } else {
-                            clearRoleError(idx, rIdx)
+                    <div v-if="membresDisponibles.length > 0" class="form-select-wrapper">
+                      <select
+                        class="form-input form-input-sm form-select"
+                        @change="
+                          (e) => {
+                            const val = (e.target as HTMLSelectElement).value
+                            if (val) {
+                              addSuggestedMember(role, val, idx, rIdx)
+                              ;(e.target as HTMLSelectElement).value = ''
+                            } else {
+                              clearRoleError(idx, rIdx)
+                            }
                           }
-                        }
-                      "
-                    >
-                      <option value="">— Ajouter un membre —</option>
-                      <option
-                        v-for="m in membresDisponibles.filter(
-                          (x) => !role.membres_suggeres_ids.includes(x.id),
-                        )"
-                        :key="m.id"
-                        :value="m.id"
+                        "
                       >
-                        {{ m.prenom }} {{ m.nom
-                        }}{{
-                          role.role_code &&
-                          m.roles.length > 0 &&
-                          !m.roles
-                            .map((r) => r.toUpperCase())
-                            .includes(role.role_code.toUpperCase())
-                            ? ' (hors compétence)'
-                            : ''
-                        }}
-                      </option>
-                    </select>
+                        <option value="">— Ajouter un membre —</option>
+                        <option
+                          v-for="m in membresDisponibles.filter(
+                            (x) => !role.membres_suggeres_ids.includes(x.id),
+                          )"
+                          :key="m.id"
+                          :value="m.id"
+                        >
+                          {{ m.prenom }} {{ m.nom
+                          }}{{
+                            role.role_code &&
+                            m.roles.length > 0 &&
+                            !m.roles
+                              .map((r) => r.toUpperCase())
+                              .includes(role.role_code.toUpperCase())
+                              ? ' (hors compétence)'
+                              : ''
+                          }}
+                        </option>
+                      </select>
+                      <svg
+                        class="form-select-chevron"
+                        viewBox="0 0 14 14"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path d="M3 5l4 4 4-4" />
+                      </svg>
+                    </div>
 
                     <!-- Erreur de compétence par rôle -->
                     <p
@@ -491,18 +519,12 @@ async function handleSave() {
     <!-- Footer -->
     <template #footer>
       <div class="flex justify-end gap-3">
-        <button
-          type="button"
-          class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-          @click="emit('close')"
-        >
-          Annuler
-        </button>
+        <button type="button" class="btn btn-secondary" @click="emit('close')">Annuler</button>
         <button
           type="submit"
           form="template-edit-form"
           :disabled="isSaving || !form.nom.trim()"
-          class="rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-(--color-primary-700) disabled:opacity-50"
+          class="btn btn-primary"
         >
           {{ isSaving ? 'Sauvegarde…' : 'Sauvegarder' }}
         </button>

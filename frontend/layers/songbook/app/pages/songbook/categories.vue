@@ -202,12 +202,7 @@ onMounted(async () => {
           @keyup.enter="handleCreate"
         />
         <!-- Bouton -->
-        <button
-          type="button"
-          :disabled="isCreating"
-          class="inline-flex items-center gap-1.5 rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white hover:bg-(--color-primary-700) disabled:opacity-50"
-          @click="handleCreate"
-        >
+        <button type="button" :disabled="isCreating" class="btn btn-primary" @click="handleCreate">
           <Plus class="h-4 w-4" />
           Ajouter
         </button>

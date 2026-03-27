@@ -13,6 +13,87 @@
 
 ---
 
+## Lancer avec Docker
+
+> Seul prérequis : **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (Mac / Windows / Linux).
+> Aucune installation de Python, Node ou PostgreSQL nécessaire.
+
+### Démarrage en 3 commandes
+
+```bash
+git clone https://github.com/T-lamo/MLA-Planner.git
+cd MLA-Planner/mla-app
+docker compose up --build
+```
+
+> Le premier `--build` télécharge les images et compile le frontend (~3–5 min selon votre connexion).
+> Les démarrages suivants (`docker compose up`) sont instantanés grâce au cache Docker.
+
+### Accès aux services
+
+| Service | URL | Description |
+|---|---|---|
+| **Application** | http://localhost:3000 | Interface utilisateur complète |
+| **API Swagger** | http://localhost:8000/docs | Documentation interactive des endpoints |
+| **Health check** | http://localhost:8000/health | Statut de l'API (`{"status": "ok"}`) |
+| **Base de données** | `localhost:5432` | PostgreSQL — user: `mla` · pass: `mla` · db: `mla_db` |
+
+### Comptes de démonstration
+
+Les comptes sont créés automatiquement au premier démarrage (seed idempotent).
+
+| Identifiant | Mot de passe | Rôle | Ministère |
+|---|---|---|---|
+| `superadmin` | `demo123!` | Super Admin | — |
+| `amos` | `plan123!` | Admin | Louange |
+| `jean` | `plan123!` | Responsable | Technique |
+| `awa` | `plan123!` | Membre | Accueil |
+
+### Commandes utiles
+
+```bash
+# Démarrer en arrière-plan
+docker compose up --build -d
+
+# Voir les logs en temps réel
+docker compose logs -f
+
+# Logs d'un seul service
+docker compose logs -f backend
+docker compose logs -f frontend
+
+# Arrêter les conteneurs (données conservées)
+docker compose down
+
+# Arrêter ET supprimer la base de données (repartir à zéro)
+docker compose down -v
+
+# Rebuilder uniquement un service après modification du code
+docker compose up --build backend
+docker compose up --build frontend
+
+# Ouvrir un shell dans le conteneur backend
+docker compose exec backend sh
+
+# Lancer les migrations manuellement
+docker compose exec backend alembic upgrade head
+
+# Relancer le seed de démo
+docker compose exec backend python scripts/db_admin.py seed
+```
+
+### Dépannage
+
+| Problème | Cause probable | Solution |
+|---|---|---|
+| Port 3000 ou 8000 déjà utilisé | Autre service actif sur ce port | `docker compose down` puis libérer le port |
+| `frontend` ne démarre pas | Le backend n'est pas encore prêt | Attendre ~60s, c'est normal (migrations + seed) |
+| Données incohérentes | Volume DB corrompu | `docker compose down -v && docker compose up --build` |
+| Build échoue sur `pnpm install` | Lockfile désynchronisé | Supprimer l'image : `docker compose build --no-cache frontend` |
+| `connection refused` sur l'API | Backend encore en cours de démarrage | Vérifier `docker compose logs backend` et attendre |
+
+---
+
 ## Ce que fait l'application
 
 **MLA Planner** centralise la vie opérationnelle d'une communauté multi-campus. Elle permet aux responsables de créer des plannings d'activités, d'y affecter les membres selon leurs rôles et compétences, et de gérer les indisponibilités en amont.
