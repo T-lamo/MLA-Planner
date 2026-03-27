@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 
 from core.auth.security import get_password_hash
 from core.settings import settings
-from mla_enum import RoleName
+from mla_enum import RoleName  # noqa: F401 — conservé pour Casbin/auth
 from models.schema_db_model import AffectationRole, Role, Utilisateur
 
 logger = logging.getLogger(__name__)
@@ -13,9 +13,11 @@ logger = logging.getLogger(__name__)
 
 def _get_or_create_superadmin_role(db: Session) -> Role:
     """Return the SUPER_ADMIN Role, creating it if absent."""
-    role = db.exec(select(Role).where(Role.libelle == RoleName.SUPER_ADMIN)).first()
+    role = db.exec(
+        select(Role).where(Role.libelle == RoleName.SUPER_ADMIN.value)
+    ).first()
     if role is None:
-        role = Role(libelle=RoleName.SUPER_ADMIN)
+        role = Role(libelle=RoleName.SUPER_ADMIN.value)
         db.add(role)
         db.flush()
     return role

@@ -150,9 +150,9 @@ class CampusConfigService:
 
     def _find_or_create_rbac_role(
         self,
-        libelle: RoleName,
+        libelle: str,
     ) -> Tuple[Role, bool]:
-        """Cherche un rôle RBAC par libellé (enum), le crée si absent."""
+        """Cherche un rôle RBAC par libellé (str), le crée si absent."""
         stmt = select(Role).where(Role.libelle == libelle)
         existing = self.db.exec(stmt).first()
         if existing:
@@ -527,7 +527,7 @@ class CampusConfigService:
             raise AppException(ErrorRegistry.CONF_MINISTERE_LINK_NOT_FOUND)
         roles: List[Role] = []
         created_count = 0
-        for role_name in RoleName:
+        for role_name in [rn.value for rn in RoleName]:
             role, created = self._find_or_create_rbac_role(role_name)
             roles.append(role)
             if created:

@@ -20,6 +20,7 @@ interface LoginSchema {
     campus_principal_id?: string | null
     name?: string
     roles: RoleSchema[]
+    capabilities: string[]
   }
 }
 
@@ -31,6 +32,7 @@ interface MeSchema {
   campus_principal_id?: string | null
   name?: string
   roles: string[]
+  capabilities: string[]
 }
 
 export interface AuthUser {
@@ -40,6 +42,7 @@ export interface AuthUser {
   membreId: string
   campusPrincipalId?: string | null
   roles: string[]
+  capabilities: string[]
   name?: string
 }
 
@@ -65,6 +68,7 @@ function transformLoginSchema(response: LoginSchema): AuthResponse {
       campusPrincipalId: response.user.campus_principal_id ?? null,
       name: response.user.name ?? response.user.username,
       roles: response.user.roles.map((r) => r.libelle),
+      capabilities: response.user.capabilities ?? [],
     },
   }
 }
@@ -107,6 +111,7 @@ export class AuthRepository extends BaseRepository {
         campusPrincipalId: user.campus_principal_id ?? null,
         name: user.name ?? user.username,
         roles: user.roles ?? [],
+        capabilities: user.capabilities ?? [],
       }),
     })
 

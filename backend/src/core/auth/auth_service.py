@@ -5,6 +5,7 @@ import jwt
 from sqlmodel import Session
 
 from core.auth.auth_repository import AuthRepository
+from core.auth.auth_utils import _affectation_valide
 from core.auth.security import (
     create_access_token,
     create_refresh_token,
@@ -53,6 +54,17 @@ class AuthService:
 
         return contexts
 
+    def _build_capabilities(self, user: Utilisateur) -> List[str]:
+        """Extrait la liste plate des codes de permission pour l'utilisateur."""
+        caps: set[str] = set()
+        for aff in user.affectations:
+            if not _affectation_valide(aff):
+                continue
+            if aff.role:
+                for perm in aff.role.permissions:
+                    caps.add(perm.code)
+        return sorted(caps)
+
     def _build_token_response(self, user: Utilisateur) -> Dict[str, Any]:
         """Émet access + refresh token et construit la réponse standard."""
         token_data: Dict[str, Any] = {
@@ -80,6 +92,7 @@ class AuthService:
             campus_principal_id=campus_id,
             name=name,
             roles=roles,
+            capabilities=self._build_capabilities(user),
         )
         return {
             "access_token": token,

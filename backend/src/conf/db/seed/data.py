@@ -1,8 +1,6 @@
 from datetime import datetime
 from typing import List, Optional, TypedDict
 
-from mla_enum import RoleName
-
 
 # Définition des types pour Mypy
 class MembreInfo(TypedDict):
@@ -121,15 +119,15 @@ PLANNING_TEMPLATES_SEED: List[PlanningTemplateSeedData] = [
 
 
 # --- RBAC ---
-ROLES = [
-    RoleName.SUPER_ADMIN,
-    RoleName.ADMIN,
-    RoleName.RESPONSABLE_MLA,
-    RoleName.MEMBRE_MLA,
+ROLES: list[str] = [
+    "Super Admin",
+    "Admin",
+    "Responsable MLA",
+    "Membre MLA",
 ]
 
-PERMISSIONS = {
-    RoleName.SUPER_ADMIN: [
+PERMISSIONS: dict[str, list[str]] = {
+    "Super Admin": [
         "USER_CREATE",
         "USER_READ",
         "USER_UPDATE",
@@ -139,22 +137,56 @@ PERMISSIONS = {
         "POLE_MANAGE",
         "ACTIVITE_MANAGE",
         "SYSTEM_MANAGE",
+        "PLANNING_READ",
+        "PLANNING_WRITE",
+        "PLANNING_PUBLISH",
+        "TEMPLATE_WRITE",
+        "CHANT_READ",
+        "CHANT_WRITE",
+        "MEMBRE_READ",
+        "MEMBRE_WRITE",
+        "INDISPO_WRITE",
+        "CAMPUS_ADMIN",
     ],
-    RoleName.ADMIN: [
+    "Admin": [
         "USER_CREATE",
         "USER_READ",
         "USER_UPDATE",
         "USER_DELETE",
         "ROLE_MANAGE",
         "MINISTERE_MANAGE",
+        "PLANNING_READ",
+        "PLANNING_WRITE",
+        "PLANNING_PUBLISH",
+        "TEMPLATE_WRITE",
+        "CHANT_READ",
+        "CHANT_WRITE",
+        "MEMBRE_READ",
+        "MEMBRE_WRITE",
+        "INDISPO_WRITE",
+        "CAMPUS_ADMIN",
     ],
-    RoleName.RESPONSABLE_MLA: [
+    "Responsable MLA": [
         "USER_READ",
         "MINISTERE_MANAGE",
         "POLE_MANAGE",
         "ACTIVITE_MANAGE",
+        "PLANNING_READ",
+        "PLANNING_WRITE",
+        "PLANNING_PUBLISH",
+        "TEMPLATE_WRITE",
+        "CHANT_READ",
+        "CHANT_WRITE",
+        "MEMBRE_READ",
+        "INDISPO_WRITE",
     ],
-    RoleName.MEMBRE_MLA: ["USER_READ", "ACTIVITE_CREATE"],
+    "Membre MLA": [
+        "USER_READ",
+        "ACTIVITE_CREATE",
+        "PLANNING_READ",
+        "CHANT_READ",
+        "MEMBRE_READ",
+    ],
 }
 
 # Compte superadmin fixe (ne doit jamais être lié à un membre)
