@@ -57,19 +57,6 @@ class AdminRepository extends BaseRepository {
   async deleteRole(roleId: string): Promise<void> {
     await this.apiRequest(`/admin/roles/${roleId}`, { method: 'DELETE' })
   }
-
-  async createCapability(code: string, description?: string): Promise<PermissionCodeRead> {
-    const { data } = await this.apiRequest<PermissionCodeRead>('/admin/capabilities', {
-      method: 'POST',
-      body: { code, description },
-    })
-    if (!data) throw new Error('Création de la capability échouée')
-    return data
-  }
-
-  async deleteCapability(capabilityId: string): Promise<void> {
-    await this.apiRequest(`/admin/capabilities/${capabilityId}`, { method: 'DELETE' })
-  }
 }
 
 const repository = new AdminRepository()
@@ -145,23 +132,6 @@ export const useRoleStore = defineStore('roles', () => {
     items.value = items.value.filter((r) => r.id !== roleId)
   }
 
-  async function createCapability(code: string, description?: string) {
-    saving.value = true
-    try {
-      const created = await repository.createCapability(code, description)
-      capabilities.value.push(created)
-      capabilities.value.sort((a, b) => a.code.localeCompare(b.code))
-      return created
-    } finally {
-      saving.value = false
-    }
-  }
-
-  async function deleteCapability(capabilityId: string) {
-    await repository.deleteCapability(capabilityId)
-    capabilities.value = capabilities.value.filter((c) => c.id !== capabilityId)
-  }
-
   return {
     items,
     rolesWithPermissions,
@@ -174,7 +144,5 @@ export const useRoleStore = defineStore('roles', () => {
     updateRolePermissions,
     createRole,
     deleteRole,
-    createCapability,
-    deleteCapability,
   }
 })
