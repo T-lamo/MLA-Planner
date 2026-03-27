@@ -14,9 +14,10 @@ export default defineNuxtConfig({
 
   // Configuration des variables d'environnement
   runtimeConfig: {
+    // Privé (server-only) : surchargé par NUXT_API_BASE (ex: http://backend:8000 dans Docker)
+    apiBase: '',
     public: {
-      // Cette valeur sera remplacée par NUXT_PUBLIC_API_BASE lors du build sur Netlify.
-      // En local, elle utilisera l'adresse par défaut de ton FastAPI.
+      // Public (browser) : surchargé par NUXT_PUBLIC_API_BASE (ex: http://localhost:8000)
       apiBase: '',
     },
   },

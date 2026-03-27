@@ -93,7 +93,7 @@ watch(
           v-if="!result"
           type="button"
           :disabled="!canGenerate"
-          class="inline-flex items-center gap-2 rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white hover:bg-(--color-primary-700) disabled:cursor-not-allowed disabled:opacity-50"
+          class="btn btn-primary"
           @click="handleGenerate"
         >
           <span v-if="isGenerating">Génération…</span>

@@ -80,28 +80,18 @@
         </div>
 
         <div class="flex gap-3">
-          <button
-            v-if="canEdit"
-            class="flex-1 rounded-lg px-4 py-2 text-sm font-bold text-white transition-colors"
-            style="background-color: var(--color-primary-600)"
-            @click="switchToEdit"
-          >
+          <button v-if="canEdit" class="btn btn-primary flex-1" @click="switchToEdit">
             Modifier
           </button>
           <button
             v-if="canWrite"
             type="button"
-            class="rounded-lg border border-red-100 px-4 py-2 text-sm font-medium text-red-500 transition-colors hover:bg-red-50"
+            class="btn btn-danger"
             @click="confirmingDelete = true"
           >
             Supprimer
           </button>
-          <button
-            class="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800"
-            @click="handleClose"
-          >
-            Fermer
-          </button>
+          <button class="btn btn-ghost" @click="handleClose">Fermer</button>
         </div>
 
         <!-- Bouton Save as Template (write uniquement) -->
@@ -123,14 +113,14 @@
     <template v-else #footer>
       <p v-if="apiError" class="mb-2 text-xs text-red-500">{{ apiError }}</p>
       <div class="flex w-full items-center gap-3">
-        <button type="button" class="footer-btn-secondary" @click="handleClose">Annuler</button>
+        <button type="button" class="btn btn-secondary" @click="handleClose">Annuler</button>
         <div class="flex-1"></div>
 
         <!-- Dropdown statut cible -->
         <div ref="formStatusDropdownRef" class="relative">
           <button
             type="button"
-            class="footer-btn-outline gap-1"
+            class="btn btn-ghost"
             :disabled="formStatusOptions.length <= 1"
             @click="formStatusDropdownOpen = !formStatusDropdownOpen"
           >
@@ -172,7 +162,7 @@
         <!-- Bouton Enregistrer -->
         <button
           type="button"
-          class="footer-btn-primary"
+          class="btn btn-primary"
           :disabled="!canSave || isSaving"
           @click="save()"
         >
@@ -383,23 +373,3 @@ function handleClose(): void {
   emit('close')
 }
 </script>
-
-<style scoped>
-@reference "~~/layers/base/app/assets/css/main.css";
-
-.footer-btn-primary {
-  @apply flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold text-white transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50;
-  background-color: var(--color-primary-600);
-}
-.footer-btn-primary:hover:not(:disabled) {
-  background-color: var(--color-primary-700);
-}
-
-.footer-btn-outline {
-  @apply flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50;
-}
-
-.footer-btn-secondary {
-  @apply rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700;
-}
-</style>

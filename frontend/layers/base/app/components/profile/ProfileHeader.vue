@@ -19,7 +19,7 @@ defineEmits<{
         {{ isFetching ? 'Chargement...' : `${total} profils au total` }}
       </p>
     </div>
-    <button class="btn-primary flex items-center gap-2" @click="$emit('add')">
+    <button class="btn btn-primary" @click="$emit('add')">
       <Plus class="size-5" />
       <span>Ajouter un profil</span>
     </button>

@@ -20,16 +20,26 @@
         </button>
       </div>
 
-      <select
-        v-else-if="campuses.length > 4"
-        :value="selectedCampusId"
-        class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-(--color-primary-400) focus:ring-2 focus:ring-(--color-primary-100)"
-        @change="(e) => selectCampus((e.target as HTMLSelectElement).value)"
-      >
-        <option v-for="campus in campuses" :key="campus.id" :value="campus.id">
-          {{ campus.nom }}
-        </option>
-      </select>
+      <div v-else-if="campuses.length > 4" class="form-select-wrapper">
+        <select
+          :value="selectedCampusId"
+          class="form-input form-select"
+          @change="(e) => selectCampus((e.target as HTMLSelectElement).value)"
+        >
+          <option v-for="campus in campuses" :key="campus.id" :value="campus.id">
+            {{ campus.nom }}
+          </option>
+        </select>
+        <svg
+          class="form-select-chevron"
+          viewBox="0 0 14 14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M3 5l4 4 4-4" />
+        </svg>
+      </div>
 
       <!-- Bouton Init Statuts (uniquement si non initialisés) -->
       <button

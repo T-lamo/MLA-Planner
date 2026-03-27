@@ -56,8 +56,8 @@
                 type="text"
                 maxlength="150"
                 placeholder="Ex : Culte dominical standard"
-                class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 transition-colors outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-                :class="{ 'border-red-300 focus:border-red-400 focus:ring-red-100': nomError }"
+                class="form-input"
+                :class="{ 'is-error': nomError }"
                 @input="nomError = ''"
               />
               <p v-if="nomError" class="mt-1 text-xs text-red-500">{{ nomError }}</p>
@@ -75,7 +75,7 @@
                 rows="3"
                 maxlength="500"
                 placeholder="Décrivez l'usage de ce template…"
-                class="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 transition-colors outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                class="form-input resize-none"
               />
             </div>
 
@@ -87,15 +87,26 @@
               >
                 Visibilité
               </label>
-              <select
-                id="template-visibilite"
-                v-model="visibilite"
-                class="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
-              >
-                <option value="MINISTERE">Ministère — tous les membres du ministère</option>
-                <option value="CAMPUS">Campus — tous les campus</option>
-                <option value="PRIVE">Privé — visible par moi uniquement</option>
-              </select>
+              <div class="form-select-wrapper">
+                <select
+                  id="template-visibilite"
+                  v-model="visibilite"
+                  class="form-input form-select"
+                >
+                  <option value="MINISTERE">Ministère — tous les membres du ministère</option>
+                  <option value="CAMPUS">Campus — tous les campus</option>
+                  <option value="PRIVE">Privé — visible par moi uniquement</option>
+                </select>
+                <svg
+                  class="form-select-chevron"
+                  viewBox="0 0 14 14"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M3 5l4 4 4-4" />
+                </svg>
+              </div>
             </div>
 
             <!-- Erreur API -->
@@ -108,7 +119,7 @@
           <div class="flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4">
             <button
               type="button"
-              class="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+              class="btn btn-secondary"
               :disabled="isSaving"
               @click="handleClose"
             >
@@ -116,7 +127,7 @@
             </button>
             <button
               type="button"
-              class="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+              class="btn btn-primary"
               :disabled="isSaving || !nom.trim()"
               @click="handleSave"
             >

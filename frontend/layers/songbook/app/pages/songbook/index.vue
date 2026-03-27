@@ -52,11 +52,7 @@ onMounted(() => Promise.all([loadCategories(), loadChants()]))
           }}
         </p>
       </div>
-      <NuxtLink
-        v-if="authStore.canManageChants"
-        to="/songbook/new"
-        class="inline-flex items-center gap-2 rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white hover:bg-(--color-primary-700)"
-      >
+      <NuxtLink v-if="authStore.canManageChants" to="/songbook/new" class="btn btn-primary">
         <Plus class="h-4 w-4" />
         Nouveau chant
       </NuxtLink>
@@ -81,11 +77,7 @@ onMounted(() => Promise.all([loadCategories(), loadChants()]))
       </div>
       <p class="text-lg font-medium text-(--color-neutral-700)">Aucun chant dans le répertoire</p>
       <p class="text-sm text-(--color-neutral-400)">Commencez par ajouter vos premiers chants.</p>
-      <NuxtLink
-        v-if="authStore.canManageChants"
-        to="/songbook/new"
-        class="inline-flex items-center gap-2 rounded-lg bg-(--color-primary-600) px-4 py-2 text-sm font-medium text-white hover:bg-(--color-primary-700)"
-      >
+      <NuxtLink v-if="authStore.canManageChants" to="/songbook/new" class="btn btn-primary">
         <Plus class="h-4 w-4" />
         Ajouter un chant
       </NuxtLink>

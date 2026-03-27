@@ -104,12 +104,7 @@
         <p class="text-sm font-semibold text-red-700">Impossible de charger le planning</p>
         <p class="text-xs text-red-500">{{ error }}</p>
       </div>
-      <button
-        class="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-700"
-        @click="refresh"
-      >
-        Réessayer
-      </button>
+      <button class="btn btn-danger" @click="refresh">Réessayer</button>
     </div>
 
     <!-- ================================================================

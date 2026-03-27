@@ -196,9 +196,4 @@ const handleDelete = async (id: string) => {
 .profile-list-move {
   transition: transform 0.3s ease;
 }
-
-/* Classes utilitaires locales (si non définies globalement) */
-.btn-primary {
-  @apply rounded-xl bg-(--color-primary-600) px-4 py-2 font-semibold text-white shadow-sm transition-all hover:bg-(--color-primary-700) active:scale-95;
-}
 </style>
