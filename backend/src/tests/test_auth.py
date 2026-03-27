@@ -15,6 +15,7 @@ from core.auth.auth_dependencies import (
     _affectation_valide,
     get_active_campus,
 )
+from core.auth.auth_service import AuthService
 from core.auth.security import create_access_token
 from core.exceptions.app_exception import AppException
 from core.settings import settings as stng
@@ -301,9 +302,15 @@ class _FakeRequest:
         self.headers = headers or {}
 
 
+class _FakePerm:
+    def __init__(self, code: str) -> None:
+        self.code = code
+
+
 class _FakeRole:
-    def __init__(self, libelle: str) -> None:
+    def __init__(self, libelle: str, permissions: list | None = None) -> None:
         self.libelle = libelle
+        self.permissions = permissions or []
 
 
 class _FakeContexte:
@@ -312,7 +319,7 @@ class _FakeContexte:
 
 
 class _FakeAff:
-    """Stub AffectationRole avec contextes optionnels."""
+    """Stub AffectationRole avec contextes et permissions optionnels."""
 
     def __init__(
         self,
@@ -321,8 +328,9 @@ class _FakeAff:
         active: bool = True,
         date_debut: date | None = None,
         date_fin: date | None = None,
+        permissions: list | None = None,
     ) -> None:
-        self.role = _FakeRole(libelle)
+        self.role = _FakeRole(libelle, permissions)
         self.contextes = contextes or []
         self.active = active
         self.dateDebut = date_debut  # pylint: disable=invalid-name
@@ -510,3 +518,81 @@ def test_casbin_guard_super_admin_bypass(monkeypatch) -> None:  # type: ignore
     guard = CasbinGuard("chants", "write")
     result = guard(_FakeRequest(), user)  # type: ignore[arg-type]
     assert result == [RoleName.SUPER_ADMIN.name]
+
+
+# --- TESTS UNITAIRES : _build_capabilities (RBAC-7) ---
+
+
+def test_build_capabilities_empty_no_affectations() -> None:
+    """Utilisateur sans affectation → liste vide."""
+    service = AuthService.__new__(AuthService)
+    user = _FakeUser([])
+    # pylint: disable=protected-access
+    caps = service._build_capabilities(user)  # type: ignore[arg-type]
+    assert caps == []
+
+
+def test_build_capabilities_deduplication() -> None:
+    """Permissions dupliquées sur deux rôles → une seule entrée."""
+    service = AuthService.__new__(AuthService)
+    perms = [_FakePerm("CHANT_READ"), _FakePerm("PLANNING_READ")]
+    aff1 = _FakeAff(RoleName.MEMBRE_MLA, permissions=perms)
+    aff2 = _FakeAff(RoleName.MEMBRE_MLA, permissions=[_FakePerm("CHANT_READ")])
+    user = _FakeUser([aff1, aff2])
+    # pylint: disable=protected-access
+    caps = service._build_capabilities(user)  # type: ignore[arg-type]
+    assert caps == sorted({"CHANT_READ", "PLANNING_READ"})
+
+
+def test_build_capabilities_inactive_affectation_excluded() -> None:
+    """Affectation inactive → permissions exclues."""
+    service = AuthService.__new__(AuthService)
+    aff = _FakeAff(
+        RoleName.RESPONSABLE_MLA,
+        active=False,
+        permissions=[_FakePerm("CHANT_WRITE")],
+    )
+    user = _FakeUser([aff])
+    # pylint: disable=protected-access
+    caps = service._build_capabilities(user)  # type: ignore[arg-type]
+    assert caps == []
+
+
+def test_build_capabilities_sorted() -> None:
+    """La liste retournée est triée alphabétiquement."""
+    service = AuthService.__new__(AuthService)
+    perms = [_FakePerm("PLANNING_WRITE"), _FakePerm("CHANT_READ")]
+    aff = _FakeAff(RoleName.RESPONSABLE_MLA, permissions=perms)
+    user = _FakeUser([aff])
+    # pylint: disable=protected-access
+    caps = service._build_capabilities(user)  # type: ignore[arg-type]
+    assert caps == sorted(caps)
+
+
+# --- TEST INTÉGRATION : /auth/me retourne capabilities ---
+
+
+def test_me_returns_capabilities(client: TestClient, test_user: Utilisateur) -> None:
+    """GET /auth/users/me → réponse contient la clé 'capabilities' (liste)."""
+    token, _ = create_access_token(data={"sub": test_user.username})
+    response = client.get(
+        "/auth/users/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "capabilities" in data
+    assert isinstance(data["capabilities"], list)
+
+
+def test_login_response_contains_capabilities(
+    client: TestClient, test_user: Utilisateur
+) -> None:
+    """POST /auth/token → user.capabilities présent dans la réponse."""
+    response = client.post(
+        "/auth/token",
+        data={"username": "active_user", "password": "password123"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    user_data = response.json()["user"]
+    assert "capabilities" in user_data
+    assert isinstance(user_data["capabilities"], list)

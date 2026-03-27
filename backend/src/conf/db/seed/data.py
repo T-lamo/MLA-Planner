@@ -128,7 +128,7 @@ ROLES = [
     RoleName.MEMBRE_MLA,
 ]
 
-PERMISSIONS = {
+PERMISSIONS: dict[RoleName, list[str]] = {
     RoleName.SUPER_ADMIN: [
         "USER_CREATE",
         "USER_READ",
@@ -139,6 +139,16 @@ PERMISSIONS = {
         "POLE_MANAGE",
         "ACTIVITE_MANAGE",
         "SYSTEM_MANAGE",
+        "PLANNING_READ",
+        "PLANNING_WRITE",
+        "PLANNING_PUBLISH",
+        "TEMPLATE_WRITE",
+        "CHANT_READ",
+        "CHANT_WRITE",
+        "MEMBRE_READ",
+        "MEMBRE_WRITE",
+        "INDISPO_WRITE",
+        "CAMPUS_ADMIN",
     ],
     RoleName.ADMIN: [
         "USER_CREATE",
@@ -147,14 +157,38 @@ PERMISSIONS = {
         "USER_DELETE",
         "ROLE_MANAGE",
         "MINISTERE_MANAGE",
+        "PLANNING_READ",
+        "PLANNING_WRITE",
+        "PLANNING_PUBLISH",
+        "TEMPLATE_WRITE",
+        "CHANT_READ",
+        "CHANT_WRITE",
+        "MEMBRE_READ",
+        "MEMBRE_WRITE",
+        "INDISPO_WRITE",
+        "CAMPUS_ADMIN",
     ],
     RoleName.RESPONSABLE_MLA: [
         "USER_READ",
         "MINISTERE_MANAGE",
         "POLE_MANAGE",
         "ACTIVITE_MANAGE",
+        "PLANNING_READ",
+        "PLANNING_WRITE",
+        "PLANNING_PUBLISH",
+        "TEMPLATE_WRITE",
+        "CHANT_READ",
+        "CHANT_WRITE",
+        "MEMBRE_READ",
+        "INDISPO_WRITE",
     ],
-    RoleName.MEMBRE_MLA: ["USER_READ", "ACTIVITE_CREATE"],
+    RoleName.MEMBRE_MLA: [
+        "USER_READ",
+        "ACTIVITE_CREATE",
+        "PLANNING_READ",
+        "CHANT_READ",
+        "MEMBRE_READ",
+    ],
 }
 
 # Compte superadmin fixe (ne doit jamais être lié à un membre)
