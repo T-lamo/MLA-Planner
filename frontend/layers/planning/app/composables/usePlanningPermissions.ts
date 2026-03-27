@@ -13,10 +13,10 @@ export function usePlanningPermissions() {
   const authStore = useAuthStore()
 
   /** Peut créer, modifier, supprimer un planning et changer son statut. */
-  const canWrite = computed<boolean>(() => authStore.canManagePlanning)
+  const canWrite = computed<boolean>(() => authStore.can('PLANNING_WRITE'))
 
-  /** Peut changer le statut d'un planning (sous-ensemble de canWrite). */
-  const canChangeStatus = computed<boolean>(() => canWrite.value)
+  /** Peut publier un planning (sous-ensemble de canWrite). */
+  const canChangeStatus = computed<boolean>(() => authStore.can('PLANNING_PUBLISH'))
 
   /** Peut visualiser le calendrier (tout utilisateur authentifié). */
   const canViewCalendar = computed<boolean>(() => !!authStore.currentUser)

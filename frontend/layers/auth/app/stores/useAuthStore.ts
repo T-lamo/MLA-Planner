@@ -1,11 +1,6 @@
 import { defineStore } from 'pinia'
 import type { AuthUser } from '../repositories/AuthRepository'
 
-export const ROLE_SUPER_ADMIN = 'Super Admin'
-export const ROLE_ADMIN = 'Admin'
-export const ROLE_RESPONSABLE_MLA = 'Responsable MLA'
-export const ROLE_MEMBRE_MLA = 'Membre MLA'
-
 export const useAuthStore = defineStore('auth', () => {
   // --- ÉTAT (STATE) ---
   // secure: true bloque les cookies sur HTTP (Docker local) — conditionnel au protocole
@@ -37,22 +32,21 @@ export const useAuthStore = defineStore('auth', () => {
 
   const currentUser = computed(() => user.value)
 
-  const isSuperAdmin = computed(() => user.value?.roles?.includes(ROLE_SUPER_ADMIN) ?? false)
-  const isAdmin = computed(() => user.value?.roles?.includes(ROLE_ADMIN) ?? false)
-  const isResponsableMLA = computed(
-    () => user.value?.roles?.includes(ROLE_RESPONSABLE_MLA) ?? false,
-  )
-  const hasAdminAccess = computed(() => isSuperAdmin.value || isAdmin.value)
+  /** Vérifie si l'utilisateur possède la capability donnée. */
+  function can(capability: string): boolean {
+    return user.value?.capabilities?.includes(capability) ?? false
+  }
+
+  const isSuperAdmin = computed(() => can('SYSTEM_MANAGE'))
+  const isAdmin = computed(() => can('CAMPUS_ADMIN') && !can('SYSTEM_MANAGE'))
+  const isResponsableMLA = computed(() => can('PLANNING_WRITE') && !can('CAMPUS_ADMIN'))
+  const hasAdminAccess = computed(() => can('CAMPUS_ADMIN'))
 
   /** Droits module Carnet de chants. */
-  const canManageChants = computed(
-    () => isSuperAdmin.value || isAdmin.value || isResponsableMLA.value,
-  )
+  const canManageChants = computed(() => can('CHANT_WRITE'))
 
   /** Droits module Planning — indépendant de canManageChants. */
-  const canManagePlanning = computed(
-    () => isSuperAdmin.value || isAdmin.value || isResponsableMLA.value,
-  )
+  const canManagePlanning = computed(() => can('PLANNING_WRITE'))
 
   // --- ACTIONS ---
 
@@ -162,6 +156,7 @@ export const useAuthStore = defineStore('auth', () => {
     hasAdminAccess,
     canManageChants,
     canManagePlanning,
+    can,
     currentUser,
     login,
     logout,
