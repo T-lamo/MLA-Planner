@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { ArrowLeft, Music2, AlignLeft, Pencil, ChevronRight, Youtube } from 'lucide-vue-next'
+import {
+  ArrowLeft,
+  Music2,
+  AlignLeft,
+  Pencil,
+  ChevronRight,
+  Youtube,
+  EyeOff,
+} from 'lucide-vue-next'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 import type { ChantTransposeResponse } from '../../../types/chant'
@@ -184,19 +192,40 @@ onMounted(async () => {
       <!-- ── Lecteur YouTube ──────────────────────────────────────────── -->
       <div
         v-if="selectedChant.youtube_url"
-        class="flex items-center gap-3 rounded-2xl border border-(--color-red-100) bg-(--color-red-50) px-5 py-4"
+        class="flex items-center gap-3 rounded-2xl border px-5 py-4 transition-colors"
+        :class="showYoutubePlayer ? 'border-slate-200 bg-slate-50' : 'border-red-100 bg-red-50'"
       >
-        <Youtube class="h-5 w-5 shrink-0 text-(--color-red-500)" />
-        <span class="flex-1 text-sm font-medium text-(--color-red-700)">
-          Une vidéo YouTube est disponible pour ce chant
+        <Youtube
+          class="h-5 w-5 shrink-0"
+          :class="showYoutubePlayer ? 'text-slate-400' : 'text-red-500'"
+        />
+        <span
+          class="flex-1 text-sm font-medium"
+          :class="showYoutubePlayer ? 'text-slate-600' : 'text-red-700'"
+        >
+          {{
+            showYoutubePlayer
+              ? 'Vidéo en cours de lecture — faites défiler les paroles'
+              : 'Une vidéo YouTube est disponible pour ce chant'
+          }}
         </span>
         <button
+          v-if="!showYoutubePlayer"
           type="button"
-          class="inline-flex items-center gap-1.5 rounded-lg bg-(--color-red-600) px-4 py-2 text-sm font-medium text-white hover:bg-(--color-red-700)"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
           @click="showYoutubePlayer = true"
         >
           <Youtube class="h-4 w-4" />
           Regarder
+        </button>
+        <button
+          v-else
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          @click="showYoutubePlayer = false"
+        >
+          <EyeOff class="h-4 w-4" />
+          Fermer
         </button>
       </div>
       <div
@@ -248,8 +277,8 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Lecteur YouTube intégré (Teleport to body) -->
-    <YoutubePlayerModal
+    <!-- Lecteur YouTube PiP (flottant desktop / bandeau mobile) -->
+    <YoutubePiP
       v-if="showYoutubePlayer && selectedChant?.youtube_url"
       :youtubeUrl="selectedChant.youtube_url"
       @close="showYoutubePlayer = false"

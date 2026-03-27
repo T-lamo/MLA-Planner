@@ -36,6 +36,7 @@ class UtilisateurRead(UtilisateurBase):
     campus_principal_id: Optional[str] = None
     name: Optional[str] = None
     roles: List[RoleRead] = []
+    capabilities: List[str] = []
 
     # password n’est jamais exposé
 
@@ -64,6 +65,7 @@ class UtilisateurRead(UtilisateurBase):
             "campus_principal_id": getattr(data, "campus_principal_id", None),
             "name": getattr(data, "name", None),
             "roles": roles,
+            "capabilities": getattr(data, "capabilities", []),
         }
 
 

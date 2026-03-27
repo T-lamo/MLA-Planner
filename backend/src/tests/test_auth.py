@@ -1,13 +1,23 @@
-from datetime import timedelta
+from datetime import date, timedelta
 
+import casbin  # type: ignore[import-untyped]
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlmodel import Session
 
+from core.auth import casbin_enforcer as _casbin_mod
+from core.auth.auth_dependencies import (
+    CasbinGuard,
+    ScopedRoleChecker,
+    _affectation_valide,
+    get_active_campus,
+)
+from core.auth.auth_service import AuthService
 from core.auth.security import create_access_token
+from core.exceptions.app_exception import AppException
 from core.settings import settings as stng
 from mla_enum import RoleName
 from models import Utilisateur
@@ -232,3 +242,357 @@ def test_logout_and_token_invalidation(client: TestClient, test_user: Utilisateu
     revoked_res = client.get("/auth/users/me", headers=headers)
     assert revoked_res.status_code == 401
     assert revoked_res.json()["detail"] == "Cette session a été fermée (déconnexion)"
+
+
+# --- TESTS UNITAIRES : _affectation_valide ---
+
+
+class _Aff:
+    """Stub minimal pour tester _affectation_valide sans SQLModel."""
+
+    def __init__(
+        self,
+        active: bool = True,
+        date_debut: date | None = None,
+        date_fin: date | None = None,
+    ) -> None:
+        self.active = active
+        self.dateDebut = date_debut  # pylint: disable=invalid-name
+        self.dateFin = date_fin  # pylint: disable=invalid-name
+
+
+def test_affectation_valide_inactive() -> None:
+    assert _affectation_valide(_Aff(active=False)) is False
+
+
+def test_affectation_valide_date_fin_passee() -> None:
+    hier = date.today() - timedelta(days=1)
+    assert _affectation_valide(_Aff(date_fin=hier)) is False
+
+
+def test_affectation_valide_date_debut_future() -> None:
+    demain = date.today() + timedelta(days=1)
+    assert _affectation_valide(_Aff(date_debut=demain)) is False
+
+
+def test_affectation_valide_sans_dates() -> None:
+    assert _affectation_valide(_Aff()) is True
+
+
+def test_affectation_valide_dans_fenetre() -> None:
+    hier = date.today() - timedelta(days=1)
+    demain = date.today() + timedelta(days=1)
+    assert _affectation_valide(_Aff(date_debut=hier, date_fin=demain)) is True
+
+
+# --- TESTS UNITAIRES : ScopedRoleChecker ---
+
+
+class _FakeRequest:
+    """Stub minimal remplaçant fastapi.Request pour les tests unitaires."""
+
+    def __init__(
+        self,
+        path_params: dict | None = None,
+        query_params: dict | None = None,
+        headers: dict | None = None,
+    ) -> None:
+        self.path_params = path_params or {}
+        self.query_params = query_params or {}
+        self.headers = headers or {}
+
+
+class _FakePerm:
+    def __init__(self, code: str) -> None:
+        self.code = code
+
+
+class _FakeRole:
+    def __init__(self, libelle: str, permissions: list | None = None) -> None:
+        self.libelle = libelle
+        self.permissions = permissions or []
+
+
+class _FakeContexte:
+    def __init__(self, ministere_id: str) -> None:
+        self.ministere_id = ministere_id
+
+
+class _FakeAff:
+    """Stub AffectationRole avec contextes et permissions optionnels."""
+
+    def __init__(
+        self,
+        libelle: str,
+        contextes: list | None = None,
+        active: bool = True,
+        date_debut: date | None = None,
+        date_fin: date | None = None,
+        permissions: list | None = None,
+    ) -> None:
+        self.role = _FakeRole(libelle, permissions)
+        self.contextes = contextes or []
+        self.active = active
+        self.dateDebut = date_debut  # pylint: disable=invalid-name
+        self.dateFin = date_fin  # pylint: disable=invalid-name
+
+
+class _FakeUser:
+    def __init__(self, affectations: list) -> None:
+        self.affectations = affectations
+        self.id: str = ""
+        self.membre_id: str | None = None
+        self.membre: object = None
+
+
+def test_scoped_checker_global_role_no_contexte() -> None:
+    """Affectation sans contexte → rôle global, accès accordé."""
+    checker = ScopedRoleChecker(["RESPONSABLE_MLA"])
+    user = _FakeUser([_FakeAff(RoleName.RESPONSABLE_MLA)])
+    req = _FakeRequest(path_params={"ministere_id": "min-abc"})
+    result = checker(req, user)  # type: ignore[arg-type]
+    assert "RESPONSABLE_MLA" in result
+
+
+def test_scoped_checker_contexte_match() -> None:
+    """Contexte présent, ministere_id correspond → accès accordé."""
+    checker = ScopedRoleChecker(["RESPONSABLE_MLA"])
+    ctx = _FakeContexte("min-louange")
+    user = _FakeUser([_FakeAff(RoleName.RESPONSABLE_MLA, contextes=[ctx])])
+    req = _FakeRequest(path_params={"ministere_id": "min-louange"})
+    result = checker(req, user)  # type: ignore[arg-type]
+    assert "RESPONSABLE_MLA" in result
+
+
+def test_scoped_checker_contexte_mismatch() -> None:
+    """Contexte présent, ministere_id différent → 403."""
+    checker = ScopedRoleChecker(["RESPONSABLE_MLA"])
+    ctx = _FakeContexte("min-louange")
+    user = _FakeUser([_FakeAff(RoleName.RESPONSABLE_MLA, contextes=[ctx])])
+    req = _FakeRequest(path_params={"ministere_id": "min-technique"})
+    with pytest.raises(HTTPException) as exc:
+        checker(req, user)  # type: ignore[arg-type]
+    assert exc.value.status_code == 403
+
+
+def test_scoped_checker_super_admin_bypass() -> None:
+    """Super Admin bypass total : contexte restreint ignoré."""
+    checker = ScopedRoleChecker(["RESPONSABLE_MLA"])
+    ctx = _FakeContexte("min-louange")
+    user = _FakeUser([_FakeAff(RoleName.SUPER_ADMIN, contextes=[ctx])])
+    req = _FakeRequest(path_params={"ministere_id": "min-technique"})
+    result = checker(req, user)  # type: ignore[arg-type]
+    assert result == ["SUPER_ADMIN"]
+
+
+def test_scoped_checker_no_ministere_id_in_request() -> None:
+    """Sans ministere_id dans la requête, le check de scope est ignoré (graceful)."""
+    checker = ScopedRoleChecker(["RESPONSABLE_MLA"])
+    ctx = _FakeContexte("min-louange")
+    user = _FakeUser([_FakeAff(RoleName.RESPONSABLE_MLA, contextes=[ctx])])
+    req = _FakeRequest()
+    result = checker(req, user)  # type: ignore[arg-type]
+    assert "RESPONSABLE_MLA" in result
+
+
+# --- TESTS UNITAIRES/INTÉGRATION : get_active_campus ---
+
+
+def test_get_active_campus_from_header(
+    session: Session, test_campus, test_membre, test_user
+):
+    """Header X-Campus-Id présent + membre lié → retourne campus_id."""
+    test_user.membre_id = test_membre.id
+    session.add(test_user)
+    session.flush()
+
+    req = _FakeRequest(headers={"X-Campus-Id": test_campus.id})
+    campus_id = get_active_campus(
+        req, db=session, user=test_user  # type: ignore[arg-type]
+    )
+    assert campus_id == test_campus.id
+
+
+def test_get_active_campus_from_principal(
+    session: Session, test_campus, test_membre, test_user
+):
+    """Pas de header, campus_principal_id défini + membre lié → retourne campus_id."""
+    test_membre.campus_principal_id = test_campus.id
+    test_user.membre_id = test_membre.id
+    test_user.membre = test_membre
+    session.add(test_membre)
+    session.add(test_user)
+    session.flush()
+
+    req = _FakeRequest()
+    campus_id = get_active_campus(
+        req, db=session, user=test_user  # type: ignore[arg-type]
+    )
+    assert campus_id == test_campus.id
+
+
+def test_get_active_campus_no_campus_raises_400() -> None:
+    """Ni header ni campus_principal_id → AppException AUTH_007 (400)."""
+    user = _FakeUser([])
+    user.membre_id = None
+    user.membre = None
+    req = _FakeRequest()
+    with pytest.raises(AppException) as exc:
+        get_active_campus(req, db=None, user=user)  # type: ignore[arg-type]
+    assert exc.value.http_status == 400
+
+
+def test_get_active_campus_unlinked_member_raises_403(
+    session: Session, test_campus, test_membre, test_user
+):
+    """Campus fourni mais membre non lié → AppException AUTH_008 (403)."""
+    other_campus_id = "campus-not-linked"
+    test_user.membre_id = test_membre.id
+    session.add(test_user)
+    session.flush()
+
+    req = _FakeRequest(headers={"X-Campus-Id": other_campus_id})
+    with pytest.raises(AppException) as exc:
+        get_active_campus(req, db=session, user=test_user)  # type: ignore[arg-type]
+    assert exc.value.http_status == 403
+
+
+def test_get_active_campus_super_admin_bypass() -> None:
+    """Super Admin avec campus non lié → bypass, retourne campus_id."""
+    user = _FakeUser([_FakeAff(RoleName.SUPER_ADMIN)])
+    user.membre_id = None
+    user.membre = None
+    req = _FakeRequest(headers={"X-Campus-Id": "campus-xyz"})
+    campus_id = get_active_campus(req, db=None, user=user)  # type: ignore[arg-type]
+    assert campus_id == "campus-xyz"
+
+
+# --- TESTS UNITAIRES : CasbinGuard ---
+
+
+def _make_test_enforcer() -> casbin.Enforcer:
+    """Enforcer Casbin en mémoire (pas de DB) pour les tests unitaires."""
+    enf = casbin.Enforcer(_casbin_mod.CONF_PATH)
+    enf.add_policy(RoleName.ADMIN.name, "*", "chants", "write")
+    enf.add_policy(RoleName.MEMBRE_MLA.name, "*", "chants", "read")
+    enf.add_grouping_policy("user-admin", RoleName.ADMIN.name, "*")
+    enf.add_grouping_policy("user-membre", RoleName.MEMBRE_MLA.name, "*")
+    return enf
+
+
+def test_casbin_guard_allows_matching_policy(monkeypatch) -> None:  # type: ignore
+    """Policy correspondante → accès accordé, user.id retourné."""
+    monkeypatch.setattr(_casbin_mod, "get_enforcer", _make_test_enforcer)
+    user = _FakeUser([])
+    user.id = "user-admin"
+    guard = CasbinGuard("chants", "write")
+    result = guard(_FakeRequest(), user)  # type: ignore[arg-type]
+    assert "user-admin" in result
+
+
+def test_casbin_guard_denies_missing_policy(monkeypatch) -> None:  # type: ignore
+    """Policy absente pour la ressource/action → 403."""
+    monkeypatch.setattr(_casbin_mod, "get_enforcer", _make_test_enforcer)
+    user = _FakeUser([])
+    user.id = "user-membre"
+    guard = CasbinGuard("chants", "write")
+    with pytest.raises(HTTPException) as exc:
+        guard(_FakeRequest(), user)  # type: ignore[arg-type]
+    assert exc.value.status_code == 403
+
+
+def test_casbin_guard_fallback_when_enforcer_none(monkeypatch) -> None:  # type: ignore
+    """Enforcer non initialisé → délègue au RoleChecker (fallback_roles)."""
+    monkeypatch.setattr(_casbin_mod, "get_enforcer", lambda: None)
+    user = _FakeUser([_FakeAff(RoleName.ADMIN)])
+    guard = CasbinGuard("chants", "write", fallback_roles=["ADMIN"])
+    result = guard(_FakeRequest(), user)  # type: ignore[arg-type]
+    assert "ADMIN" in result
+
+
+def test_casbin_guard_super_admin_bypass(monkeypatch) -> None:  # type: ignore
+    """Super Admin bypass Casbin même sans policy explicite."""
+    monkeypatch.setattr(_casbin_mod, "get_enforcer", _make_test_enforcer)
+    user = _FakeUser([_FakeAff(RoleName.SUPER_ADMIN)])
+    user.id = "super-admin"
+    guard = CasbinGuard("chants", "write")
+    result = guard(_FakeRequest(), user)  # type: ignore[arg-type]
+    assert result == [RoleName.SUPER_ADMIN.name]
+
+
+# --- TESTS UNITAIRES : _build_capabilities (RBAC-7) ---
+
+
+def test_build_capabilities_empty_no_affectations() -> None:
+    """Utilisateur sans affectation → liste vide."""
+    service = AuthService.__new__(AuthService)
+    user = _FakeUser([])
+    # pylint: disable=protected-access
+    caps = service._build_capabilities(user)  # type: ignore[arg-type]
+    assert caps == []
+
+
+def test_build_capabilities_deduplication() -> None:
+    """Permissions dupliquées sur deux rôles → une seule entrée."""
+    service = AuthService.__new__(AuthService)
+    perms = [_FakePerm("CHANT_READ"), _FakePerm("PLANNING_READ")]
+    aff1 = _FakeAff(RoleName.MEMBRE_MLA, permissions=perms)
+    aff2 = _FakeAff(RoleName.MEMBRE_MLA, permissions=[_FakePerm("CHANT_READ")])
+    user = _FakeUser([aff1, aff2])
+    # pylint: disable=protected-access
+    caps = service._build_capabilities(user)  # type: ignore[arg-type]
+    assert caps == sorted({"CHANT_READ", "PLANNING_READ"})
+
+
+def test_build_capabilities_inactive_affectation_excluded() -> None:
+    """Affectation inactive → permissions exclues."""
+    service = AuthService.__new__(AuthService)
+    aff = _FakeAff(
+        RoleName.RESPONSABLE_MLA,
+        active=False,
+        permissions=[_FakePerm("CHANT_WRITE")],
+    )
+    user = _FakeUser([aff])
+    # pylint: disable=protected-access
+    caps = service._build_capabilities(user)  # type: ignore[arg-type]
+    assert caps == []
+
+
+def test_build_capabilities_sorted() -> None:
+    """La liste retournée est triée alphabétiquement."""
+    service = AuthService.__new__(AuthService)
+    perms = [_FakePerm("PLANNING_WRITE"), _FakePerm("CHANT_READ")]
+    aff = _FakeAff(RoleName.RESPONSABLE_MLA, permissions=perms)
+    user = _FakeUser([aff])
+    # pylint: disable=protected-access
+    caps = service._build_capabilities(user)  # type: ignore[arg-type]
+    assert caps == sorted(caps)
+
+
+# --- TEST INTÉGRATION : /auth/me retourne capabilities ---
+
+
+def test_me_returns_capabilities(client: TestClient, test_user: Utilisateur) -> None:
+    """GET /auth/users/me → réponse contient la clé 'capabilities' (liste)."""
+    token, _ = create_access_token(data={"sub": test_user.username})
+    response = client.get(
+        "/auth/users/me", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert "capabilities" in data
+    assert isinstance(data["capabilities"], list)
+
+
+def test_login_response_contains_capabilities(
+    client: TestClient, test_user: Utilisateur
+) -> None:
+    """POST /auth/token → user.capabilities présent dans la réponse."""
+    response = client.post(
+        "/auth/token",
+        data={"username": "active_user", "password": "password123"},
+    )
+    assert response.status_code == status.HTTP_200_OK
+    user_data = response.json()["user"]
+    assert "capabilities" in user_data
+    assert isinstance(user_data["capabilities"], list)
