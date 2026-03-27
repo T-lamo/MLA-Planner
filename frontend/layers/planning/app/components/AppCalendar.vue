@@ -37,10 +37,12 @@ import type {
   EventContentArg,
   EventDropArg,
 } from '@fullcalendar/core'
-import type { PlanningEvent } from '../types/planning.types'
+import type { PlanningEvent, PlanningViewPerspective } from '../types/planning.types'
 
 const props = defineProps<{
   events: PlanningEvent[]
+  perspective?: PlanningViewPerspective
+  userMinistereIds?: Set<string>
 }>()
 
 const emit = defineEmits<{
@@ -164,9 +166,20 @@ const calendarOptions = computed<CalendarOptions>(() => ({
     }),
 
   eventClassNames: (arg: { event: EventApi }) => {
+    const mId = String(arg.event.extendedProps.ministereId ?? '')
+    const isDimmed =
+      props.perspective === 'CAMPUS' &&
+      !!props.userMinistereIds &&
+      props.userMinistereIds.size > 0 &&
+      !props.userMinistereIds.has(mId)
     const isPersonal = arg.event.extendedProps.isPersonal ? 'is-personal' : ''
     const status = String(arg.event.extendedProps.statut || 'brouillon').toLowerCase()
-    return ['mla-calendar-event', `status-${status}`, isPersonal].filter(Boolean)
+    return [
+      'mla-calendar-event',
+      `status-${status}`,
+      isPersonal,
+      isDimmed ? 'is-dimmed' : '',
+    ].filter(Boolean)
   },
 
   // Vue liste : rendu enrichi (dot + titre + badge statut + méta campus/ministère)
@@ -311,6 +324,20 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   background-color: rgba(255, 255, 255, 0.9);
   pointer-events: none;
   z-index: 2;
+}
+
+/* ── Vue CAMPUS — ministères non rattachés à l'utilisateur ─────────── */
+/* Chaque ministère conserve sa couleur propre, simplement atténuée     */
+.mla-calendar-event.is-dimmed {
+  opacity: 0.38;
+  filter: saturate(0.4);
+  transition:
+    opacity 0.2s ease,
+    filter 0.2s ease;
+}
+.mla-calendar-event.is-dimmed:hover {
+  opacity: 0.7;
+  filter: saturate(0.75);
 }
 
 /* ── Statuts ────────────────────────────────────────────────────────── */
