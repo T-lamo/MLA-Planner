@@ -112,7 +112,9 @@ function selectedCount(roleId: string): number {
 
 async function save(roleId: string) {
   ensureLocal(roleId)
-  await roleStore.updateRolePermissions(roleId, [...localSelections.value[roleId]])
+  await roleStore.updateRolePermissions(roleId, [
+    ...(localSelections.value[roleId] ?? new Set<string>()),
+  ])
   Reflect.deleteProperty(localSelections.value, roleId)
   savedRoles.value.add(roleId)
   setTimeout(() => savedRoles.value.delete(roleId), 2500)
@@ -273,7 +275,7 @@ function catMeta(prefix: string): CatMeta {
 const groupedCapabilities = computed(() => {
   const groups: Record<string, string[]> = {}
   for (const cap of roleStore.capabilities) {
-    const prefix = cap.code.split('_')[0]
+    const prefix = cap.code.split('_')[0] ?? cap.code
     if (!groups[prefix]) groups[prefix] = []
     groups[prefix].push(cap.code)
   }
