@@ -189,6 +189,33 @@ PERMISSIONS: dict[str, list[str]] = {
     ],
 }
 
+# Ensemble canonique des capabilities de l'application.
+# Source de vérité : toute capability utilisée dans un RoleChecker doit figurer ici.
+# Les capabilities sont créées automatiquement au bootstrap (make db-setup-back).
+# Ne jamais créer/supprimer via l'UI — modifier ce fichier + redéployer.
+CAPABILITY_CODES: list[str] = [
+    "ACTIVITE_CREATE",
+    "ACTIVITE_MANAGE",
+    "CAMPUS_ADMIN",
+    "CHANT_READ",
+    "CHANT_WRITE",
+    "INDISPO_WRITE",
+    "MEMBRE_READ",
+    "MEMBRE_WRITE",
+    "MINISTERE_MANAGE",
+    "PLANNING_PUBLISH",
+    "PLANNING_READ",
+    "PLANNING_WRITE",
+    "POLE_MANAGE",
+    "ROLE_MANAGE",
+    "SYSTEM_MANAGE",
+    "TEMPLATE_WRITE",
+    "USER_CREATE",
+    "USER_DELETE",
+    "USER_READ",
+    "USER_UPDATE",
+]
+
 # Compte superadmin fixe (ne doit jamais être lié à un membre)
 SUPERADMIN_USERNAME = "superadmin"
 SUPERADMIN_PASSWORD = "plan123!"
