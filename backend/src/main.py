@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware  # Import indispensable
 from sqlmodel import Session
 
 from conf.db.database import Database
+from core.auth.casbin_enforcer import build_enforcer
 from core.bootstrap import bootstrap_superadmin
 from core.exceptions.exceptions_handlers import register_exception_handlers
 from core.settings import settings
@@ -18,6 +19,7 @@ async def lifespan(_app: FastAPI):
     Database.init_db()
     with Session(Database.get_engine()) as db:
         bootstrap_superadmin(db)
+        build_enforcer(db)
     yield
     Database.disconnect()
 

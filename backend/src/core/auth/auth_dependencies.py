@@ -1,6 +1,4 @@
 # core/auth/auth_dependencies.py
-from datetime import date
-from enum import Enum
 from typing import Optional
 
 import jwt
@@ -18,6 +16,7 @@ from models import Utilisateur
 from models.schema_db_model import MembreCampusLink
 
 from .auth_repository import AuthRepository
+from .auth_utils import _affectation_valide, _role_name
 
 
 def get_current_active_user(
@@ -81,28 +80,6 @@ def get_current_active_user(
     setattr(user, "_current_token_payload", payload)
 
     return user
-
-
-def _role_name(libelle: object) -> str:
-    """Normalise un libellé de rôle en nom d'enum (ex: 'SUPER_ADMIN')."""
-    if isinstance(libelle, RoleName):
-        return libelle.name
-    if isinstance(libelle, Enum):
-        return libelle.name
-    return str(libelle)
-
-
-def _affectation_valide(aff: object) -> bool:
-    """True si l'affectation est active et dans sa fenêtre de validité."""
-    today = date.today()
-    return (
-        bool(getattr(aff, "active", True))
-        and (
-            getattr(aff, "dateDebut", None) is None
-            or getattr(aff, "dateDebut") <= today
-        )
-        and (getattr(aff, "dateFin", None) is None or getattr(aff, "dateFin") >= today)
-    )
 
 
 class RoleChecker:
@@ -195,6 +172,58 @@ def _is_super_admin(user: Utilisateur) -> bool:
         for aff in user.affectations
         if aff.role and aff.role.libelle is not None and _affectation_valide(aff)
     )
+
+
+class CasbinGuard:
+    """Vérifie les autorisations via le moteur Casbin (RBAC with domains).
+
+    - obj : ressource (ex: "chants", "planning")
+    - act : action (ex: "read", "write")
+    - Si l'enforcer n'est pas encore initialisé, délègue à fallback_roles.
+    - Super Admin : bypass total.
+    - Domain résolu depuis path_params ou query_params (ministere_id).
+    """
+
+    def __init__(
+        self,
+        obj: str,
+        act: str,
+        *,
+        fallback_roles: Optional[list[str]] = None,
+    ) -> None:
+        self.obj = obj
+        self.act = act
+        self._fallback = RoleChecker(fallback_roles or [])
+
+    def __call__(
+        self,
+        request: Request,
+        user: Utilisateur = Depends(get_current_active_user),
+    ) -> list[str]:
+        from .casbin_enforcer import (  # pylint: disable=import-outside-toplevel
+            WILDCARD_DOMAIN,
+            get_enforcer,
+        )
+
+        enf = get_enforcer()
+        if enf is None:
+            return self._fallback(user)
+
+        if _is_super_admin(user):
+            return [RoleName.SUPER_ADMIN.name]
+
+        domain: str = (
+            request.path_params.get("ministere_id")
+            or request.query_params.get("ministere_id")
+            or WILDCARD_DOMAIN
+        )
+
+        if not enf.enforce(user.id, domain, self.obj, self.act):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Droits insuffisants pour cette action",
+            )
+        return [user.id]
 
 
 def get_active_campus(
