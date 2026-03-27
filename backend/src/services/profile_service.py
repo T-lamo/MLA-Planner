@@ -21,7 +21,12 @@ from models import (
 )
 from models.base_pagination import PaginatedResponse
 from models.ministere_model import MinistereSimple
-from models.schema_db_model import AffectationRole, CampusMinistereLink
+from models.schema_db_model import (
+    AffectationRole,
+    CampusMinistereLink,
+    MembreCampusLink,
+    MembreMinistereLink,
+)
 from repositories.membre_repository import _exclude_superadmin_clause
 from services.membre_service import MembreService
 
@@ -273,6 +278,53 @@ class ProfileService(
             for m in profil.ministeres
             if m.id in campus_min_ids
         ]
+
+    def list_by_ministere(
+        self,
+        ministere_id: str,
+        *,
+        requesting_membre_id: Optional[str] = None,
+        bypass_check: bool = False,
+        campus_id: Optional[str] = None,
+    ) -> List[ProfilReadFull]:
+        """Membres liés à un ministère donné, optionnellement filtrés par campus.
+
+        bypass_check=True pour les admins (CAMPUS_ADMIN).
+        Sinon, requesting_membre_id doit appartenir au ministère.
+        campus_id filtre les résultats sur un campus spécifique.
+        """
+        if not bypass_check:
+            if not requesting_membre_id:
+                raise AppException(ErrorRegistry.PROFIL_MINISTERE_ACCESS_DENIED)
+            membre = self._get_db_obj(requesting_membre_id)
+            if not any(m.id == ministere_id for m in membre.ministeres):
+                raise AppException(ErrorRegistry.PROFIL_MINISTERE_ACCESS_DENIED)
+        try:
+            statement = (
+                select(Membre)
+                .join(
+                    MembreMinistereLink,
+                    cast(Any, MembreMinistereLink.membre_id == Membre.id),
+                )
+                .where(MembreMinistereLink.ministere_id == ministere_id)
+                .where(col(cast(Any, Membre.deleted_at)) == None)  # noqa: E711
+            )
+            if campus_id:
+                statement = statement.join(
+                    MembreCampusLink,
+                    cast(Any, MembreCampusLink.membre_id == Membre.id),
+                ).where(MembreCampusLink.campus_id == campus_id)
+            statement = statement.options(
+                selectinload(cast(Any, Membre.utilisateur)),
+                selectinload(cast(Any, Membre.campuses)),
+            ).distinct()
+            items = self.db.exec(statement).unique().all()
+            return [ProfilReadFull.model_validate(i) for i in items]
+        except AppException:
+            raise
+        except Exception as e:
+            logger.error(f"Erreur list_by_ministere: {e}")
+            raise AppException(ErrorRegistry.CORE_DATABASE_ERROR) from e
 
     def list_all(self, campus_id: Optional[str] = None) -> List[ProfilReadFull]:
         try:

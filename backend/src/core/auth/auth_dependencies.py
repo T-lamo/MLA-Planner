@@ -109,6 +109,49 @@ class RoleChecker:
         return user_roles
 
 
+class CapabilityChecker:
+    """Vérifie si l'utilisateur possède au moins une des capabilities requises.
+
+    Priorité : champ 'capabilities' du JWT payload.
+    Fallback : lecture directe depuis les affectations/permissions chargées en DB.
+    Super Admin bypasse le check.
+    """
+
+    def __init__(self, required: list[str]) -> None:
+        self.required = required
+
+    def __call__(
+        self, user: Utilisateur = Depends(get_current_active_user)
+    ) -> Utilisateur:
+        if _is_super_admin(user):
+            return user
+
+        caps = self._resolve_caps(user)
+
+        if not any(cap in caps for cap in self.required):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Droits insuffisants pour cette action",
+            )
+        return user
+
+    @staticmethod
+    def _resolve_caps(user: Utilisateur) -> list[str]:
+        """Caps depuis JWT si disponibles, sinon depuis les affectations DB."""
+        payload = getattr(user, "_current_token_payload", {})
+        raw = payload.get("capabilities") if isinstance(payload, dict) else None
+        if isinstance(raw, list):
+            return [c for c in raw if isinstance(c, str)]
+        # Fallback : tokens émis avant l'ajout du champ capabilities au JWT
+        caps: set[str] = set()
+        for aff in user.affectations:
+            if aff.role and _affectation_valide(aff):
+                for perm in aff.role.permissions:
+                    if perm.code:
+                        caps.add(perm.code)
+        return list(caps)
+
+
 class ScopedRoleChecker:
     """Vérifie le rôle ET le scope ministère via AffectationContexte.
 

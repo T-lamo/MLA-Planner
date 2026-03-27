@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { ref, reactive, watch } from 'vue'
 import { useUIStore } from './useUiStore'
 import type { ProfilReadFull, ProfilCreateFull, ProfilUpdateFull } from '../../types/profiles'
+import type { MinistereSimple } from '../../types/ministere'
 import { ProfileRepository } from '../repositories/ProfileRepository'
 
 export const useProfileStore = defineStore('profile', () => {
@@ -13,6 +14,9 @@ export const useProfileStore = defineStore('profile', () => {
   const profiles = ref<ProfilReadFull[]>([])
   const total = ref(0)
   const loading = ref(false)
+  const myMinisteres = ref<MinistereSimple[]>([])
+  const profilesByMinistere = ref<Record<string, ProfilReadFull[]>>({})
+  const loadingMinistere = ref(false)
 
   const pagination = reactive({
     limit: 10,
@@ -97,6 +101,34 @@ export const useProfileStore = defineStore('profile', () => {
     }
   }
 
+  async function fetchMyMinisteres(campusId: string) {
+    try {
+      myMinisteres.value = await repository.getMyMinisteresByCampus(campusId)
+    } catch {
+      // errors handled globally
+    }
+  }
+
+  function clearMinistereCache() {
+    profilesByMinistere.value = {}
+    myMinisteres.value = []
+  }
+
+  async function fetchProfilesByMinistere(ministereId: string, campusId: string) {
+    const cacheKey = `${campusId}:${ministereId}`
+    loadingMinistere.value = true
+    try {
+      profilesByMinistere.value[cacheKey] = await repository.getAllByMinistere(
+        ministereId,
+        campusId,
+      )
+    } catch {
+      // errors handled globally
+    } finally {
+      loadingMinistere.value = false
+    }
+  }
+
   watch(
     () => uiStore.selectedCampusId,
     () => {
@@ -110,10 +142,16 @@ export const useProfileStore = defineStore('profile', () => {
     profiles,
     total,
     loading,
+    myMinisteres,
+    profilesByMinistere,
+    loadingMinistere,
     pagination,
     fetchProfiles,
     createProfile,
     updateProfile,
     deleteProfile,
+    fetchMyMinisteres,
+    fetchProfilesByMinistere,
+    clearMinistereCache,
   }
 })
