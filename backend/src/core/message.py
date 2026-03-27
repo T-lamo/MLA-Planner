@@ -94,6 +94,16 @@ class ErrorRegistry:
         message="Échec de la création du template de planning.",
         http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
+    PLAN_016 = ErrorDetail(
+        code="PLAN_016",
+        message="Accès refusé : vous n'appartenez pas à ce ministère.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
+    PLAN_017 = ErrorDetail(
+        code="PLAN_017",
+        message="Accès refusé : vous n'appartenez pas à ce campus.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
     TMPL_003 = ErrorDetail(
         code="TMPL_003",
         message="Template introuvable.",
