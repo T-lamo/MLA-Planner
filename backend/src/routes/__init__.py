@@ -6,6 +6,7 @@ from core.auth.auth_route import router as auth_router
 from notification.notification_router import router as notification
 
 from .activite_router import router as activite  # Doit être après planning pour les FK
+from .admin_router import router as admin
 from .affectation_router import me_router as affectation_me  # Routes /me — avant /{id}
 from .affectation_router import (
     router as affectation,  # Doit être après planning pour les FK
@@ -55,5 +56,6 @@ router.include_router(team)
 router.include_router(notification)
 router.include_router(campus_config)  # Campus Configuration (Super Admin)
 router.include_router(chant)  # Songbook
+router.include_router(admin)  # Admin capabilities & rôles
 
 __all__ = ["router"]

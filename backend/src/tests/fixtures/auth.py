@@ -2,7 +2,7 @@ import pytest
 from sqlmodel import Session, select
 
 from core.auth.security import create_access_token, get_password_hash
-from mla_enum import RoleName
+from mla_enum import RoleName  # noqa: F401 — conservé pour token tests
 from models import AffectationRole, Role, Utilisateur
 
 
@@ -31,10 +31,10 @@ def test_admin(session: Session) -> Utilisateur:
     """Crée un administrateur avec son rôle (Get or Create)."""
     # 1. Gestion du rôle
     admin_role = session.exec(
-        select(Role).where(Role.libelle == RoleName.ADMIN)
+        select(Role).where(Role.libelle == RoleName.ADMIN.value)
     ).first()
     if not admin_role:
-        admin_role = Role(libelle=RoleName.ADMIN)
+        admin_role = Role(libelle=RoleName.ADMIN.value)
         session.add(admin_role)
         session.flush()
 
@@ -83,10 +83,10 @@ def inactive_user(session: Session) -> Utilisateur:
 def test_superadmin(session: Session) -> Utilisateur:
     """Crée un superadmin avec son rôle (Get or Create)."""
     super_role = session.exec(
-        select(Role).where(Role.libelle == RoleName.SUPER_ADMIN)
+        select(Role).where(Role.libelle == RoleName.SUPER_ADMIN.value)
     ).first()
     if not super_role:
-        super_role = Role(libelle=RoleName.SUPER_ADMIN)
+        super_role = Role(libelle=RoleName.SUPER_ADMIN.value)
         session.add(super_role)
         session.flush()
 

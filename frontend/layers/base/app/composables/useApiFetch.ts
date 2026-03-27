@@ -2,6 +2,7 @@ import { defu } from 'defu'
 import type { NitroFetchOptions, NitroFetchRequest } from 'nitropack'
 import type { ApiErrorResponse, EnhancedApiError } from '../../types/api'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
+import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 
 interface RequestInterceptorCtx {
   options: { headers?: Record<string, string> }
@@ -21,6 +22,7 @@ let _isRefreshing = false
 function getApiConfig() {
   const config = useRuntimeConfig()
   const authStore = useAuthStore()
+  const uiStore = useUIStore()
   const route = useRoute()
   const { notifyError } = useErrorHandler()
 
@@ -37,6 +39,12 @@ function getApiConfig() {
         options.headers = {
           ...options.headers,
           Authorization: `Bearer ${authStore.token}`,
+        }
+      }
+      if (uiStore.selectedCampusId) {
+        options.headers = {
+          ...(options.headers ?? {}),
+          'X-Campus-Id': uiStore.selectedCampusId,
         }
       }
     },
@@ -62,6 +70,13 @@ function getApiConfig() {
           }
         }
         return
+      }
+
+      // 403 : le rôle a peut-être expiré depuis la dernière connexion (RBAC-1).
+      // Re-sync silencieux des droits → les computed canManagePlanning / hasAdminAccess
+      // se mettront à jour réactivement et masqueront les boutons non autorisés.
+      if (response.status === 403 && !isLoginRequest) {
+        await authStore.fetchMe().catch(() => {})
       }
 
       const errorPayload: EnhancedApiError = {

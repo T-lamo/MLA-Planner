@@ -40,7 +40,7 @@ function handleActionClick(notifId: string, action: NotificationAction): void {
 
 <template>
   <div
-    class="pointer-events-none fixed inset-x-0 bottom-4 z-[100] flex flex-col items-center gap-3 px-4 sm:px-6 md:top-4 md:right-4 md:bottom-auto md:left-auto md:w-full md:max-w-sm md:items-end"
+    class="pointer-events-none fixed inset-x-0 bottom-4 z-10002 flex flex-col items-center gap-3 px-4 sm:px-6 md:top-4 md:right-4 md:bottom-auto md:left-auto md:w-full md:max-w-sm md:items-end"
   >
     <TransitionGroup
       enterActiveClass="transition duration-300 ease-out"

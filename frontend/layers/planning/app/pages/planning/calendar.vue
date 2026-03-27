@@ -163,6 +163,8 @@
     <AppCalendar
       v-else
       :events="filteredEvents"
+      :perspective="perspective"
+      :userMinistereIds="userMinistereIds"
       @event-click="onEventClick"
       @date-select="onDateSelect"
       @event-drop="onEventDrop"
@@ -215,6 +217,7 @@ const {
   perspective,
   activeMinistereId,
   ministeres,
+  ministereIds,
   ministereColorMap,
   rawPlannings,
   events,
@@ -226,6 +229,9 @@ const {
   patchLocalPlanning,
   removeLocalPlanning,
 } = usePlanning()
+
+/** IDs des ministères de l'utilisateur connecté — utilisé pour le dimming vue CAMPUS */
+const userMinistereIds = computed<Set<string>>(() => new Set(ministereIds.value))
 
 const { canWrite } = usePlanningPermissions()
 const planningRepo = new PlanningRepository()

@@ -32,14 +32,21 @@ export const useAuthStore = defineStore('auth', () => {
 
   const currentUser = computed(() => user.value)
 
-  const isSuperAdmin = computed(() => user.value?.roles?.includes('Super Admin') ?? false)
-  const isAdmin = computed(() => user.value?.roles?.includes('Admin') ?? false)
-  const isResponsableMLA = computed(() => user.value?.roles?.includes('Responsable MLA') ?? false)
-  const hasAdminAccess = computed(() => isSuperAdmin.value || isAdmin.value)
-  // Accès gestion des chants : Super Admin + Admin + Responsable MLA
-  const canManageChants = computed(
-    () => isSuperAdmin.value || isAdmin.value || isResponsableMLA.value,
-  )
+  /** Vérifie si l'utilisateur possède la capability donnée. */
+  function can(capability: string): boolean {
+    return user.value?.capabilities?.includes(capability) ?? false
+  }
+
+  const isSuperAdmin = computed(() => can('SYSTEM_MANAGE'))
+  const isAdmin = computed(() => can('CAMPUS_ADMIN') && !can('SYSTEM_MANAGE'))
+  const isResponsableMLA = computed(() => can('PLANNING_WRITE') && !can('CAMPUS_ADMIN'))
+  const hasAdminAccess = computed(() => can('CAMPUS_ADMIN'))
+
+  /** Droits module Carnet de chants. */
+  const canManageChants = computed(() => can('CHANT_WRITE'))
+
+  /** Droits module Planning — indépendant de canManageChants. */
+  const canManagePlanning = computed(() => can('PLANNING_WRITE'))
 
   // --- ACTIONS ---
 
@@ -148,6 +155,8 @@ export const useAuthStore = defineStore('auth', () => {
     isResponsableMLA,
     hasAdminAccess,
     canManageChants,
+    canManagePlanning,
+    can,
     currentUser,
     login,
     logout,

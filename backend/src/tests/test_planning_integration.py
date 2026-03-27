@@ -145,3 +145,45 @@ def test_api_update_full_conflict_rollback(
         select(Activite).where(Activite.id == planning.activite_id)
     ).first()
     assert db_act.type == old_type
+
+
+# --- RBAC-3 : sécurisation des endpoints ---
+
+
+def test_list_by_ministere_requires_auth(client, test_ministere):
+    """GET /by-ministere/{id} sans token → 401."""
+    response = client.get(f"/plannings/by-ministere/{test_ministere.id}")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_list_by_ministere_denies_unlinked_user(client, user_headers, test_ministere):
+    """Un utilisateur sans membre lié au ministère reçoit 403."""
+    response = client.get(
+        f"/plannings/by-ministere/{test_ministere.id}",
+        headers=user_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+def test_list_by_ministere_allows_admin(client, admin_headers, test_ministere):
+    """Un administrateur peut accéder aux plannings du ministère."""
+    response = client.get(
+        f"/plannings/by-ministere/{test_ministere.id}",
+        headers=admin_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+
+def test_list_by_campus_requires_auth(client, test_campus):
+    """GET /by-campus/{id} sans token → 401."""
+    response = client.get(f"/plannings/by-campus/{test_campus.id}")
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+
+def test_list_by_campus_denies_unlinked_user(client, user_headers, test_campus):
+    """Un utilisateur sans membre lié au campus reçoit 403."""
+    response = client.get(
+        f"/plannings/by-campus/{test_campus.id}",
+        headers=user_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
