@@ -54,6 +54,7 @@ router = factory.router
         "Crée un nouveau créneau lié à un planning spécifique. "
         "Vérifie la cohérence temporelle avec l'activité parente."
     ),
+    dependencies=[planning_manager],
 )
 def create_slot_for_planning(
     planning_id: str,
@@ -73,6 +74,7 @@ def create_slot_for_planning(
     status_code=status.HTTP_201_CREATED,
     summary="Création directe de créneau",
     description="Permet de créer un créneau en spécifiant directement le planning_id.",
+    dependencies=[planning_manager],
 )
 def add_slot(slot_data: SlotCreate, db: Session = Depends(Database.get_db_for_route)):
     service = PlanningServiceSvc(db)
@@ -167,7 +169,9 @@ def delete_full_planning_endpoint(
 
 @router.get("/{planning_id}/full", response_model=DataResponse[PlanningFullRead])
 def read_full_planning(
-    planning_id: str, db: Session = Depends(Database.get_db_for_route)
+    planning_id: str,
+    db: Session = Depends(Database.get_db_for_route),
+    _: Utilisateur = Depends(get_current_active_user),
 ):
     svc = PlanningServiceSvc(db)
     return {"data": svc.get_full_planning(planning_id)}
@@ -206,10 +210,10 @@ def list_by_ministere(
     ministere_id: str,
     campus_id: Optional[str] = Query(None),
     db: Session = Depends(Database.get_db_for_route),
-    _: Utilisateur = Depends(get_current_active_user),
+    current_user: Utilisateur = Depends(get_current_active_user),
 ):
     svc = PlanningServiceSvc(db)
-    return {"data": svc.list_by_ministere(ministere_id, campus_id)}
+    return {"data": svc.list_by_ministere(ministere_id, current_user, campus_id)}
 
 
 @router.get(
@@ -224,10 +228,10 @@ def list_by_ministere(
 def list_by_campus(
     campus_id: str,
     db: Session = Depends(Database.get_db_for_route),
-    _: Utilisateur = Depends(get_current_active_user),
+    current_user: Utilisateur = Depends(get_current_active_user),
 ):
     svc = PlanningServiceSvc(db)
-    return {"data": svc.list_by_campus(campus_id)}
+    return {"data": svc.list_by_campus(campus_id, current_user)}
 
 
 # Garantit que les routes littérales (ex: /by-ministere/..., /full, /slots)
