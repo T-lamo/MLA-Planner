@@ -412,6 +412,13 @@
                 :collapsed="false"
                 class="pl-9"
               />
+              <SidebarLink
+                to="/admin/roles"
+                :icon="ShieldCheck"
+                label="Rôles & Droits"
+                :collapsed="false"
+                class="pl-9"
+              />
             </ul>
           </transition>
 
@@ -434,6 +441,13 @@
                     to="/admin/profiles"
                     :icon="Users"
                     label="Profils"
+                    :collapsed="false"
+                    @click="closeAdminPopup"
+                  />
+                  <SidebarLink
+                    to="/admin/roles"
+                    :icon="ShieldCheck"
+                    label="Rôles & Droits"
                     :collapsed="false"
                     @click="closeAdminPopup"
                   />
@@ -478,6 +492,7 @@ import {
   Music,
   Plus,
   Settings2,
+  ShieldCheck,
   Tag,
   Users,
 } from 'lucide-vue-next'
