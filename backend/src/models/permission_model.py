@@ -15,7 +15,7 @@ class PermissionBase(SQLModel):
 
     @field_validator("code")
     @classmethod
-    def normalize_code(cls, v: str):
+    def normalize_code(cls, v: str) -> str:
         if not v.strip():
             raise ValueError("Le code permission ne peut pas être vide")
 
@@ -57,7 +57,7 @@ class PermissionUpdate(SQLModel):
 
     @field_validator("code")
     @classmethod
-    def validate_code(cls, v):
+    def validate_code(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
 
@@ -77,4 +77,53 @@ class PermissionUpdate(SQLModel):
         return v
 
 
-__all__ = ["PermissionBase", "PermissionCreate", "PermissionRead", "PermissionUpdate"]
+class PermissionCodeRead(SQLModel):
+    """Version légère sans relation inverse (évite les refs circulaires)."""
+
+    id: str
+    code: str
+
+
+class RoleWithPermissionsRead(SQLModel):
+    """Rôle avec la liste de ses permissions — usage admin uniquement."""
+
+    id: str
+    libelle: Optional[str] = None
+    permissions: List[PermissionCodeRead] = []
+
+
+class RolePermissionsUpdate(SQLModel):
+    """Remplace les permissions d'un rôle (liste complète des codes)."""
+
+    permission_codes: List[str]
+
+
+class RoleCreate(SQLModel):
+    """Crée un nouveau rôle applicatif."""
+
+    libelle: str = Field(max_length=100)
+
+    @field_validator("libelle")
+    @classmethod
+    def normalize_libelle(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Le libellé ne peut pas être vide")
+        return v
+
+
+class CapabilityCreate(PermissionBase):
+    """Crée une nouvelle capability (hérite de la validation RESOURCE_ACTION)."""
+
+
+__all__ = [
+    "CapabilityCreate",
+    "PermissionBase",
+    "PermissionCodeRead",
+    "PermissionCreate",
+    "PermissionRead",
+    "PermissionUpdate",
+    "RoleCreate",
+    "RolePermissionsUpdate",
+    "RoleWithPermissionsRead",
+]

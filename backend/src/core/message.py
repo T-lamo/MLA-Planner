@@ -94,6 +94,16 @@ class ErrorRegistry:
         message="Échec de la création du template de planning.",
         http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
+    PLAN_016 = ErrorDetail(
+        code="PLAN_016",
+        message="Accès refusé : vous n'appartenez pas à ce ministère.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
+    PLAN_017 = ErrorDetail(
+        code="PLAN_017",
+        message="Accès refusé : vous n'appartenez pas à ce campus.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
     TMPL_003 = ErrorDetail(
         code="TMPL_003",
         message="Template introuvable.",
@@ -290,6 +300,19 @@ class ErrorRegistry:
         message="Token de rafraîchissement invalide ou expiré.",
         http_status=status.HTTP_401_UNAUTHORIZED,
     )
+    AUTH_CAMPUS_REQUIRED = ErrorDetail(
+        code="AUTH_007",
+        message=(
+            "Campus actif requis. Passez X-Campus-Id en header "
+            "ou configurez un campus principal dans votre profil."
+        ),
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    AUTH_CAMPUS_FORBIDDEN = ErrorDetail(
+        code="AUTH_008",
+        message="Vous n'êtes pas autorisé à accéder à ce campus.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
 
     # --- DOMAINE RÔLES ET CATÉGORIES (ROLE) ---
     ROLE_CAT_INVALID_CODE = ErrorDetail(
@@ -401,6 +424,16 @@ class ErrorRegistry:
     CORE_DUPLICATE = ErrorDetail(
         code="CORE_005",
         message="{resource} avec ce code ou ce nom existe déjà.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    CORE_RESOURCE_ALREADY_EXISTS = ErrorDetail(
+        code="CORE_006",
+        message="Cette ressource existe déjà.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    CORE_RESOURCE_IN_USE = ErrorDetail(
+        code="CORE_007",
+        message="Cette ressource est utilisée et ne peut pas être supprimée.",
         http_status=status.HTTP_409_CONFLICT,
     )
 

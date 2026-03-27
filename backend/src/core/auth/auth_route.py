@@ -7,6 +7,7 @@ from sqlmodel import Session
 from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from core.auth.auth_service import AuthService
+from core.auth.auth_utils import _affectation_valide
 from core.auth.models import PasswordChangeRequest, RefreshTokenRequest, Token
 from models import Utilisateur
 
@@ -81,6 +82,14 @@ async def read_users_me(
     Retourne les informations de l'utilisateur actuellement connecté
     extraites de la base de données via le token.
     """
+    caps: list[str] = sorted(
+        {
+            perm.code
+            for aff in current_user.affectations
+            if aff.role and _affectation_valide(aff)
+            for perm in aff.role.permissions
+        }
+    )
     return {
         "id": current_user.id,
         "username": current_user.username,
@@ -95,6 +104,7 @@ async def read_users_me(
             else current_user.username
         ),
         "roles": [aff.role.libelle for aff in current_user.affectations if aff.role],
+        "capabilities": caps,
     }
 
 

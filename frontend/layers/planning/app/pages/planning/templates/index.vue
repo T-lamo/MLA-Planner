@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { LayoutTemplate } from 'lucide-vue-next'
 import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
-import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
+import { usePlanningPermissions } from '../../../composables/usePlanningPermissions'
 import { usePlanningTemplateStore } from '../../../stores/usePlanningTemplateStore'
 import type {
   GenerateSeriesResponse,
@@ -15,7 +15,7 @@ const editingTemplateId = ref<string | null>(null)
 
 definePageMeta({ middleware: [] })
 
-const authStore = useAuthStore()
+const { canWrite } = usePlanningPermissions()
 const templateStore = usePlanningTemplateStore()
 const { templates, isLoading } = storeToRefs(templateStore)
 
@@ -77,8 +77,6 @@ function openGenerateSerie(tpl: PlanningTemplateListItem) {
 function onSerieGenerated(_result: GenerateSeriesResponse) {
   generateSerieTarget.value = null
 }
-
-const canWrite = computed(() => authStore.canManageChants)
 
 const columns = computed(() => [
   { key: 'nom', label: 'Nom' },

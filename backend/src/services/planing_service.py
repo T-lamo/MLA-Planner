@@ -1,15 +1,16 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, List, Optional, Sequence, cast
 
 from fastapi import BackgroundTasks
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
+from core.auth.auth_utils import _role_name
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from core.workflow_engine import WorkflowEngine, planning_transitions
-from mla_enum.custom_enum import PlanningStatusCode
+from mla_enum.custom_enum import PlanningStatusCode, RoleName
 from models import (
     Affectation,
     PlanningService,
@@ -18,6 +19,7 @@ from models import (
     PlanningServiceUpdate,
     Slot,
     SlotCreate,
+    Utilisateur,
 )
 from models.activite_model import ActiviteFullRead
 from models.membre_model import MemberAgendaResponse
@@ -27,7 +29,14 @@ from models.planning_model import (
     PlanningFullUpdate,
     ViewContext,
 )
-from models.schema_db_model import Activite, Campus, Ministere, PlanningTemplate
+from models.schema_db_model import (
+    Activite,
+    Campus,
+    MembreCampusLink,
+    MembreMinistereLink,
+    Ministere,
+    PlanningTemplate,
+)
 from notification.notification_schemas import (
     PlanningCancelledNotification,
     PlanningPublishedNotification,
@@ -42,6 +51,25 @@ from utils.utils_func import extract_field
 from .base_service import BaseService
 
 logger = logging.getLogger(__name__)
+
+
+def _is_admin_or_super(user: Utilisateur) -> bool:
+    """True si l'utilisateur possède un rôle Admin ou Super Admin actif."""
+    today = date.today()
+    for aff in user.affectations:
+        if not (aff.role and aff.role.libelle):
+            continue
+        if not aff.active:
+            continue
+        if aff.dateDebut is not None and aff.dateDebut > today:
+            continue
+        if aff.dateFin is not None and aff.dateFin < today:
+            continue
+        libelle = aff.role.libelle
+        name = _role_name(libelle)
+        if name in {RoleName.SUPER_ADMIN.name, RoleName.ADMIN.name}:
+            return True
+    return False
 
 
 class PlanningServiceSvc(
@@ -450,13 +478,45 @@ class PlanningServiceSvc(
             logger.error(f"Erreur get_full_planning ID {planning_id}: {str(e)}")
             raise
 
+    def _assert_ministere_access(
+        self, ministere_id: str, current_user: Utilisateur
+    ) -> None:
+        """Lève PLAN_016 si l'user n'est pas admin et n'appartient pas au ministère."""
+        if _is_admin_or_super(current_user):
+            return
+        if not current_user.membre_id:
+            raise AppException(ErrorRegistry.PLAN_016)
+        link = self.db.exec(
+            select(MembreMinistereLink)
+            .where(MembreMinistereLink.membre_id == current_user.membre_id)
+            .where(MembreMinistereLink.ministere_id == ministere_id)
+        ).first()
+        if not link:
+            raise AppException(ErrorRegistry.PLAN_016)
+
+    def _assert_campus_access(self, campus_id: str, current_user: Utilisateur) -> None:
+        """Lève PLAN_017 si l'user n'est pas admin et n'appartient pas au campus."""
+        if _is_admin_or_super(current_user):
+            return
+        if not current_user.membre_id:
+            raise AppException(ErrorRegistry.PLAN_017)
+        link = self.db.exec(
+            select(MembreCampusLink)
+            .where(MembreCampusLink.membre_id == current_user.membre_id)
+            .where(MembreCampusLink.campus_id == campus_id)
+        ).first()
+        if not link:
+            raise AppException(ErrorRegistry.PLAN_017)
+
     def list_by_ministere(
         self,
         ministere_id: str,
+        current_user: Utilisateur,
         campus_id: Optional[str] = None,
     ) -> List[PlanningFullRead]:
         """Retourne tous les plannings complets dont l'activité est organisée
         par un ministère donné, avec activite + slots + affectations chargés."""
+        self._assert_ministere_access(ministere_id, current_user)
         cutoff = datetime.now() - timedelta(days=7)
         try:
             query = (
@@ -525,9 +585,12 @@ class PlanningServiceSvc(
             logger.error(f"Erreur list_my_plannings_full {membre_id}: {str(e)}")
             raise
 
-    def list_by_campus(self, campus_id: str) -> List[PlanningFullRead]:
+    def list_by_campus(
+        self, campus_id: str, current_user: Utilisateur
+    ) -> List[PlanningFullRead]:
         """Retourne tous les plannings complets dont l'activité se déroule
         sur un campus donné, avec activite + slots + affectations chargés."""
+        self._assert_campus_access(campus_id, current_user)
         cutoff = datetime.now() - timedelta(days=7)
         try:
             query = (

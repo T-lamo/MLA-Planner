@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
 from conf.db.database import Database
-from core.auth.auth_dependencies import RoleChecker, get_current_active_user
+from core.auth.auth_dependencies import CasbinGuard, get_current_active_user
 from models import Utilisateur
 from models.base_pagination import PaginatedResponse
 from models.chant_model import (
@@ -32,8 +32,10 @@ from services.chant_service import ChantCategorieService, ChantService
 router = APIRouter(prefix="/chants", tags=["Songbook"])
 
 _DB = Depends(Database.get_db_for_route)
-_AUTH = Depends(RoleChecker(["SUPER_ADMIN", "ADMIN", "RESPONSABLE_MLA", "MEMBRE_MLA"]))
-_ADMIN = Depends(RoleChecker(["SUPER_ADMIN", "ADMIN", "RESPONSABLE_MLA"]))
+_ALL_ROLES = ["SUPER_ADMIN", "ADMIN", "RESPONSABLE_MLA", "MEMBRE_MLA"]
+_WRITE_ROLES = ["SUPER_ADMIN", "ADMIN", "RESPONSABLE_MLA"]
+_CASBIN_READ = Depends(CasbinGuard("chants", "read", fallback_roles=_ALL_ROLES))
+_CASBIN_WRITE = Depends(CasbinGuard("chants", "write", fallback_roles=_WRITE_ROLES))
 
 
 def _get_cat_svc(db: Session = _DB) -> ChantCategorieService:  # type: ignore
@@ -54,7 +56,7 @@ def _get_svc(db: Session = _DB) -> ChantService:  # type: ignore
     response_model=List[ChantCategorieRead],
     status_code=status.HTTP_200_OK,
     summary="Lister les catégories de chants",
-    dependencies=[_AUTH],
+    dependencies=[_CASBIN_READ],
 )
 def list_categories(
     svc: ChantCategorieService = Depends(_get_cat_svc),
@@ -68,7 +70,7 @@ def list_categories(
     response_model=ChantCategorieRead,
     status_code=status.HTTP_201_CREATED,
     summary="Créer une catégorie de chant",
-    dependencies=[_ADMIN],
+    dependencies=[_CASBIN_WRITE],
 )
 def create_categorie(
     payload: ChantCategorieCreate,
@@ -83,7 +85,7 @@ def create_categorie(
     response_model=ChantCategorieRead,
     status_code=status.HTTP_200_OK,
     summary="Mettre à jour une catégorie",
-    dependencies=[_ADMIN],
+    dependencies=[_CASBIN_WRITE],
 )
 def update_categorie(
     code: str,
@@ -98,7 +100,7 @@ def update_categorie(
     "/categories/{code}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Supprimer une catégorie vide",
-    dependencies=[_ADMIN],
+    dependencies=[_CASBIN_WRITE],
 )
 def delete_categorie(
     code: str,
@@ -144,7 +146,7 @@ def list_chants(  # pylint: disable=too-many-positional-arguments
     response_model=ChantRead,
     status_code=status.HTTP_201_CREATED,
     summary="Créer un chant",
-    dependencies=[_ADMIN],
+    dependencies=[_CASBIN_WRITE],
 )
 def create_chant(
     payload: ChantCreate,
@@ -158,7 +160,7 @@ def create_chant(
     response_model=ChantReadFull,
     status_code=status.HTTP_200_OK,
     summary="Détail d'un chant (avec contenu et catégorie)",
-    dependencies=[_AUTH],
+    dependencies=[_CASBIN_READ],
 )
 def get_chant(
     chant_id: str,
@@ -172,7 +174,7 @@ def get_chant(
     response_model=ChantRead,
     status_code=status.HTTP_200_OK,
     summary="Mettre à jour un chant",
-    dependencies=[_ADMIN],
+    dependencies=[_CASBIN_WRITE],
 )
 def update_chant(
     chant_id: str,
@@ -186,7 +188,7 @@ def update_chant(
     "/{chant_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Supprimer un chant (soft delete)",
-    dependencies=[_ADMIN],
+    dependencies=[_CASBIN_WRITE],
 )
 def delete_chant(
     chant_id: str,
@@ -205,7 +207,7 @@ def delete_chant(
     response_model=ChantContenuRead,
     status_code=status.HTTP_200_OK,
     summary="Récupérer le contenu ChordPro",
-    dependencies=[_AUTH],
+    dependencies=[_CASBIN_READ],
 )
 def get_contenu(
     chant_id: str,
@@ -220,7 +222,7 @@ def get_contenu(
     response_model=ChantContenuRead,
     status_code=status.HTTP_200_OK,
     summary="Créer ou remplacer le contenu ChordPro",
-    dependencies=[_ADMIN],
+    dependencies=[_CASBIN_WRITE],
 )
 def upsert_contenu(
     chant_id: str,
@@ -236,7 +238,7 @@ def upsert_contenu(
     response_model=ChantContenuRead,
     status_code=status.HTTP_200_OK,
     summary="Mettre à jour le contenu avec verrou optimiste",
-    dependencies=[_ADMIN],
+    dependencies=[_CASBIN_WRITE],
 )
 def update_contenu(
     chant_id: str,
@@ -252,7 +254,7 @@ def update_contenu(
     response_model=ChantTransposeResponse,
     status_code=status.HTTP_200_OK,
     summary="Transposer le contenu (sans sauvegarde)",
-    dependencies=[_AUTH],
+    dependencies=[_CASBIN_READ],
 )
 def transpose_contenu(
     chant_id: str,

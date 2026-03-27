@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from models import AffectationRole, TokenBlacklist, Utilisateur
+from models.schema_db_model import Role
 
 
 class AuthRepository:
@@ -19,8 +20,11 @@ class AuthRepository:
             select(Utilisateur)
             .where(Utilisateur.username == username)
             .options(
+                selectinload(cast(Any, Utilisateur.affectations))
+                .selectinload(cast(Any, AffectationRole.role))
+                .selectinload(cast(Any, Role.permissions)),
                 selectinload(cast(Any, Utilisateur.affectations)).selectinload(
-                    cast(Any, AffectationRole.role)
+                    cast(Any, AffectationRole.contextes)
                 ),
                 selectinload(cast(Any, Utilisateur.membre)),
             )

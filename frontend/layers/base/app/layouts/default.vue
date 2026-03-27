@@ -36,7 +36,7 @@
 
       <nav class="custom-scrollbar flex-1 overflow-y-auto px-3 py-4">
         <div class="space-y-4">
-          <div v-if="!authStore.isSuperAdmin" class="relative">
+          <div class="relative">
             <button
               ref="triggerRef"
               class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
@@ -374,8 +374,8 @@
           </Teleport>
         </div>
 
-        <!-- Section Administration (ADMIN uniquement — SuperAdmin a sa propre section) -->
-        <div v-if="authStore.hasAdminAccess && !authStore.isSuperAdmin" class="relative mt-4">
+        <!-- Section Administration (tout admin, SuperAdmin inclus) -->
+        <div v-if="authStore.hasAdminAccess" class="relative mt-4">
           <button
             ref="adminTriggerRef"
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
@@ -412,6 +412,13 @@
                 :collapsed="false"
                 class="pl-9"
               />
+              <SidebarLink
+                to="/admin/roles"
+                :icon="ShieldCheck"
+                label="Rôles & Droits"
+                :collapsed="false"
+                class="pl-9"
+              />
             </ul>
           </transition>
 
@@ -434,6 +441,13 @@
                     to="/admin/profiles"
                     :icon="Users"
                     label="Profils"
+                    :collapsed="false"
+                    @click="closeAdminPopup"
+                  />
+                  <SidebarLink
+                    to="/admin/roles"
+                    :icon="ShieldCheck"
+                    label="Rôles & Droits"
                     :collapsed="false"
                     @click="closeAdminPopup"
                   />
@@ -478,6 +492,7 @@ import {
   Music,
   Plus,
   Settings2,
+  ShieldCheck,
   Tag,
   Users,
 } from 'lucide-vue-next'
