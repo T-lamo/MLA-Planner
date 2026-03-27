@@ -36,7 +36,7 @@
 
       <nav class="custom-scrollbar flex-1 overflow-y-auto px-3 py-4">
         <div class="space-y-4">
-          <div v-if="!authStore.isSuperAdmin" class="relative">
+          <div class="relative">
             <button
               ref="triggerRef"
               class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
@@ -374,8 +374,8 @@
           </Teleport>
         </div>
 
-        <!-- Section Administration (ADMIN uniquement — SuperAdmin a sa propre section) -->
-        <div v-if="authStore.hasAdminAccess && !authStore.isSuperAdmin" class="relative mt-4">
+        <!-- Section Administration (tout admin, SuperAdmin inclus) -->
+        <div v-if="authStore.hasAdminAccess" class="relative mt-4">
           <button
             ref="adminTriggerRef"
             class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all hover:bg-slate-100"
