@@ -16,7 +16,6 @@ from core.auth.auth_dependencies import CasbinGuard
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models.permission_model import (
-    CapabilityCreate,
     PermissionCodeRead,
     RoleCreate,
     RolePermissionsUpdate,
@@ -66,49 +65,6 @@ def list_capabilities(
 ) -> List[PermissionCodeRead]:
     perms = db.exec(select(Permission).order_by(Permission.code)).all()
     return [PermissionCodeRead(id=p.id, code=p.code) for p in perms]
-
-
-@router.post(
-    "/capabilities",
-    response_model=PermissionCodeRead,
-    status_code=status.HTTP_201_CREATED,
-    summary="Créer une nouvelle capability",
-    dependencies=[_WRITE_GUARD],
-)
-def create_capability(
-    payload: CapabilityCreate,
-    db: Session = _DB,
-) -> PermissionCodeRead:
-    existing = db.exec(
-        select(Permission).where(cast(Any, Permission.code) == payload.code)
-    ).first()
-    if existing:
-        raise AppException(ErrorRegistry.CORE_RESOURCE_ALREADY_EXISTS)
-    perm = Permission(code=payload.code, description=payload.description)
-    db.add(perm)
-    db.flush()
-    db.refresh(perm)
-    return PermissionCodeRead(id=perm.id, code=perm.code)
-
-
-@router.delete(
-    "/capabilities/{capability_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Supprimer une capability (interdit si attachée à un rôle)",
-    dependencies=[_WRITE_GUARD],
-)
-def delete_capability(capability_id: str, db: Session = _DB) -> None:
-    perm = db.get(Permission, capability_id)
-    if not perm:
-        raise AppException(ErrorRegistry.CORE_RESOURCE_NOT_FOUND)
-    in_use = db.exec(
-        select(RolePermission).where(
-            cast(Any, RolePermission.permission_id) == capability_id
-        )
-    ).first()
-    if in_use:
-        raise AppException(ErrorRegistry.CORE_RESOURCE_IN_USE)
-    db.delete(perm)
 
 
 # ------------------------------------------------------------------ #
