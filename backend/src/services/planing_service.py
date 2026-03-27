@@ -6,6 +6,7 @@ from fastapi import BackgroundTasks
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, col, select
 
+from core.auth.auth_utils import _role_name
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from core.workflow_engine import WorkflowEngine, planning_transitions
@@ -65,7 +66,7 @@ def _is_admin_or_super(user: Utilisateur) -> bool:
         if aff.dateFin is not None and aff.dateFin < today:
             continue
         libelle = aff.role.libelle
-        name = libelle.name if isinstance(libelle, RoleName) else str(libelle)
+        name = _role_name(libelle)
         if name in {RoleName.SUPER_ADMIN.name, RoleName.ADMIN.name}:
             return True
     return False

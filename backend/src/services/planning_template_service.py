@@ -8,6 +8,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
+from core.auth.auth_utils import _role_name
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from mla_enum import RoleName
@@ -46,16 +47,12 @@ from repositories.planning_template_repository import (
 
 
 def _get_user_role_names(user: Utilisateur) -> List[str]:
-    """Extrait les noms des rôles d'un utilisateur."""
-    result: List[str] = []
-    for aff in user.affectations:
-        if aff.role and aff.role.libelle is not None:
-            lib = aff.role.libelle
-            if isinstance(lib, RoleName):
-                result.append(lib.name)
-            else:
-                result.append(str(lib))
-    return result
+    """Extrait les noms Casbin des rôles d'un utilisateur."""
+    return [
+        _role_name(aff.role.libelle)
+        for aff in user.affectations
+        if aff.role and aff.role.libelle is not None
+    ]
 
 
 def _is_admin_or_super(user: Utilisateur) -> bool:

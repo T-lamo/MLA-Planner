@@ -1,8 +1,6 @@
 from datetime import datetime
 from typing import List, Optional, TypedDict
 
-from mla_enum import RoleName
-
 
 # Définition des types pour Mypy
 class MembreInfo(TypedDict):
@@ -121,15 +119,15 @@ PLANNING_TEMPLATES_SEED: List[PlanningTemplateSeedData] = [
 
 
 # --- RBAC ---
-ROLES = [
-    RoleName.SUPER_ADMIN,
-    RoleName.ADMIN,
-    RoleName.RESPONSABLE_MLA,
-    RoleName.MEMBRE_MLA,
+ROLES: list[str] = [
+    "Super Admin",
+    "Admin",
+    "Responsable MLA",
+    "Membre MLA",
 ]
 
-PERMISSIONS: dict[RoleName, list[str]] = {
-    RoleName.SUPER_ADMIN: [
+PERMISSIONS: dict[str, list[str]] = {
+    "Super Admin": [
         "USER_CREATE",
         "USER_READ",
         "USER_UPDATE",
@@ -150,7 +148,7 @@ PERMISSIONS: dict[RoleName, list[str]] = {
         "INDISPO_WRITE",
         "CAMPUS_ADMIN",
     ],
-    RoleName.ADMIN: [
+    "Admin": [
         "USER_CREATE",
         "USER_READ",
         "USER_UPDATE",
@@ -168,7 +166,7 @@ PERMISSIONS: dict[RoleName, list[str]] = {
         "INDISPO_WRITE",
         "CAMPUS_ADMIN",
     ],
-    RoleName.RESPONSABLE_MLA: [
+    "Responsable MLA": [
         "USER_READ",
         "MINISTERE_MANAGE",
         "POLE_MANAGE",
@@ -182,7 +180,7 @@ PERMISSIONS: dict[RoleName, list[str]] = {
         "MEMBRE_READ",
         "INDISPO_WRITE",
     ],
-    RoleName.MEMBRE_MLA: [
+    "Membre MLA": [
         "USER_READ",
         "ACTIVITE_CREATE",
         "PLANNING_READ",

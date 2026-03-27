@@ -8,6 +8,21 @@ from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
 from core.exceptions.app_exception import AppException
 
 
+def _serialize_errors(errors: list[dict]) -> list[dict]:
+    """Rend les erreurs Pydantic v2 sérialisables en JSON.
+
+    Pydantic v2 peut placer des objets Exception dans ctx['error'] —
+    on les convertit en str pour éviter une TypeError lors de JSONResponse.
+    """
+    result = []
+    for err in errors:
+        safe: dict = {k: v for k, v in err.items() if k != "ctx"}
+        if "ctx" in err:
+            safe["ctx"] = {k: str(v) for k, v in err["ctx"].items()}
+        result.append(safe)
+    return result
+
+
 def register_exception_handlers(app):
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(
@@ -25,7 +40,7 @@ def register_exception_handlers(app):
             status_code=HTTP_422_UNPROCESSABLE_CONTENT,
             content={
                 "error": "ValidationError",
-                "detail": exc.errors(),
+                "detail": _serialize_errors(list(exc.errors())),
                 "body": formatted_body,
             },
         )

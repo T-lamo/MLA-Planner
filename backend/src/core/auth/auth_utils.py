@@ -11,12 +11,18 @@ from mla_enum import RoleName
 
 
 def _role_name(libelle: object) -> str:
-    """Normalise un libellé de rôle en nom d'enum (ex: 'SUPER_ADMIN')."""
-    if isinstance(libelle, RoleName):
-        return libelle.name
+    """Normalise un libellé de rôle en nom Casbin (ex: 'Super Admin' → 'SUPER_ADMIN').
+
+    - Enum RoleName → retourne .name
+    - String → reverse lookup par .value dans RoleName, sinon str() brut
+    """
     if isinstance(libelle, Enum):
         return libelle.name
-    return str(libelle)
+    s = str(libelle)
+    for member in RoleName:
+        if member.value == s:
+            return member.name
+    return s
 
 
 def _affectation_valide(aff: object) -> bool:
