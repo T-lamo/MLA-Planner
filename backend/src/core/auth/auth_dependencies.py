@@ -1,9 +1,10 @@
 # core/auth/auth_dependencies.py
 from datetime import date
 from enum import Enum
+from typing import Optional
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError as JWTError
 from sqlmodel import Session
@@ -79,6 +80,15 @@ def get_current_active_user(
     return user
 
 
+def _role_name(libelle: object) -> str:
+    """Normalise un libellé de rôle en nom d'enum (ex: 'SUPER_ADMIN')."""
+    if isinstance(libelle, RoleName):
+        return libelle.name
+    if isinstance(libelle, Enum):
+        return libelle.name
+    return str(libelle)
+
+
 def _affectation_valide(aff: object) -> bool:
     """True si l'affectation est active et dans sa fenêtre de validité."""
     today = date.today()
@@ -101,13 +111,6 @@ class RoleChecker:
     def __call__(
         self, user: Utilisateur = Depends(get_current_active_user)
     ) -> list[str]:
-        def _role_name(libelle: object) -> str:
-            if isinstance(libelle, RoleName):
-                return libelle.name  # "SUPER_ADMIN", "ADMIN", etc.
-            if isinstance(libelle, Enum):
-                return libelle.name
-            return str(libelle)
-
         user_roles = [
             _role_name(aff.role.libelle)
             for aff in user.affectations
@@ -124,3 +127,59 @@ class RoleChecker:
                 detail="Droits insuffisants pour cette action",
             )
         return user_roles
+
+
+class ScopedRoleChecker:
+    """Vérifie le rôle ET le scope ministère via AffectationContexte.
+
+    - Affectation sans contexte → rôle global, accès accordé.
+    - Affectation avec contextes → le ministere_id de la requête doit
+      figurer dans la liste des contextes.
+    - Super Admin → bypass total (rôle + scope).
+    - ministere_id extrait de path_params puis query_params.
+    - Absent de la requête → graceful skip du check de scope.
+    """
+
+    def __init__(self, allowed_roles: list[str]) -> None:
+        self.allowed_roles = allowed_roles
+
+    def __call__(
+        self,
+        request: Request,
+        user: Utilisateur = Depends(get_current_active_user),
+    ) -> list[str]:
+        ministere_id: Optional[str] = request.path_params.get(
+            "ministere_id"
+        ) or request.query_params.get("ministere_id")
+
+        granted: list[str] = []
+
+        for aff in user.affectations:
+            if not (aff.role and aff.role.libelle is not None):
+                continue
+            if not _affectation_valide(aff):
+                continue
+
+            role = _role_name(aff.role.libelle)
+
+            if role == RoleName.SUPER_ADMIN.name:
+                return [role]
+
+            if role not in self.allowed_roles:
+                continue
+
+            if not aff.contextes:
+                granted.append(role)
+                continue
+
+            if ministere_id is None or any(
+                ctx.ministere_id == ministere_id for ctx in aff.contextes
+            ):
+                granted.append(role)
+
+        if not granted:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Droits insuffisants pour cette action",
+            )
+        return granted
