@@ -6,7 +6,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, SQLModel, select
 
 from core.auth.security import get_password_hash
-from mla_enum import RoleName
 from models import Slot  # Nouveau
 from models import StatutAffectation  # Nouveau
 from models import (
@@ -715,7 +714,7 @@ class SeedService:
         users = []
         membre_idx = 0
         for rn, role in rm.items():
-            if rn == RoleName.SUPER_ADMIN:
+            if rn == "Super Admin":
                 u, _ = self._get_or_create(
                     Utilisateur,
                     username=SUPERADMIN_USERNAME,

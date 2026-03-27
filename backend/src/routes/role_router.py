@@ -5,7 +5,6 @@ from sqlmodel import Session, select
 
 from conf.db.database import Database
 from core.auth.auth_dependencies import get_current_active_user
-from mla_enum import RoleName
 from models import Utilisateur
 from models.role_model import RoleRead
 from models.schema_db_model import Role
@@ -30,6 +29,6 @@ def list_roles(
     Retourne tous les rôles disponibles à l'exception du rôle SUPER_ADMIN.
     Requiert une authentification.
     """
-    stmt = select(Role).where(Role.libelle != RoleName.SUPER_ADMIN)
+    stmt = select(Role).where(Role.libelle != "Super Admin")
     roles = db.exec(stmt).all()
     return [RoleRead(id=r.id, libelle=r.libelle) for r in roles]

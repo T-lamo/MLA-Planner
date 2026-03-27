@@ -15,16 +15,20 @@ import {
   LayoutTemplate,
   Loader2,
   Music,
+  Plus,
   RotateCcw,
   Settings2,
   ShieldAlert,
   ShieldCheck,
+  Trash2,
   User,
   UserCog,
   Users,
 } from 'lucide-vue-next'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import { useRoleStore } from '~~/layers/base/app/stores/useRoleStore'
+import RoleDrawer from '~~/layers/base/app/components/admin/RoleDrawer.vue'
+import CanGuard from '~~/layers/base/app/components/ui/CanGuard.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -281,6 +285,39 @@ const totalCaps = computed(() => roleStore.capabilities.length)
 function actionLabel(code: string): string {
   return code.split('_').slice(1).join('_')
 }
+
+// ─── Drawer création ────────────────────────────────────────────────
+const drawerOpen = ref(false)
+const drawerMode = ref<'role' | 'capability'>('role')
+
+function openDrawer(mode: 'role' | 'capability') {
+  drawerMode.value = mode
+  drawerOpen.value = true
+}
+
+// ─── Suppression ────────────────────────────────────────────────────
+const deleteError = ref('')
+
+async function confirmDeleteRole(roleId: string) {
+  if (!window.confirm('Supprimer ce rôle ? Cette action est irréversible.')) return
+  deleteError.value = ''
+  try {
+    await roleStore.deleteRole(roleId)
+    if (openRole.value === roleId) openRole.value = null
+  } catch {
+    deleteError.value = 'Suppression impossible : ce rôle est peut-être utilisé.'
+  }
+}
+
+async function confirmDeleteCapability(capId: string, code: string) {
+  if (!window.confirm(`Supprimer la capability "${code}" ? Cette action est irréversible.`)) return
+  deleteError.value = ''
+  try {
+    await roleStore.deleteCapability(capId)
+  } catch {
+    deleteError.value = 'Suppression impossible : cette capability est peut-être utilisée.'
+  }
+}
 </script>
 
 <template>
@@ -293,194 +330,299 @@ function actionLabel(code: string): string {
         >
           <ShieldCheck class="size-5 text-white" />
         </div>
-        <div>
+        <div class="flex-1">
           <h1 class="text-lg font-bold tracking-tight text-slate-900">Rôles & Droits</h1>
           <p class="text-sm text-slate-500">
             Configurez les permissions de chaque rôle —
             <span class="font-medium text-slate-700">{{ totalCaps }} capabilities disponibles</span>
           </p>
         </div>
+        <CanGuard capability="ROLE_MANAGE">
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50"
+              @click="openDrawer('capability')"
+            >
+              <Plus class="size-4" />
+              Nouvelle capability
+            </button>
+            <button
+              type="button"
+              class="bg-primary-600 hover:bg-primary-700 flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold text-white shadow-sm transition-all"
+              @click="openDrawer('role')"
+            >
+              <Plus class="size-4" />
+              Nouveau rôle
+            </button>
+          </div>
+        </CanGuard>
       </div>
     </div>
 
     <!-- ── Contenu ── -->
     <div class="mx-auto max-w-4xl px-6 py-6">
+      <!-- Erreur suppression -->
+      <div
+        v-if="deleteError"
+        class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+      >
+        {{ deleteError }}
+      </div>
+
       <!-- Loading -->
       <div v-if="roleStore.loading" class="flex flex-col items-center gap-3 py-20">
         <Loader2 class="size-8 animate-spin text-slate-300" />
         <p class="text-sm text-slate-400">Chargement des rôles…</p>
       </div>
 
-      <!-- Liste -->
-      <div v-else class="space-y-3">
-        <div
-          v-for="role in roleStore.rolesWithPermissions"
-          :key="role.id"
-          class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
-          :class="['border-l-4', roleMeta(role.libelle ?? '').borderClass]"
-        >
-          <!-- ── Header card ── -->
-          <button
-            type="button"
-            class="flex w-full items-center gap-4 px-5 py-4 text-left"
-            @click="toggle(role.id)"
-          >
-            <!-- Icône rôle -->
-            <div
-              class="flex size-10 shrink-0 items-center justify-center rounded-xl"
-              :class="roleMeta(role.libelle ?? '').iconBgClass"
-            >
-              <component
-                :is="roleMeta(role.libelle ?? '').icon"
-                class="size-5"
-                :class="roleMeta(role.libelle ?? '').iconColorClass"
-              />
+      <template v-else>
+        <!-- ── Capabilities ── -->
+        <div class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+            <div class="flex items-center gap-2">
+              <ShieldCheck class="size-4 text-slate-400" />
+              <span class="text-sm font-semibold text-slate-700">Capabilities</span>
+              <span
+                class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500"
+              >
+                {{ totalCaps }}
+              </span>
             </div>
-
-            <!-- Nom + description -->
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-slate-900">{{ role.libelle }}</span>
-                <!-- Dirty indicator -->
-                <span
-                  v-if="isDirty(role.id)"
-                  class="size-2 animate-pulse rounded-full bg-amber-400"
-                  title="Modifications non enregistrées"
-                />
-                <!-- Saved indicator -->
-                <span
-                  v-else-if="savedRoles.has(role.id)"
-                  class="flex items-center gap-1 text-xs font-medium text-emerald-600"
-                >
-                  <CheckCircle2 class="size-3.5" />
-                  Enregistré
+          </div>
+          <div class="px-5 py-4">
+            <div
+              v-for="(codes, prefix) in groupedCapabilities"
+              :key="prefix"
+              class="mb-4 last:mb-0"
+            >
+              <div class="mb-2 flex items-center gap-2">
+                <component :is="catMeta(prefix).icon" class="size-3.5 text-slate-400" />
+                <span class="text-[11px] font-bold tracking-widest text-slate-400 uppercase">
+                  {{ catMeta(prefix).label || prefix }}
                 </span>
               </div>
-              <p class="mt-0.5 text-xs text-slate-400">
-                {{ roleMeta(role.libelle ?? '').description }}
-              </p>
-            </div>
-
-            <!-- Badge compteur + progress -->
-            <div class="hidden shrink-0 items-center gap-3 sm:flex">
-              <div class="text-right">
-                <div
-                  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1"
-                  :class="roleMeta(role.libelle ?? '').badgeClass"
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  v-for="code in codes"
+                  :key="code"
+                  class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium"
+                  :class="catMeta(prefix).chipClass"
                 >
-                  {{ selectedCount(role.id) }}/{{ totalCaps }}
-                </div>
-                <div class="mt-1.5 h-1 w-24 overflow-hidden rounded-full bg-slate-100">
-                  <div
-                    class="h-full rounded-full bg-current transition-all duration-300"
-                    :class="roleMeta(role.libelle ?? '').iconColorClass"
-                    :style="{ width: `${(selectedCount(role.id) / totalCaps) * 100}%` }"
-                  />
-                </div>
+                  {{ code }}
+                  <CanGuard capability="ROLE_MANAGE">
+                    <button
+                      type="button"
+                      class="ml-0.5 rounded-full p-0.5 opacity-50 transition-opacity hover:opacity-100"
+                      :title="`Supprimer ${code}`"
+                      @click="
+                        confirmDeleteCapability(
+                          roleStore.capabilities.find((c) => c.code === code)?.id ?? '',
+                          code,
+                        )
+                      "
+                    >
+                      <Trash2 class="size-3" />
+                    </button>
+                  </CanGuard>
+                </span>
               </div>
             </div>
+            <p v-if="totalCaps === 0" class="text-sm text-slate-400">Aucune capability définie.</p>
+          </div>
+        </div>
 
-            <ChevronDown
-              class="size-4 shrink-0 text-slate-400 transition-transform duration-200"
-              :class="openRole === role.id ? 'rotate-180' : ''"
-            />
-          </button>
-
-          <!-- ── Corps accordéon ── -->
-          <Transition
-            enterActiveClass="transition-all duration-200 ease-out"
-            enterFromClass="opacity-0 -translate-y-1"
-            enterToClass="opacity-100 translate-y-0"
-            leaveActiveClass="transition-all duration-150 ease-in"
-            leaveFromClass="opacity-100 translate-y-0"
-            leaveToClass="opacity-0 -translate-y-1"
+        <!-- Liste des rôles -->
+        <div class="space-y-3">
+          <div
+            v-for="role in roleStore.rolesWithPermissions"
+            :key="role.id"
+            class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
+            :class="['border-l-4', roleMeta(role.libelle ?? '').borderClass]"
           >
-            <div v-if="openRole === role.id" class="border-t border-slate-100">
-              <div class="px-5 py-5">
-                <!-- Catégories -->
-                <div
-                  v-for="(codes, prefix) in groupedCapabilities"
-                  :key="prefix"
-                  class="mb-5 last:mb-0"
-                >
-                  <!-- Header catégorie -->
-                  <button
-                    type="button"
-                    class="mb-2.5 flex items-center gap-2 text-left"
-                    :title="`Tout sélectionner / désélectionner — ${catMeta(prefix).label}`"
-                    @click="toggleCategory(role.id, codes)"
-                  >
-                    <component :is="catMeta(prefix).icon" class="size-3.5 text-slate-400" />
-                    <span class="text-[11px] font-bold tracking-widest text-slate-400 uppercase">
-                      {{ catMeta(prefix).label || prefix }}
-                    </span>
-                    <span class="text-[10px] text-slate-300">
-                      ({{ codes.filter((c) => isChecked(role.id, c)).length }}/{{ codes.length }})
-                    </span>
-                  </button>
+            <!-- ── Header card ── -->
+            <button
+              type="button"
+              class="flex w-full items-center gap-4 px-5 py-4 text-left"
+              @click="toggle(role.id)"
+            >
+              <!-- Icône rôle -->
+              <div
+                class="flex size-10 shrink-0 items-center justify-center rounded-xl"
+                :class="roleMeta(role.libelle ?? '').iconBgClass"
+              >
+                <component
+                  :is="roleMeta(role.libelle ?? '').icon"
+                  class="size-5"
+                  :class="roleMeta(role.libelle ?? '').iconColorClass"
+                />
+              </div>
 
-                  <!-- Chips -->
-                  <div class="flex flex-wrap gap-2">
-                    <button
-                      v-for="code in codes"
-                      :key="code"
-                      type="button"
-                      class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 focus:outline-none"
-                      :class="
-                        isChecked(role.id, code)
-                          ? [catMeta(prefix).chipClass, catMeta(prefix).chipActiveClass]
-                          : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600'
-                      "
-                      @click="handleToggle(role.id, code)"
-                    >
-                      <Check v-if="isChecked(role.id, code)" class="size-3 shrink-0" />
-                      <span v-else class="size-3 shrink-0 rounded-full border border-slate-200" />
-                      {{ actionLabel(code) }}
-                    </button>
+              <!-- Nom + description -->
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-slate-900">{{ role.libelle }}</span>
+                  <!-- Dirty indicator -->
+                  <span
+                    v-if="isDirty(role.id)"
+                    class="size-2 animate-pulse rounded-full bg-amber-400"
+                    title="Modifications non enregistrées"
+                  />
+                  <!-- Saved indicator -->
+                  <span
+                    v-else-if="savedRoles.has(role.id)"
+                    class="flex items-center gap-1 text-xs font-medium text-emerald-600"
+                  >
+                    <CheckCircle2 class="size-3.5" />
+                    Enregistré
+                  </span>
+                </div>
+                <p class="mt-0.5 text-xs text-slate-400">
+                  {{ roleMeta(role.libelle ?? '').description }}
+                </p>
+              </div>
+
+              <!-- Badge compteur + progress -->
+              <div class="hidden shrink-0 items-center gap-3 sm:flex">
+                <div class="text-right">
+                  <div
+                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1"
+                    :class="roleMeta(role.libelle ?? '').badgeClass"
+                  >
+                    {{ selectedCount(role.id) }}/{{ totalCaps }}
+                  </div>
+                  <div class="mt-1.5 h-1 w-24 overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      class="h-full rounded-full bg-current transition-all duration-300"
+                      :class="roleMeta(role.libelle ?? '').iconColorClass"
+                      :style="{ width: `${(selectedCount(role.id) / totalCaps) * 100}%` }"
+                    />
                   </div>
                 </div>
               </div>
 
-              <!-- ── Pied de carte ── -->
-              <div
-                class="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-5 py-3"
-              >
-                <span class="text-xs text-slate-400">
-                  <span class="font-semibold text-slate-600">{{ selectedCount(role.id) }}</span>
-                  permissions sélectionnées
-                </span>
-                <div class="flex items-center gap-2">
-                  <button
-                    v-if="isDirty(role.id)"
-                    type="button"
-                    class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-200"
-                    @click="reset(role.id)"
+              <ChevronDown
+                class="size-4 shrink-0 text-slate-400 transition-transform duration-200"
+                :class="openRole === role.id ? 'rotate-180' : ''"
+              />
+            </button>
+
+            <!-- ── Corps accordéon ── -->
+            <Transition
+              enterActiveClass="transition-all duration-200 ease-out"
+              enterFromClass="opacity-0 -translate-y-1"
+              enterToClass="opacity-100 translate-y-0"
+              leaveActiveClass="transition-all duration-150 ease-in"
+              leaveFromClass="opacity-100 translate-y-0"
+              leaveToClass="opacity-0 -translate-y-1"
+            >
+              <div v-if="openRole === role.id" class="border-t border-slate-100">
+                <div class="px-5 py-5">
+                  <!-- Catégories -->
+                  <div
+                    v-for="(codes, prefix) in groupedCapabilities"
+                    :key="prefix"
+                    class="mb-5 last:mb-0"
                   >
-                    <RotateCcw class="size-3" />
-                    Annuler
-                  </button>
-                  <button
-                    type="button"
-                    :disabled="roleStore.saving"
-                    class="flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold transition-all disabled:opacity-50"
-                    :class="
-                      savedRoles.has(role.id)
-                        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-                        : 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm'
-                    "
-                    @click="save(role.id)"
-                  >
-                    <Loader2 v-if="roleStore.saving" class="size-3 animate-spin" />
-                    <CheckCircle2 v-else-if="savedRoles.has(role.id)" class="size-3" />
-                    <Check v-else class="size-3" />
-                    {{ savedRoles.has(role.id) ? 'Enregistré' : 'Enregistrer' }}
-                  </button>
+                    <!-- Header catégorie -->
+                    <button
+                      type="button"
+                      class="mb-2.5 flex items-center gap-2 text-left"
+                      :title="`Tout sélectionner / désélectionner — ${catMeta(prefix).label}`"
+                      @click="toggleCategory(role.id, codes)"
+                    >
+                      <component :is="catMeta(prefix).icon" class="size-3.5 text-slate-400" />
+                      <span class="text-[11px] font-bold tracking-widest text-slate-400 uppercase">
+                        {{ catMeta(prefix).label || prefix }}
+                      </span>
+                      <span class="text-[10px] text-slate-300">
+                        ({{ codes.filter((c) => isChecked(role.id, c)).length }}/{{ codes.length }})
+                      </span>
+                    </button>
+
+                    <!-- Chips -->
+                    <div class="flex flex-wrap gap-2">
+                      <button
+                        v-for="code in codes"
+                        :key="code"
+                        type="button"
+                        class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 focus:outline-none"
+                        :class="
+                          isChecked(role.id, code)
+                            ? [catMeta(prefix).chipClass, catMeta(prefix).chipActiveClass]
+                            : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300 hover:text-slate-600'
+                        "
+                        @click="handleToggle(role.id, code)"
+                      >
+                        <Check v-if="isChecked(role.id, code)" class="size-3 shrink-0" />
+                        <span v-else class="size-3 shrink-0 rounded-full border border-slate-200" />
+                        {{ actionLabel(code) }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- ── Pied de carte ── -->
+                <div
+                  class="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-5 py-3"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">
+                      <span class="font-semibold text-slate-600">{{ selectedCount(role.id) }}</span>
+                      permissions sélectionnées
+                    </span>
+                    <CanGuard capability="ROLE_MANAGE">
+                      <button
+                        type="button"
+                        class="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
+                        :title="`Supprimer le rôle ${role.libelle}`"
+                        @click="confirmDeleteRole(role.id)"
+                      >
+                        <Trash2 class="size-3" />
+                        Supprimer
+                      </button>
+                    </CanGuard>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button
+                      v-if="isDirty(role.id)"
+                      type="button"
+                      class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-200"
+                      @click="reset(role.id)"
+                    >
+                      <RotateCcw class="size-3" />
+                      Annuler
+                    </button>
+                    <button
+                      type="button"
+                      :disabled="roleStore.saving"
+                      class="flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs font-semibold transition-all disabled:opacity-50"
+                      :class="
+                        savedRoles.has(role.id)
+                          ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                          : 'bg-primary-600 hover:bg-primary-700 text-white shadow-sm'
+                      "
+                      @click="save(role.id)"
+                    >
+                      <Loader2 v-if="roleStore.saving" class="size-3 animate-spin" />
+                      <CheckCircle2 v-else-if="savedRoles.has(role.id)" class="size-3" />
+                      <Check v-else class="size-3" />
+                      {{ savedRoles.has(role.id) ? 'Enregistré' : 'Enregistrer' }}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Transition>
+            </Transition>
+          </div>
         </div>
-      </div>
+      </template>
     </div>
+
+    <RoleDrawer
+      :isOpen="drawerOpen"
+      :mode="drawerMode"
+      @close="drawerOpen = false"
+      @created="drawerOpen = false"
+    />
   </div>
 </template>

@@ -426,6 +426,16 @@ class ErrorRegistry:
         message="{resource} avec ce code ou ce nom existe déjà.",
         http_status=status.HTTP_409_CONFLICT,
     )
+    CORE_RESOURCE_ALREADY_EXISTS = ErrorDetail(
+        code="CORE_006",
+        message="Cette ressource existe déjà.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    CORE_RESOURCE_IN_USE = ErrorDetail(
+        code="CORE_007",
+        message="Cette ressource est utilisée et ne peut pas être supprimée.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
 
     # --- DOMAINE CAMPUS (CAMP) ---
     CAMP_NOT_FOUND = ErrorDetail(
