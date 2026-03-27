@@ -3,6 +3,8 @@ from typing import List, Optional
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
+from mla_enum import RoleName
+
 from .role_model import RoleRead
 
 
@@ -77,4 +79,33 @@ class PermissionUpdate(SQLModel):
         return v
 
 
-__all__ = ["PermissionBase", "PermissionCreate", "PermissionRead", "PermissionUpdate"]
+class PermissionCodeRead(SQLModel):
+    """Version légère sans relation inverse (évite les refs circulaires)."""
+
+    id: str
+    code: str
+
+
+class RoleWithPermissionsRead(SQLModel):
+    """Rôle avec la liste de ses permissions — usage admin uniquement."""
+
+    id: str
+    libelle: Optional[RoleName] = None
+    permissions: List[PermissionCodeRead] = []
+
+
+class RolePermissionsUpdate(SQLModel):
+    """Remplace les permissions d'un rôle (liste complète des codes)."""
+
+    permission_codes: List[str]
+
+
+__all__ = [
+    "PermissionBase",
+    "PermissionCodeRead",
+    "PermissionCreate",
+    "PermissionRead",
+    "PermissionUpdate",
+    "RolePermissionsUpdate",
+    "RoleWithPermissionsRead",
+]
