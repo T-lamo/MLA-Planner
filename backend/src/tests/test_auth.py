@@ -1,13 +1,13 @@
 from datetime import date, timedelta
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlmodel import Session
 
-from core.auth.auth_dependencies import _affectation_valide
+from core.auth.auth_dependencies import ScopedRoleChecker, _affectation_valide
 from core.auth.security import create_access_token
 from core.settings import settings as stng
 from mla_enum import RoleName
@@ -274,3 +274,101 @@ def test_affectation_valide_dans_fenetre() -> None:
     hier = date.today() - timedelta(days=1)
     demain = date.today() + timedelta(days=1)
     assert _affectation_valide(_Aff(date_debut=hier, date_fin=demain)) is True
+
+
+# --- TESTS UNITAIRES : ScopedRoleChecker ---
+
+
+class _FakeRequest:
+    """Stub minimal remplaçant fastapi.Request pour les tests unitaires."""
+
+    def __init__(
+        self,
+        path_params: dict | None = None,
+        query_params: dict | None = None,
+    ) -> None:
+        self.path_params = path_params or {}
+        self.query_params = query_params or {}
+
+
+class _FakeRole:
+    def __init__(self, libelle: str) -> None:
+        self.libelle = libelle
+
+
+class _FakeContexte:
+    def __init__(self, ministere_id: str) -> None:
+        self.ministere_id = ministere_id
+
+
+class _FakeAff:
+    """Stub AffectationRole avec contextes optionnels."""
+
+    def __init__(
+        self,
+        libelle: str,
+        contextes: list | None = None,
+        active: bool = True,
+        date_debut: date | None = None,
+        date_fin: date | None = None,
+    ) -> None:
+        self.role = _FakeRole(libelle)
+        self.contextes = contextes or []
+        self.active = active
+        self.dateDebut = date_debut  # pylint: disable=invalid-name
+        self.dateFin = date_fin  # pylint: disable=invalid-name
+
+
+class _FakeUser:
+    def __init__(self, affectations: list) -> None:
+        self.affectations = affectations
+
+
+def test_scoped_checker_global_role_no_contexte() -> None:
+    """Affectation sans contexte → rôle global, accès accordé."""
+    checker = ScopedRoleChecker(["RESPONSABLE_MLA"])
+    user = _FakeUser([_FakeAff(RoleName.RESPONSABLE_MLA)])
+    req = _FakeRequest(path_params={"ministere_id": "min-abc"})
+    result = checker(req, user)  # type: ignore[arg-type]
+    assert "RESPONSABLE_MLA" in result
+
+
+def test_scoped_checker_contexte_match() -> None:
+    """Contexte présent, ministere_id correspond → accès accordé."""
+    checker = ScopedRoleChecker(["RESPONSABLE_MLA"])
+    ctx = _FakeContexte("min-louange")
+    user = _FakeUser([_FakeAff(RoleName.RESPONSABLE_MLA, contextes=[ctx])])
+    req = _FakeRequest(path_params={"ministere_id": "min-louange"})
+    result = checker(req, user)  # type: ignore[arg-type]
+    assert "RESPONSABLE_MLA" in result
+
+
+def test_scoped_checker_contexte_mismatch() -> None:
+    """Contexte présent, ministere_id différent → 403."""
+    checker = ScopedRoleChecker(["RESPONSABLE_MLA"])
+    ctx = _FakeContexte("min-louange")
+    user = _FakeUser([_FakeAff(RoleName.RESPONSABLE_MLA, contextes=[ctx])])
+    req = _FakeRequest(path_params={"ministere_id": "min-technique"})
+    with pytest.raises(HTTPException) as exc:
+        checker(req, user)  # type: ignore[arg-type]
+    assert exc.value.status_code == 403
+
+
+def test_scoped_checker_super_admin_bypass() -> None:
+    """Super Admin bypass total : contexte restreint ignoré."""
+    checker = ScopedRoleChecker(["RESPONSABLE_MLA"])
+    ctx = _FakeContexte("min-louange")
+    user = _FakeUser([_FakeAff(RoleName.SUPER_ADMIN, contextes=[ctx])])
+    req = _FakeRequest(path_params={"ministere_id": "min-technique"})
+    result = checker(req, user)  # type: ignore[arg-type]
+    assert result == ["SUPER_ADMIN"]
+
+
+def test_scoped_checker_no_ministere_id_in_request() -> None:
+    """Sans ministere_id dans la requête, le check de scope est ignoré (graceful)."""
+    checker = ScopedRoleChecker(["RESPONSABLE_MLA"])
+    ctx = _FakeContexte("min-louange")
+    user = _FakeUser([_FakeAff(RoleName.RESPONSABLE_MLA, contextes=[ctx])])
+    req = _FakeRequest()
+    result = checker(req, user)  # type: ignore[arg-type]
+    assert "RESPONSABLE_MLA" in result
