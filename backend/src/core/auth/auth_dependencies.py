@@ -242,9 +242,11 @@ class CasbinGuard:
         self,
         request: Request,
         user: Utilisateur = Depends(get_current_active_user),
+        db: Session = Depends(Database.get_session),
     ) -> list[str]:
         from .casbin_enforcer import (  # pylint: disable=import-outside-toplevel
             WILDCARD_DOMAIN,
+            build_enforcer,
             get_enforcer,
         )
 
@@ -262,10 +264,22 @@ class CasbinGuard:
         )
 
         if not enf.enforce(user.id, domain, self.obj, self.act):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Droits insuffisants pour cette action",
-            )
+            # L'enforcer peut être périmé après un reset/seed DB.
+            # Si le fallback confirme que l'utilisateur a bien le rôle
+            # en base, on reconstruit l'enforcer et on réessaie une fois.
+            try:
+                self._fallback(user)
+                build_enforcer(db)
+                enf = get_enforcer()
+            except HTTPException:
+                enf = None
+
+            if enf is None or not enf.enforce(user.id, domain, self.obj, self.act):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Droits insuffisants pour cette action",
+                )
+
         return [user.id]
 
 
