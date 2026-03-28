@@ -104,6 +104,11 @@ class ErrorRegistry:
         message="Accès refusé : vous n'appartenez pas à ce campus.",
         http_status=status.HTTP_403_FORBIDDEN,
     )
+    PLAN_018 = ErrorDetail(
+        code="PLAN_018",
+        message="Chant introuvable dans ce campus.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
     TMPL_003 = ErrorDetail(
         code="TMPL_003",
         message="Template introuvable.",

@@ -70,6 +70,24 @@ class MembrePoleLink(SQLModel, table=True):  # type: ignore
     pole_id: str = Field(foreign_key="t_pole.id", primary_key=True, ondelete="CASCADE")
 
 
+class PlanningChantLink(SQLModel, table=True):  # type: ignore
+    """Lien ordonné entre un planning et ses chants."""
+
+    __tablename__ = "t_planning_chant_link"
+    __table_args__ = {"extend_existing": True}
+    planning_id: str = Field(
+        foreign_key="t_planningservice.id",
+        primary_key=True,
+        ondelete="CASCADE",
+    )
+    chant_id: str = Field(
+        foreign_key="t_chant.id",
+        primary_key=True,
+        ondelete="CASCADE",
+    )
+    ordre: int = Field(default=0)
+
+
 # -------------------------
 # 1. RÉFÉRENTIELS & POLYVALENCE
 # -------------------------
@@ -573,4 +591,6 @@ __all__ = [
     "PlanningTemplateSlot",
     "PlanningTemplateRole",
     "PlanningTemplateRoleMembre",
+    # Planning ↔ Chant
+    "PlanningChantLink",
 ]

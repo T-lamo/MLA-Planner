@@ -8,7 +8,7 @@
     <PlanningDetailView
       v-if="internalMode === 'detail' && event"
       :event="event"
-      :planning="planning"
+      :planning="effectivePlanning"
     />
     <PlanningFormView v-else-if="internalMode !== 'detail'" />
 
@@ -196,6 +196,7 @@ import {
   planningDetailHelpersKey,
 } from '../composables/usePlanningDetailHelpers'
 import { usePlanningForm, planningFormKey } from '../composables/usePlanningForm'
+import { useRepertoire } from '../composables/useRepertoire'
 import PlanningDetailView from './PlanningDetailView.vue'
 import PlanningFormView from './PlanningFormView.vue'
 import SaveAsTemplateModal from './SaveAsTemplateModal.vue'
@@ -229,6 +230,9 @@ const { canWrite, canChangeStatus } = usePlanningPermissions()
 const userCampuses = computed(() => uiStore.myCampuses)
 const userCampusPrincipalId = computed<string | null>(() => uiStore.currentCampus?.id ?? null)
 
+// Répertoire — instancié tôt pour pouvoir le référencer dans onSaved
+const repertoire = useRepertoire()
+
 // -----------------------------------------------------------------------
 // État interne du mode
 // -----------------------------------------------------------------------
@@ -258,7 +262,13 @@ const form = usePlanningForm(
   ministereColorMap,
   canWrite,
   {
-    onSaved: (p, isNew) => emit('saved', p, isNew),
+    onSaved: async (p, isNew) => {
+      if (repertoire.isDirty.value) {
+        await repertoire.save(p.id)
+        p.chants = [...repertoire.chants.value]
+      }
+      emit('saved', p, isNew)
+    },
     onClose: () => emit('close'),
   },
 )
@@ -279,6 +289,15 @@ const helpers = usePlanningDetailHelpers(
   uiStore,
 )
 
+// Charger le répertoire depuis le planning courant (données initiales de la liste)
+watch(
+  planningRef,
+  (p) => {
+    if (p?.chants?.length) repertoire.loadFromPlanning(p.chants)
+  },
+  { immediate: true },
+)
+
 // -----------------------------------------------------------------------
 // Provide — sous-composants lisent via inject
 // -----------------------------------------------------------------------
@@ -286,6 +305,7 @@ provide(planningWorkflowKey, workflow)
 provide(planningDetailHelpersKey, helpers)
 provide(planningFormKey, form)
 provide('userCampuses', userCampuses)
+provide('repertoire', repertoire)
 
 // -----------------------------------------------------------------------
 // Destructuration pour le template du shell (footer + header)
@@ -305,7 +325,16 @@ const {
   handleTransitionSelect,
   loadFullPlanning,
   resetState,
+  detailPlanningFull,
 } = workflow
+
+// Planning effectif : détail complet (avec chants) si disponible, sinon la prop initiale
+const effectivePlanning = computed(() => detailPlanningFull.value ?? planningRef.value)
+
+// Mettre à jour le répertoire quand le planning complet (avec chants) est chargé
+watch(detailPlanningFull, (full) => {
+  if (full?.chants) repertoire.loadFromPlanning(full.chants)
+})
 
 const {
   // form — footer formulaire
