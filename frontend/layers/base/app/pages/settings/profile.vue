@@ -377,30 +377,6 @@
           </div>
         </div>
 
-        <!-- ── Compétences musicales ── -->
-        <div v-if="hasCompetences" class="info-card">
-          <div class="card-header">
-            <div class="card-icon-box">
-              <Music class="size-4" />
-            </div>
-            <h2 class="card-title">Compétences musicales</h2>
-          </div>
-          <div class="card-body space-y-5">
-            <div
-              v-for="(competences, categorie) in profile.competences_par_categorie"
-              :key="categorie"
-            >
-              <p class="field-label mb-2">{{ categorie }}</p>
-              <div class="flex flex-wrap gap-2">
-                <div v-for="comp in competences" :key="comp.code" class="competence-chip">
-                  <Music class="text-primary-400 size-3 shrink-0" />
-                  <span>{{ comp.libelle }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- ── Sécurité ── -->
         <div class="info-card">
           <div class="card-header">
@@ -538,7 +514,6 @@ import {
   User,
   MapPin,
   Building2,
-  Music,
   Shield,
   Lock,
   KeyRound,
@@ -629,12 +604,6 @@ const initials = computed(() => {
 
 const principalCampus = computed(() =>
   profile.value?.campuses?.find((c) => c.id === profile.value?.campus_principal_id),
-)
-
-const hasCompetences = computed(
-  () =>
-    profile.value?.competences_par_categorie &&
-    Object.keys(profile.value.competences_par_categorie).length > 0,
 )
 
 const polesForMinistere = (ministereId: string) =>
@@ -936,11 +905,6 @@ const handleChangePassword = async () => {
   border-color: var(--color-primary-100, #dbeafe);
   background-color: var(--color-primary-50);
   color: var(--color-primary-700, #1d4ed8);
-}
-
-/* ── Compétences ── */
-.competence-chip {
-  @apply flex items-center gap-1.5 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:border-slate-200;
 }
 
 /* ── Empty state ── */

@@ -1,3 +1,9 @@
 <script setup lang="ts">
-await navigateTo('/planning/calendar', { replace: true })
+definePageMeta({
+  middleware: [
+    function () {
+      return navigateTo('/planning/calendar', { replace: true })
+    },
+  ],
+})
 </script>

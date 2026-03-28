@@ -599,6 +599,24 @@
       </FormSection>
     </div>
 
+    <!-- SECTION 3 — RÉPERTOIRE -->
+    <FormSection
+      title="Répertoire"
+      :icon="Music"
+      :isOpen="activeSections.has('repertoire')"
+      :badge="repertoire?.chants.value.length || undefined"
+      @toggle="toggleSection('repertoire')"
+    >
+      <RepertoireEditor
+        v-if="activiteForm.campus_id"
+        :campusId="activiteForm.campus_id"
+        :repertoire="repertoire"
+      />
+      <p v-else class="text-sm text-slate-400 italic">
+        Sélectionnez d'abord un campus pour accéder au répertoire.
+      </p>
+    </FormSection>
+
     <!-- ── US-96 : avertissements membres suggérés ──────────────────────── -->
     <div
       v-if="applyWarningsIndispo.length > 0 || applyIgnoredMembres.length > 0"
@@ -692,6 +710,7 @@ import {
   BookmarkPlus,
   AlertTriangle,
   UserX,
+  Music,
 } from 'lucide-vue-next'
 import FormSection from '~~/layers/base/app/components/FormSection.vue'
 import { planningFormKey } from '../composables/usePlanningForm'
@@ -701,6 +720,8 @@ import { ACTIVITE_TYPES } from '../types/planning.types'
 import type { AffectationStatus } from '../types/planning.types'
 import { useIndisponibiliteWarning } from '../composables/useIndisponibiliteWarning'
 import { AffectationRepository } from '../repositories/AffectationRepository'
+import RepertoireEditor from './RepertoireEditor.vue'
+import type { UseRepertoireReturn } from '../composables/useRepertoire'
 
 const affRepo = new AffectationRepository()
 const notify = useMLANotify()
@@ -796,6 +817,7 @@ async function handleTemplateSelect(e: Event): Promise<void> {
 // mais userCampuses vient du shell via un prop ou inject supplémentaire.
 // Pour l'instant on l'injecte depuis le shell (voir PlanningDetailDrawer.vue).
 const userCampuses = inject<Array<{ id: string; nom: string }>>('userCampuses')!
+const repertoire = inject<UseRepertoireReturn>('repertoire')!
 
 // --- Indisponibilités (soft warning) ---
 const { isMemberUnavailable, getWarningTooltip, loadForPeriod } = useIndisponibiliteWarning()

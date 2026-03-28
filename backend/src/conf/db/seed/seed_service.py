@@ -29,6 +29,7 @@ from models import (
     Organisation,
     Pays,
     Permission,
+    PlanningChantLink,
     PlanningService,
     PlanningTemplate,
     PlanningTemplateRole,
@@ -131,6 +132,9 @@ class SeedService:
 
                 # 6. SONGBOOK
                 self._seed_songbook(campus_paris.id)
+
+                # 6b. RÉPERTOIRE : attacher des chants aux plannings
+                self._seed_planning_repertoire(campus_paris.id, act_map)
 
                 # 7. PLANNING TEMPLATES
                 self._seed_planning_templates(campus_paris.id, min_map, user_list)
@@ -904,4 +908,30 @@ class SeedService:
                     "paroles_chords": data["paroles_chords"],
                     "version": 1,
                 },
+            )
+
+    def _seed_planning_repertoire(self, campus_id: str, act_map: dict) -> None:
+        """Attache les 3 premiers chants du campus au premier planning Louange."""
+        louange_key = next((k for k in act_map if "louange" in k.lower()), None)
+        if not louange_key:
+            return
+        act = act_map[louange_key]
+        planning = self.db.exec(
+            select(PlanningService)
+            .where(PlanningService.activite_id == act.id)
+            .where(PlanningService.deleted_at == None)  # noqa: E711
+        ).first()
+        if not planning:
+            return
+
+        chants = self.db.exec(
+            select(Chant).where(Chant.campus_id == campus_id).limit(3)
+        ).all()
+
+        for ordre, chant in enumerate(chants):
+            self._get_or_create(
+                PlanningChantLink,
+                planning_id=planning.id,
+                chant_id=chant.id,
+                defaults={"ordre": ordre},
             )

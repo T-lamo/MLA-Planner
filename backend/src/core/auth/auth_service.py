@@ -71,6 +71,7 @@ class AuthService:
             "sub": user.username,
             "user_id": user.id,
             "context": self._build_user_context(user),
+            "capabilities": self._build_capabilities(user),
         }
         token, expire = create_access_token(data=token_data)
         new_refresh = create_refresh_token(data={"sub": user.username})[0]

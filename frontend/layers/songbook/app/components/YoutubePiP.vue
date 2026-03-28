@@ -33,41 +33,16 @@ const embedSrc = computed(() =>
 
 <template>
   <Teleport to="body">
-    <!-- ── Mobile : bandeau fixe en haut de l'écran ── -->
-    <div class="fixed inset-x-0 top-0 z-10001 shadow-2xl md:hidden">
-      <div class="relative bg-black">
-        <div class="aspect-video w-full">
-          <iframe
-            v-if="embedSrc"
-            :src="embedSrc"
-            class="h-full w-full"
-            allow="autoplay; encrypted-media"
-            allowfullscreen
-            sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
-            title="Lecteur YouTube"
-          />
-          <div v-else class="flex h-full items-center justify-center text-sm text-slate-400">
-            Impossible d'extraire l'identifiant vidéo.
-          </div>
-        </div>
-        <button
-          type="button"
-          class="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
-          title="Fermer la vidéo"
-          @click="emit('close')"
-        >
-          <X class="size-4" />
-        </button>
-      </div>
-    </div>
-
-    <!-- ── Desktop : lecteur flottant bas-droite ── -->
+    <!--
+      Un seul bloc — position mobile : bandeau fixe en haut (plein écran)
+                      position desktop : flottant bas-droite
+    -->
     <div
-      class="fixed right-4 bottom-4 z-10001 hidden overflow-hidden rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.35)] transition-all duration-300 ease-out md:block"
-      :class="isExpanded ? 'w-[480px]' : 'w-72'"
+      class="fixed inset-x-0 top-0 z-10001 shadow-2xl md:inset-x-auto md:top-auto md:right-4 md:bottom-4 md:overflow-hidden md:rounded-2xl md:shadow-[0_8px_32px_rgba(0,0,0,0.35)] md:transition-all md:duration-300 md:ease-out"
+      :class="isExpanded ? 'md:w-120' : 'md:w-72'"
     >
-      <!-- Barre de titre -->
-      <div class="flex items-center justify-between bg-slate-900 px-3 py-2">
+      <!-- Barre de titre — desktop uniquement -->
+      <div class="hidden items-center justify-between bg-slate-900 px-3 py-2 md:flex">
         <span class="truncate text-xs font-semibold text-slate-300">Vidéo YouTube</span>
         <div class="flex shrink-0 items-center gap-1">
           <button
@@ -90,8 +65,8 @@ const embedSrc = computed(() =>
         </div>
       </div>
 
-      <!-- Lecteur -->
-      <div class="aspect-video w-full bg-black">
+      <!-- Lecteur — unique iframe partagée mobile/desktop -->
+      <div class="relative aspect-video w-full bg-black">
         <iframe
           v-if="embedSrc"
           :src="embedSrc"
@@ -104,6 +79,16 @@ const embedSrc = computed(() =>
         <div v-else class="flex h-full items-center justify-center text-sm text-slate-400">
           Impossible d'extraire l'identifiant vidéo.
         </div>
+
+        <!-- Bouton fermer — mobile uniquement (overlay sur la vidéo) -->
+        <button
+          type="button"
+          class="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80 md:hidden"
+          title="Fermer la vidéo"
+          @click="emit('close')"
+        >
+          <X class="size-4" />
+        </button>
       </div>
     </div>
   </Teleport>

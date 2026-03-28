@@ -7,9 +7,11 @@ import type {
   GenerateSeriesForm,
   GenerateSeriesResponse,
   MembreSimple,
+  PlanningChantRead,
   PlanningFullCreate,
   PlanningFullRead,
   PlanningFullUpdate,
+  PlanningRepertoireUpdate,
   PlanningTemplateFullUpdate,
   PlanningTemplateListItem,
   PlanningTemplateRead,
@@ -199,5 +201,21 @@ export class PlanningRepository extends BaseRepository {
       { method: 'POST', body: { ...form, template_id: templateId } },
     )
     return data
+  }
+
+  // ── Répertoire de chants ──────────────────────────────────────────────────
+
+  async getRepertoire(planningId: string): Promise<PlanningChantRead[]> {
+    return this.unwrap<PlanningChantRead[]>(`${this.endpoint}/${planningId}/repertoire`)
+  }
+
+  async setRepertoire(
+    planningId: string,
+    payload: PlanningRepertoireUpdate,
+  ): Promise<PlanningChantRead[]> {
+    return this.unwrap<PlanningChantRead[]>(`${this.endpoint}/${planningId}/repertoire`, {
+      method: 'PUT',
+      body: payload,
+    })
   }
 }

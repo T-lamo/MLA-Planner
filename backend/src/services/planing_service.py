@@ -22,11 +22,14 @@ from models import (
     Utilisateur,
 )
 from models.activite_model import ActiviteFullRead
+from models.chant_model import Chant
 from models.membre_model import MemberAgendaResponse
 from models.planning_model import (
+    PlanningChantRead,
     PlanningFullCreate,
     PlanningFullRead,
     PlanningFullUpdate,
+    PlanningRepertoireUpdate,
     ViewContext,
 )
 from models.schema_db_model import (
@@ -35,6 +38,7 @@ from models.schema_db_model import (
     MembreCampusLink,
     MembreMinistereLink,
     Ministere,
+    PlanningChantLink,
     PlanningTemplate,
 )
 from notification.notification_schemas import (
@@ -472,6 +476,7 @@ class PlanningServiceSvc(
             if planning_db.activite:
                 result_dto.activite = self._build_activite_full(planning_db.activite)
             result_dto.view_context = context
+            result_dto.chants = self.get_repertoire(planning_id)
             return result_dto
 
         except Exception as e:
@@ -648,3 +653,67 @@ class PlanningServiceSvc(
         return MemberAgendaResponse(
             period_start=start, period_end=end, statistics=stats, entries=entries
         )
+
+    # ──────────────────────────────────────────────────────────────────
+    # RÉPERTOIRE DE CHANTS
+    # ──────────────────────────────────────────────────────────────────
+
+    def get_repertoire(self, planning_id: str) -> List[PlanningChantRead]:
+        """Retourne les chants liés à un planning, triés par ordre."""
+        planning = self.db.get(PlanningService, planning_id)
+        if not planning or planning.deleted_at is not None:
+            raise AppException(ErrorRegistry.PLAN_NOT_FOUND)
+
+        rows = self.db.exec(
+            select(PlanningChantLink, Chant)
+            .join(Chant, cast(Any, PlanningChantLink.chant_id == Chant.id))
+            .where(PlanningChantLink.planning_id == planning_id)
+            .order_by(col(PlanningChantLink.ordre))
+        ).all()
+
+        return [
+            PlanningChantRead(
+                id=chant.id,
+                titre=chant.titre,
+                artiste=chant.artiste,
+                youtube_url=chant.youtube_url,
+                categorie_code=chant.categorie_code,
+                ordre=link.ordre,
+            )
+            for link, chant in rows
+        ]
+
+    def set_repertoire(
+        self, planning_id: str, payload: PlanningRepertoireUpdate
+    ) -> List[PlanningChantRead]:
+        """Remplace le répertoire complet d'un planning."""
+        planning = self.db.get(PlanningService, planning_id)
+        if not planning or planning.deleted_at is not None:
+            raise AppException(ErrorRegistry.PLAN_NOT_FOUND)
+
+        # Valider que chaque chant_id existe
+        for chant_id in payload.chant_ids:
+            chant = self.db.get(Chant, chant_id)
+            if not chant:
+                raise AppException(ErrorRegistry.PLAN_018)
+
+        # Supprimer les liens existants
+        existing = self.db.exec(
+            select(PlanningChantLink).where(
+                PlanningChantLink.planning_id == planning_id
+            )
+        ).all()
+        for link in existing:
+            self.db.delete(link)
+
+        # Insérer les nouveaux liens ordonnés
+        for ordre, chant_id in enumerate(payload.chant_ids):
+            self.db.add(
+                PlanningChantLink(
+                    planning_id=planning_id,
+                    chant_id=chant_id,
+                    ordre=ordre,
+                )
+            )
+        self.db.commit()
+        return self.get_repertoire(planning_id)
