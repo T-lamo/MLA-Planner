@@ -73,15 +73,60 @@ Super Admin
 
 ### Implémentation backend
 
-```python
-# Injection via FastAPI Depends — déclaratif par endpoint
-router.get("/planning/full", dependencies=[Depends(RoleChecker(["ADMIN", "RESPONSABLE_MLA"]))])
+Quatre guards injectables via `Depends()` :
 
-# RoleChecker extrait les rôles depuis le payload JWT
-# Superadmin bypass automatique : si SUPER_ADMIN dans les rôles → toutes les vérifications passent
+```python
+# RoleChecker — rôle actif temporellement valide
+Depends(RoleChecker(["ADMIN", "RESPONSABLE_MLA"]))
+
+# ScopedRoleChecker — rôle + vérification du scope ministère
+Depends(ScopedRoleChecker(["ADMIN", "RESPONSABLE_MLA"]))
+# → l'affectation doit avoir un contexte couvrant le ministere_id de la requête
+
+# CasbinGuard — moteur RBAC with domains (Casbin)
+Depends(CasbinGuard("planning", "write", fallback_roles=["ADMIN"]))
+# → sub=user.id, dom=ministere_id, obj="planning", act="write"
+
+# CapabilityChecker — permission granulaire codée
+Depends(CapabilityChecker(["MEMBRE_READ"]))
+# → vérifie le champ 'capabilities' du JWT, fallback sur les permissions DB
 ```
 
-**Important** : `RoleChecker` compare avec les noms d'enum Python (`"ADMIN"`, `"SUPER_ADMIN"`) et non les valeurs JWT lisibles (`"Admin"`, `"Super Admin"`). La conversion est faite à l'intérieur du checker.
+**Important** : `RoleChecker` et `ScopedRoleChecker` comparent avec les noms d'enum Python (`"ADMIN"`, `"SUPER_ADMIN"`), pas les valeurs JWT lisibles (`"Admin"`, `"Super Admin"`). Superadmin bypass automatique sur tous les guards.
+
+### Casbin RBAC with domains
+
+Le moteur Casbin est initialisé au démarrage (`lifespan`) depuis la DB :
+
+```
+Modèle RBAC with domains :
+  (sub, dom, obj, act)
+  sub  = user.id
+  dom  = ministere_id ou '*' (global)
+  obj  = ressource : "planning", "chants", "admin"
+  act  = "read" | "write"
+```
+
+Policies par rôle : `(ADMIN, *, planning, write)`, `(MEMBRE_MLA, *, chants, read)`, etc.
+
+Groupings : chaque `AffectationRole` active génère `g(user_id, role, ministere_id)` ou `g(user_id, role, *)` si sans contexte.
+
+Dégradation gracieuse : si `build_enforcer()` échoue au boot, les guards repassent sur `RoleChecker` sans bloquer l'application.
+
+### `get_active_campus`
+
+Dépendance de résolution du campus actif :
+
+1. Header `X-Campus-Id` (priorité)
+2. `campus_principal_id` du membre
+3. Vérification `MembreCampusLink` (l'user appartient bien à ce campus)
+4. Super Admin : bypass du check d'appartenance
+
+Lève `AUTH_CAMPUS_REQUIRED` (400) ou `AUTH_CAMPUS_FORBIDDEN` (403) selon le cas.
+
+### Capabilities dans le JWT
+
+Le payload JWT contient désormais un champ `capabilities` : liste des codes de permission (`["MEMBRE_READ", "PLANNING_WRITE", …]`). Cela évite un aller-retour DB à chaque check de permission. `CapabilityChecker` lit ce champ en priorité, avec fallback sur les permissions DB pour les tokens émis avant ce changement.
 
 ### Implémentation frontend
 
@@ -203,8 +248,12 @@ En production : `ALLOWED_ORIGINS` doit contenir uniquement le domaine du fronten
 
 - ✅ JWT HS256 avec JTI blacklist (révocation immédiate au logout)
 - ✅ Cookies `HttpOnly` + `sameSite: strict` + `secure: true`
-- ✅ RBAC déclaratif via `RoleChecker` injectable
+- ✅ RBAC déclaratif via `RoleChecker` injectable (+ `ScopedRoleChecker` par ministère)
+- ✅ Moteur Casbin RBAC with domains — policies dynamiques sans redéploiement
+- ✅ `CapabilityChecker` — vérification granulaire des permissions via JWT
+- ✅ `get_active_campus` — résolution et validation du campus actif (`X-Campus-Id`)
 - ✅ Isolation multi-tenant par campus et ministère
+- ✅ Validité temporelle des affectations vérifiée à chaque check de rôle
 - ✅ Zéro `HTTPException` dans les services — erreurs contrôlées via `ErrorRegistry`
 - ✅ CORS whitelist explicite
 - ✅ Secrets exclusivement via variables d'environnement
