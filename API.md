@@ -29,10 +29,13 @@ Response:
   "user": {
     "id": "...",
     "username": "amos",
-    "roles": ["Admin"]
+    "roles": ["Admin"],
+    "capabilities": ["MEMBRE_READ", "PLANNING_WRITE", "CHANT_READ"]
   }
 }
 ```
+
+The `capabilities` array contains permission codes for the user. The frontend reads this to guard UI elements without additional API calls.
 
 ### Use the token
 
@@ -105,6 +108,20 @@ The frontend reads `error.error.code` to handle specific cases.
 | POST | `/auth/token` | Login | Public |
 | POST | `/auth/logout` | Revoke token | Authenticated |
 | POST | `/auth/refresh` | Refresh token | Authenticated |
+| GET | `/auth/users/me` | Current user + capabilities | Authenticated |
+| PATCH | `/auth/utilisateurs/{id}/password` | Change password | Owner or Admin |
+
+The `GET /auth/users/me` response includes a `capabilities` field (list of permission codes):
+
+```json
+{
+  "id": "...",
+  "username": "amos",
+  "roles": ["Admin"],
+  "capabilities": ["MEMBRE_READ", "PLANNING_WRITE", "CHANT_READ"],
+  "campus_principal_id": "..."
+}
+```
 
 ---
 
@@ -215,6 +232,18 @@ Query params for `GET /chants` : `campus_id` (optional filter) · `categorie_cod
 
 ---
 
+### Admin — `/admin` (Admin+)
+
+| Method | Path | Description | Roles |
+|---|---|---|---|
+| GET | `/admin/capabilities` | List all available capability codes | Admin+ |
+| GET | `/admin/roles` | List roles with their permissions | Admin+ |
+| POST | `/admin/roles` | Create a new role | Admin+ |
+| DELETE | `/admin/roles/{role_id}` | Delete role (forbidden if assigned) | Admin+ |
+| PATCH | `/admin/roles/{role_id}/permissions` | Replace role permissions | Admin+ |
+
+---
+
 ### Campus Config — `/campus-config` (Super Admin)
 
 | Method | Path | Description |
@@ -243,7 +272,10 @@ Query params for `GET /chants` : `campus_id` (optional filter) · `categorie_cod
 | | `ASGN_008` | 403 | Not owner of assignment |
 | **Auth** | `AUTH_001` | 401 | Invalid credentials |
 | | `AUTH_002` | 403 | Account disabled |
+| | `AUTH_004` | 400 | Current password incorrect |
 | | `AUTH_006` | 401 | Refresh token invalid/expired |
+| | `AUTH_007` | 400 | Active campus required (`X-Campus-Id` missing) |
+| | `AUTH_008` | 403 | Campus access forbidden |
 | **Config** | `CONF_002` | 409 | Ministry already linked to campus |
 | | `CONF_004` | 409 | Role code conflict |
 | **Member** | `MEMBRE_003` | 422 | Must be attached to at least 1 campus |
@@ -254,8 +286,11 @@ Query params for `GET /chants` : `campus_id` (optional filter) · `categorie_cod
 | | `SERIE_003` | 422 | `jour_semaine` required for weekly recurrence |
 | **Template** | `TMPL_003` | 404 | Template not found |
 | | `TMPL_004` | 403 | Insufficient access to template |
+| **Workflow** | `WKFL_001` | 409 | Invalid status transition |
 | **Core** | `CORE_001` | 404 | Resource not found |
-| | `CORE_004` | 409 | Integrity error (duplicate, FK violation) |
+| | `CORE_004` | 400 | Integrity error |
+| | `CORE_006` | 409 | Resource already exists |
+| | `CORE_007` | 409 | Resource in use (cannot delete) |
 
 ---
 
