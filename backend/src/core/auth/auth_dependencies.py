@@ -23,33 +23,46 @@ def get_current_active_user(
     db: Session = Depends(Database.get_session),
     token: str = Depends(OAuth2PasswordBearer(tokenUrl="/auth/token")),
 ) -> Utilisateur:
+    # 1. Décodage du payload — essaie la clé courante, puis la clé précédente
+    payload: dict = {}
     try:
-        # 1. Décodage du payload
         payload = jwt.decode(
             token, stng.JWT_SECRET_KEY, algorithms=[stng.JWT_ALGORITHM]
         )
-
-        username = payload.get("sub")
-        jti = payload.get("jti")  # <-- Nouvel identifiant du token
-
-        # 2. Tes validations strictes sur le format du token
-        if not isinstance(username, str) or username is None:
+    except JWTError as primary_exc:
+        if stng.JWT_SECRET_KEY_PREVIOUS:
+            try:
+                payload = jwt.decode(
+                    token,
+                    stng.JWT_SECRET_KEY_PREVIOUS,
+                    algorithms=[stng.JWT_ALGORITHM],
+                )
+            except JWTError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Session expirée ou corrompue",
+                ) from exc
+        else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token invalide: sub manquant ou incorrect",
-            )
+                detail="Session expirée ou corrompue",
+            ) from primary_exc
 
-        if not jti:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token invalide: jti manquant",
-            )
+    username = payload.get("sub")
+    jti = payload.get("jti")
 
-    except JWTError as exc:
+    # 2. Validations strictes sur le format du token
+    if not isinstance(username, str) or username is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session expirée ou corrompue",
-        ) from exc
+            detail="Token invalide: sub manquant ou incorrect",
+        )
+
+    if not jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token invalide: jti manquant",
+        )
 
     repo = AuthRepository(db)
 

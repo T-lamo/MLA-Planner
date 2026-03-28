@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional, cast
 
 from sqlalchemy.orm import selectinload
-from sqlmodel import Session, select
+from sqlmodel import Session, delete, select
 
 from models import AffectationRole, TokenBlacklist, Utilisateur
 from models.schema_db_model import Role
@@ -53,3 +53,15 @@ class AuthRepository:
         """Vérifie si un JTI est présent dans la table des révocations."""
         statement = select(TokenBlacklist).where(TokenBlacklist.jti == jti)
         return self.db.exec(statement).first() is not None
+
+    def purge_expired_tokens(self) -> None:
+        """Supprime les JTI dont la date d'expiration est dépassée.
+
+        Appelé à chaque login pour limiter la croissance de la table
+        t_revoked_tokens sans nécessiter de job externe.
+        """
+        now = datetime.now(tz=timezone.utc)
+        self.db.exec(  # type: ignore[call-overload]
+            delete(TokenBlacklist).where(cast(Any, TokenBlacklist.expires_at) <= now)
+        )
+        self.db.flush()

@@ -121,9 +121,45 @@ jobs:
           flags: backend
           fail_ci_if_error: false
 
-  # --- JOB 2 : BUILD ---
-  build-frontend:
+  # --- JOB 2 : DEPENDENCY SECURITY AUDIT ---
+  security-audit:
+    name: Security audit
+    runs-on: ubuntu-latest
     needs: quality-assurance
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: pip-audit (backend)
+        run: pip-audit --requirement backend/requirements.txt
+        continue-on-error: true  # non-bloquant : signale sans casser le build
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: pnpm audit (frontend)
+        run: cd frontend && pnpm install --frozen-lockfile && pnpm audit --prod
+        continue-on-error: true  # non-bloquant : signale sans casser le build
+
+  # --- JOB 3 : BUILD ---
+  build-frontend:
+    needs: [quality-assurance, security-audit]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     steps:

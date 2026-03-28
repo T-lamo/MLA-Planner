@@ -35,6 +35,28 @@ export default defineNuxtConfig({
 
   extends: ['./layers/base', './layers/auth', './layers/planning', './layers/songbook'],
 
+  // Headers de sécurité HTTP appliqués à toutes les routes
+  routeRules: {
+    '/**': {
+      headers: {
+        'X-Frame-Options': 'DENY',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+        // CSP : 'unsafe-inline' requis pour Nuxt SSR/hydration
+        'Content-Security-Policy': [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline'",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: https:",
+          "font-src 'self'",
+          "connect-src 'self'",
+          "frame-ancestors 'none'",
+        ].join('; '),
+      },
+    },
+  },
+
   vite: {
     plugins: [
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

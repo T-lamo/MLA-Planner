@@ -4,12 +4,15 @@ from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # Import indispensable
+from slowapi import _rate_limit_exceeded_handler  # type: ignore[import-untyped]
+from slowapi.errors import RateLimitExceeded  # type: ignore[import-untyped]
 from sqlmodel import Session
 
 from conf.db.database import Database
 from core.auth.casbin_enforcer import build_enforcer
 from core.bootstrap import bootstrap_superadmin
 from core.exceptions.exceptions_handlers import register_exception_handlers
+from core.rate_limit import limiter
 from core.settings import settings
 from routes import router
 
@@ -48,6 +51,11 @@ app.add_middleware(
     ],  # Autorise tous les headers (Content-Type, Authorization, etc.)
 )
 # ---------------------------
+
+app.state.limiter = limiter
+app.add_exception_handler(
+    RateLimitExceeded, _rate_limit_exceeded_handler  # type: ignore[arg-type]
+)
 
 app.include_router(router)
 register_exception_handlers(app)

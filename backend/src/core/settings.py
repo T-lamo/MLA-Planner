@@ -28,6 +28,8 @@ class Settings(BaseSettings):
 
     # JWT
     JWT_SECRET_KEY: str = "votre_cle_secrete_super_longue"  # À définir sur Render aussi
+    # Ancienne clé pendant la rotation — les tokens signés avec elle restent valides
+    JWT_SECRET_KEY_PREVIOUS: Optional[str] = None
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
