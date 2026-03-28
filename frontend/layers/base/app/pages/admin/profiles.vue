@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { refDebounced } from '@vueuse/core'
+import { Search, X } from 'lucide-vue-next'
 import ProfileHeader from '../../components/profile/ProfileHeader.vue'
-import ProfileFilters from '../../components/profile/ProfileFilters.vue'
 import ProfileCard from '../../components/profile/ProfileCard.vue'
 import ProfileFormDrawer from '../../components/profile/ProfileFormDrawer.vue'
+import AppSelect from '../../components/ui/AppSelect.vue'
+import CanGuard from '../../components/ui/CanGuard.vue'
 
-// Import des types nécessaires
 import type {
   ProfilReadFull,
   ProfilCreateFull,
@@ -14,52 +16,116 @@ import type {
 import type { CampusRead } from '~~/layers/base/types/campus'
 import { ProfileRepository } from '~~/layers/base/app/repositories/ProfileRepository'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
+import { useProfileStore } from '~~/layers/base/app/stores/useProfileStore'
 
 const authStore = useAuthStore()
+const profileStore = useProfileStore()
 
 const { profiles, isFetching, totalProfiles, activeCampusId, campuses, create, update, remove } =
   useProfiles()
 
-// All campuses for the form selector (admins can assign any campus to a member)
+// Tous les campus pour le formulaire
 const allCampuses = ref<CampusRead[]>([])
 onMounted(async () => {
   try {
     allCampuses.value = await new ProfileRepository().getAllCampuses()
   } catch {
-    // Fallback to user's campuses if endpoint unreachable
     allCampuses.value = campuses.value
   }
 })
 
 const { ministeresByCampus, fetchDetailedMinisteres } = useCampuses()
 
-// State
-const searchQuery = ref('')
+// ── Filtre ministère ───────────────────────────────────────────────
+// '' = vue campus (tous), sinon ID du ministère sélectionné
+const selectedMinistereId = ref('')
+
+// Toujours basé sur les ministères de l'utilisateur — admin ou pas
+const ministeresOptions = computed(() => [
+  { label: 'Tous les membres', value: '' },
+  ...profileStore.myMinisteres.map((m) => ({ label: m.nom, value: m.id })),
+])
+
+// Afficher le sélecteur seulement si au moins un ministère disponible
+const showMinistereFilter = computed(() => ministeresOptions.value.length > 1)
+
+// ── Recherche avec debounce 300ms ──────────────────────────────────
+const searchInput = ref('')
+const searchQuery = refDebounced(searchInput, 300)
+
+// ── Chargement des données au changement de campus ─────────────────
+watch(
+  activeCampusId,
+  async (newId) => {
+    if (!newId) return
+    // Invalider le cache ministère — les profils appartiennent à l'ancien campus
+    profileStore.clearMinistereCache()
+    selectedMinistereId.value = ''
+    fetchDetailedMinisteres(newId)
+    if (authStore.canReadMembres) {
+      await profileStore.fetchMyMinisteres(newId)
+    }
+  },
+  { immediate: true },
+)
+
+// Charger les profils du ministère sélectionné (cache par campus+ministère)
+watch(selectedMinistereId, async (id) => {
+  if (!id || !activeCampusId.value) return
+  const cacheKey = `${activeCampusId.value}:${id}`
+  if (!(cacheKey in profileStore.profilesByMinistere)) {
+    await profileStore.fetchProfilesByMinistere(id, activeCampusId.value)
+  }
+})
+
+// ── Profils filtrés ────────────────────────────────────────────────
+function filterBySearch(list: ProfilReadFull[]): ProfilReadFull[] {
+  const q = searchQuery.value.toLowerCase().trim()
+  if (!q) return list
+  return list.filter(
+    (p) =>
+      p.nom.toLowerCase().includes(q) ||
+      p.prenom.toLowerCase().includes(q) ||
+      p.email.toLowerCase().includes(q),
+  )
+}
+
+const campusProfiles = computed(() => filterBySearch(profiles.value))
+
+const ministereProfiles = computed<ProfilReadFull[]>(() => {
+  if (!selectedMinistereId.value || !activeCampusId.value) return []
+  const cacheKey = `${activeCampusId.value}:${selectedMinistereId.value}`
+  return filterBySearch(profileStore.profilesByMinistere[cacheKey] ?? [])
+})
+
+const displayedProfiles = computed(() =>
+  selectedMinistereId.value ? ministereProfiles.value : campusProfiles.value,
+)
+
+const displayedTotal = computed(() =>
+  selectedMinistereId.value ? displayedProfiles.value.length : totalProfiles.value,
+)
+
+const isListLoading = computed(() =>
+  selectedMinistereId.value ? profileStore.loadingMinistere : isFetching.value,
+)
+
+// Label contextuel pour le header
+const contextLabel = computed(() => {
+  if (!activeCampusId.value) return undefined
+  if (selectedMinistereId.value) {
+    const found = ministeresOptions.value.find((o) => o.value === selectedMinistereId.value)
+    return found?.label
+  }
+  const campus = campuses.value.find((c) => c.id === activeCampusId.value)
+  return campus?.nom ?? undefined
+})
+
+// ── CRUD ──────────────────────────────────────────────────────────
 const isDrawerOpen = ref(false)
 const isSubmitting = ref(false)
 const editingProfile = ref<ProfilReadFull | null>(null)
 
-// Watcher intelligent pour charger les données du campus
-watch(
-  activeCampusId,
-  (newId) => {
-    if (newId) fetchDetailedMinisteres(newId)
-  },
-  { immediate: true },
-)
-// Computed : Filtrage de la liste
-const filteredProfiles = computed(() => {
-  const query = searchQuery.value.toLowerCase().trim()
-  if (!query) return profiles.value
-  return profiles.value.filter(
-    (p) =>
-      p.nom.toLowerCase().includes(query) ||
-      p.prenom.toLowerCase().includes(query) ||
-      p.email.toLowerCase().includes(query),
-  )
-})
-
-// Actions
 const handleOpenCreate = () => {
   editingProfile.value = null
   isDrawerOpen.value = true
@@ -74,8 +140,6 @@ const handleFormSubmit = async (formData: ProfilCreateFull) => {
   isSubmitting.value = true
   try {
     if (editingProfile.value) {
-      // Build an explicit ProfilUpdateFull — never send roles_ids in utilisateur:
-      // UtilisateurUpdate validator rejects an empty roles_ids array with 422.
       const updatePayload: ProfilUpdateFull = {
         nom: formData.nom,
         prenom: formData.prenom,
@@ -102,7 +166,6 @@ const handleFormSubmit = async (formData: ProfilCreateFull) => {
       }
       await update(editingProfile.value.id, updatePayload)
     } else {
-      // Normalize empty password to undefined — backend min_length=6 rejects "".
       const createPayload: ProfilCreateFull = {
         ...formData,
         utilisateur: formData.utilisateur
@@ -113,7 +176,7 @@ const handleFormSubmit = async (formData: ProfilCreateFull) => {
     }
     isDrawerOpen.value = false
   } catch {
-    // errors are handled by the global fetch interceptor
+    // errors handled globally
   } finally {
     isSubmitting.value = false
   }
@@ -128,72 +191,149 @@ const handleDelete = async (id: string) => {
 
 <template>
   <div class="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 md:p-8">
-    <ProfileHeader :total="totalProfiles" :isFetching="isFetching" @add="handleOpenCreate" />
-
-    <ProfileFilters
-      v-model:searchQuery="searchQuery"
-      v-model:activeCampusId="activeCampusId"
-      :campuses="campuses"
-    />
-
+    <!-- Accès refusé -->
     <div
-      v-if="campuses.length === 0 && !isFetching"
-      class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700"
+      v-if="!authStore.canReadMembres"
+      class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
     >
-      Aucun campus disponible.
-      <template v-if="authStore.isSuperAdmin">
-        <RouterLink to="/admin/campuses" class="font-medium underline">
-          Créer le premier campus
-        </RouterLink>
-      </template>
-      <template v-else> Contactez un Super Admin pour créer un campus. </template>
+      Vous n'avez pas les droits nécessaires pour consulter les profils membres.
     </div>
 
-    <div v-if="isFetching" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      <div v-for="n in 6" :key="n" class="h-20 animate-pulse rounded-xl bg-slate-100"></div>
-    </div>
-
-    <TransitionGroup
-      v-else
-      name="profile-list"
-      tag="div"
-      class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
-    >
-      <ProfileCard
-        v-for="profile in filteredProfiles"
-        :key="profile.id"
-        :profile="profile"
-        @edit="handleOpenEdit"
-        @delete="handleDelete"
+    <template v-else>
+      <!-- En-tête -->
+      <ProfileHeader
+        :total="displayedTotal"
+        :isFetching="isListLoading"
+        :contextLabel="contextLabel"
+        @add="handleOpenCreate"
       />
-    </TransitionGroup>
-    <ProfileFormDrawer
-      :isOpen="isDrawerOpen"
-      :editingProfile="editingProfile"
-      :campuses="allCampuses"
-      :prefillCampusId="editingProfile ? undefined : activeCampusId"
-      :ministeresDetailed="ministeresByCampus"
-      :isSubmitting="isSubmitting"
-      @close="isDrawerOpen = false"
-      @submit="handleFormSubmit"
-    />
+
+      <!-- Barre de contrôle : recherche + filtre ministère -->
+      <div
+        class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center"
+      >
+        <!-- Recherche -->
+        <div class="relative flex-1">
+          <Search
+            class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            v-model="searchInput"
+            type="text"
+            placeholder="Rechercher par nom, prénom, email…"
+            class="form-input w-full bg-white pr-8 pl-10"
+          />
+          <button
+            v-if="searchInput"
+            class="absolute top-1/2 right-2.5 -translate-y-1/2 rounded p-0.5 text-slate-400 transition-colors hover:text-slate-700"
+            type="button"
+            aria-label="Effacer la recherche"
+            @click="searchInput = ''"
+          >
+            <X class="size-3.5" />
+          </button>
+        </div>
+
+        <!-- Filtre ministère -->
+        <div v-if="showMinistereFilter" class="flex items-center gap-3">
+          <span class="text-xs font-bold tracking-wider whitespace-nowrap text-slate-400 uppercase">
+            Ministère
+          </span>
+          <AppSelect v-model="selectedMinistereId" :options="ministeresOptions" class="min-w-44" />
+        </div>
+      </div>
+
+      <!-- Avertissement campus manquant -->
+      <div
+        v-if="campuses.length === 0 && !isListLoading"
+        class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700"
+      >
+        Aucun campus disponible.
+        <template v-if="authStore.isSuperAdmin">
+          <RouterLink to="/admin/campuses" class="font-medium underline">
+            Créer le premier campus
+          </RouterLink>
+        </template>
+        <template v-else> Contactez un Super Admin pour créer un campus. </template>
+      </div>
+
+      <!-- Skeleton chargement -->
+      <div v-if="isListLoading" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div v-for="n in 6" :key="n" class="h-24 animate-pulse rounded-xl bg-slate-100" />
+      </div>
+
+      <!-- Liste -->
+      <template v-else>
+        <!-- État vide contextualisé -->
+        <div
+          v-if="displayedProfiles.length === 0"
+          class="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-200 py-14 text-center"
+        >
+          <template v-if="searchInput">
+            <p class="text-sm font-medium text-slate-600">
+              Aucun résultat pour
+              <span class="font-semibold">"{{ searchInput }}"</span>
+            </p>
+            <button
+              class="text-xs text-(--color-primary-600) underline hover:no-underline"
+              @click="searchInput = ''"
+            >
+              Effacer la recherche
+            </button>
+          </template>
+          <template v-else>
+            <p class="text-sm text-slate-500">Aucun membre dans cette vue.</p>
+            <CanGuard capability="MEMBRE_CREATE">
+              <button class="btn btn-primary btn-sm" @click="handleOpenCreate">
+                Ajouter le premier membre
+              </button>
+            </CanGuard>
+          </template>
+        </div>
+
+        <TransitionGroup
+          v-else
+          name="profile-list"
+          tag="div"
+          class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          <ProfileCard
+            v-for="profile in displayedProfiles"
+            :key="profile.id"
+            :profile="profile"
+            @edit="handleOpenEdit"
+            @delete="handleDelete"
+          />
+        </TransitionGroup>
+      </template>
+
+      <ProfileFormDrawer
+        :isOpen="isDrawerOpen"
+        :editingProfile="editingProfile"
+        :campuses="allCampuses"
+        :prefillCampusId="editingProfile ? undefined : activeCampusId"
+        :ministeresDetailed="ministeresByCampus"
+        :isSubmitting="isSubmitting"
+        @close="isDrawerOpen = false"
+        @submit="handleFormSubmit"
+      />
+    </template>
   </div>
 </template>
 
 <style scoped>
 @reference "../../assets/css/main.css";
 
-/* Animations de liste */
 .profile-list-enter-active,
 .profile-list-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.25s ease;
 }
 .profile-list-enter-from,
 .profile-list-leave-to {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(8px);
 }
 .profile-list-move {
-  transition: transform 0.3s ease;
+  transition: transform 0.25s ease;
 }
 </style>

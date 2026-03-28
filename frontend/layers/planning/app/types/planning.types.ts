@@ -206,6 +206,21 @@ export interface ViewContext {
   is_ready_for_publish: boolean
 }
 
+// --- Répertoire de chants ---
+
+export interface PlanningChantRead {
+  id: string
+  titre: string
+  artiste?: string | null
+  youtube_url?: string | null
+  categorie_code?: string | null
+  ordre: number
+}
+
+export interface PlanningRepertoireUpdate {
+  chant_ids: string[]
+}
+
 // --- Planning complet ---
 
 export interface PlanningFullRead {
@@ -215,6 +230,7 @@ export interface PlanningFullRead {
   template_id?: string | null
   activite?: ActiviteFullRead | null
   slots: SlotFullRead[]
+  chants: PlanningChantRead[]
   view_context?: ViewContext | null
 }
 

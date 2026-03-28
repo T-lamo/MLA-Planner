@@ -288,12 +288,19 @@ export function usePlanningForm(
     activiteForm.ministere_organisateur_id = id
   }
 
+  function debutPlusTwoHours(): string {
+    const d = new Date(activiteForm.date_debut)
+    d.setMinutes(d.getMinutes() + 120)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
   function onDateDebutChange(): void {
     if (
-      activiteForm.date_fin &&
+      !activiteForm.date_fin ||
       new Date(activiteForm.date_fin) <= new Date(activiteForm.date_debut)
     ) {
-      activiteForm.date_fin = ''
+      activiteForm.date_fin = debutPlusTwoHours()
     }
   }
 

@@ -2,12 +2,11 @@
 import { computed, ref } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import AppSearchSelect from '~~/layers/base/app/components/ui/AppSearchSelect.vue'
-import ChantCategorieDrawer from './ChantCategorieDrawer.vue'
-import type { ChantCategorieRead } from '../types/chant'
+import ArtisteDrawer from './ArtisteDrawer.vue'
 
 const props = defineProps<{
   modelValue: string
-  categories: ChantCategorieRead[]
+  suggestions: string[]
 }>()
 
 const emit = defineEmits<{
@@ -16,10 +15,10 @@ const emit = defineEmits<{
 
 const showDrawer = ref(false)
 
-const options = computed(() => props.categories.map((c) => ({ label: c.libelle, value: c.code })))
+const options = computed(() => props.suggestions.map((a) => ({ label: a, value: a })))
 
-function onCreated(code: string): void {
-  emit('update:modelValue', code)
+function onCreated(name: string): void {
+  emit('update:modelValue', name)
 }
 </script>
 
@@ -36,13 +35,13 @@ function onCreated(code: string): void {
     <button
       type="button"
       class="border-primary-200 text-primary-600 hover:bg-primary-50 inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm"
-      title="Créer une nouvelle catégorie"
+      title="Ajouter un nouvel artiste"
       @click="showDrawer = true"
     >
       <Plus class="h-4 w-4" />
-      Nouvelle
+      Nouveau
     </button>
   </div>
 
-  <ChantCategorieDrawer :isOpen="showDrawer" @close="showDrawer = false" @created="onCreated" />
+  <ArtisteDrawer :isOpen="showDrawer" @close="showDrawer = false" @created="onCreated" />
 </template>
