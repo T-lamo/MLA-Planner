@@ -230,17 +230,19 @@ En production : `ALLOWED_ORIGINS` doit contenir uniquement le domaine du fronten
 
 ## Points à renforcer avant mise en production
 
-| Priorité | Item | Action recommandée |
+| Priorité | Item | Statut |
 |---|---|---|
-| 🔴 Critique | `print()` dans `generic_exception_handler` | Remplacer par `logging.getLogger(__name__).exception(exc)` |
-| 🔴 Critique | Rate limiting absent | Ajouter `slowapi` ou un reverse proxy (Nginx/Cloudflare) sur `/auth/token` |
-| 🟠 Important | Rotation de `JWT_SECRET_KEY` | Mettre en place un mécanisme de rotation sans casser les sessions actives |
-| 🟠 Important | Audit log des actions sensibles | Logger les connexions, créations/suppressions de planning, changements de rôle |
-| 🟡 Moyen | HTTPS only enforcement | Redirection HTTP→HTTPS via Nginx ou Render settings |
-| 🟡 Moyen | Politique de mot de passe | Actuellement aucune validation de complexité côté API |
-| 🟡 Moyen | Expiration refresh token | Vérifier que les refresh tokens expirés sont bien nettoyés de la table `t_revoked_tokens` |
-| 🟢 Faible | Content Security Policy | Ajouter un header CSP via Nuxt `routeRules` |
-| 🟢 Faible | Dependency scanning | Intégrer `pip-audit` et `pnpm audit` dans la CI |
+| ✅ Résolu | `print()` → `logging.exception()` dans `generic_exception_handler` | Implémenté — détail masqué en `prod` |
+| ✅ Résolu | Rate limiting sur `/auth/token` | `slowapi` — 10 req/min par IP |
+| ✅ Résolu | Rotation de `JWT_SECRET_KEY` | Variable `JWT_SECRET_KEY_PREVIOUS` — tokens anciens acceptés pendant la rotation |
+| ✅ Résolu | Audit log des actions sensibles | `core/audit.py` — login, logout, changement de mot de passe, modifications de rôle |
+| ✅ Résolu | Politique de mot de passe | `validate_password_strength` — 8c + chiffre + caractère spécial |
+| ✅ Résolu | Purge des refresh tokens expirés | `purge_expired_tokens()` appelé à chaque login |
+| ✅ Résolu | Content Security Policy | Headers CSP + sécurité dans `nuxt.config.ts` via `routeRules` |
+| ✅ Résolu | Dependency scanning | `pip-audit` + `pnpm audit` — job `security-audit` dans la CI |
+| 🟡 Moyen | HTTPS only enforcement | Activer "Force HTTPS" dans les paramètres Render (aucun code requis) |
+| 🟠 Important | Rate limiting global | Ajouter Nginx/Cloudflare en reverse proxy pour protection DDoS complète |
+| 🟢 Faible | Rotation automatique `JWT_SECRET_KEY` | Script de rotation planifié + invalidation progressive |
 
 ---
 
@@ -255,6 +257,14 @@ En production : `ALLOWED_ORIGINS` doit contenir uniquement le domaine du fronten
 - ✅ Isolation multi-tenant par campus et ministère
 - ✅ Validité temporelle des affectations vérifiée à chaque check de rôle
 - ✅ Zéro `HTTPException` dans les services — erreurs contrôlées via `ErrorRegistry`
+- ✅ Rate limiting sur `/auth/token` (10 req/min par IP via `slowapi`)
+- ✅ Audit log (`core/audit.py`) — login, logout, changements de mot de passe et de rôle
+- ✅ Politique de mot de passe — 8c minimum + chiffre + caractère spécial
+- ✅ Purge automatique des tokens révoqués expirés (à chaque login)
+- ✅ Rotation `JWT_SECRET_KEY` sans coupure de session (`JWT_SECRET_KEY_PREVIOUS`)
+- ✅ Logging structuré — `logging.exception()` au lieu de `print()`, détail masqué en prod
+- ✅ Headers sécurité HTTP (CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`)
+- ✅ Dependency scanning automatique (`pip-audit` + `pnpm audit` dans la CI)
 - ✅ CORS whitelist explicite
 - ✅ Secrets exclusivement via variables d'environnement
 - ✅ `actif` vérifié à chaque requête (compte désactivé → 403 immédiat)
