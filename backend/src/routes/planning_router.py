@@ -21,9 +21,11 @@ from models import (
     Utilisateur,
 )
 from models.planning_model import (
+    PlanningChantRead,
     PlanningFullCreate,
     PlanningFullRead,
     PlanningFullUpdate,
+    PlanningRepertoireUpdate,
 )
 from notification.notification_repository import EmailRepository
 from notification.notification_service import EmailService
@@ -236,6 +238,41 @@ def list_by_campus(
 ):
     svc = PlanningServiceSvc(db)
     return {"data": svc.list_by_campus(campus_id, current_user)}
+
+
+@router.get(
+    "/{planning_id}/repertoire",
+    response_model=DataListResponse[PlanningChantRead],
+    summary="Répertoire de chants d'un planning",
+    description="Retourne la liste ordonnée des chants attachés à un planning.",
+)
+def get_repertoire(
+    planning_id: str,
+    db: Session = Depends(Database.get_db_for_route),
+    _: Utilisateur = Depends(get_current_active_user),
+):
+    svc = PlanningServiceSvc(db)
+    return {"data": svc.get_repertoire(planning_id)}
+
+
+@router.put(
+    "/{planning_id}/repertoire",
+    response_model=DataListResponse[PlanningChantRead],
+    summary="Mettre à jour le répertoire d'un planning",
+    description=(
+        "Remplace la liste ordonnée des chants d'un planning. "
+        "Requiert le rôle RESPONSABLE_MLA ou supérieur."
+    ),
+    dependencies=[planning_manager],
+)
+def set_repertoire(
+    planning_id: str,
+    payload: PlanningRepertoireUpdate,
+    db: Session = Depends(Database.get_db_for_route),
+    _: Utilisateur = Depends(get_current_active_user),
+):
+    svc = PlanningServiceSvc(db)
+    return {"data": svc.set_repertoire(planning_id, payload)}
 
 
 # Garantit que les routes littérales (ex: /by-ministere/..., /full, /slots)

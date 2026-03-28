@@ -126,7 +126,24 @@
       </div>
     </div>
 
-    <!-- Bloc 4 — Résumé global -->
+    <!-- Bloc 4 — Répertoire de chants -->
+    <div v-if="planning?.chants !== undefined" class="flex flex-col gap-2">
+      <div class="flex items-center gap-2">
+        <Music class="size-4 text-slate-400" />
+        <span class="text-[11px] font-black tracking-widest text-slate-500 uppercase">
+          Répertoire
+        </span>
+        <span
+          v-if="planning.chants.length > 0"
+          class="flex h-5 items-center justify-center rounded-full bg-slate-100 px-2 text-[10px] font-bold text-slate-500"
+        >
+          {{ planning.chants.length }}
+        </span>
+      </div>
+      <PlanningRepertoire :chants="planning.chants" />
+    </div>
+
+    <!-- Bloc 5 — Résumé global -->
     <div
       v-if="planning?.slots?.length"
       class="flex items-center gap-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3"
@@ -198,9 +215,10 @@
 
 <script setup lang="ts">
 import { inject } from 'vue'
-import { Calendar, Clock, MapPin, Users as UsersIcon } from 'lucide-vue-next'
+import { Calendar, Clock, MapPin, Music, Users as UsersIcon } from 'lucide-vue-next'
 import { planningWorkflowKey } from '../composables/usePlanningWorkflow'
 import { planningDetailHelpersKey } from '../composables/usePlanningDetailHelpers'
+import PlanningRepertoire from './PlanningRepertoire.vue'
 import type { PlanningEvent, PlanningFullRead } from '../types/planning.types'
 
 defineProps<{
