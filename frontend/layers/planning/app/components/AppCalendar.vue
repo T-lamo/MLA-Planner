@@ -242,18 +242,75 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   --fc-now-indicator-color: var(--color-primary-600);
 }
 
+/* ── Force la police système sur tous les éléments FC ───────────────── */
+/* FullCalendar injecte Arial/Helvetica — on hérite du body */
+.fc,
+.fc * {
+  font-family: inherit;
+}
+
 /* ── Toolbar ────────────────────────────────────────────────────────── */
 .fc .fc-toolbar {
   @apply mb-6 flex-col gap-3 md:flex-row;
 }
 .fc .fc-toolbar-title {
-  @apply text-base font-bold text-slate-800 capitalize md:text-lg;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a; /* slate-900 */
+  letter-spacing: -0.01em;
+  text-transform: capitalize;
+}
+@media (min-width: 768px) {
+  .fc .fc-toolbar-title {
+    font-size: 1.125rem;
+  }
 }
 
 /* ── Boutons ────────────────────────────────────────────────────────── */
 .fc .fc-button {
   @apply px-2 py-2 text-[10px] font-semibold shadow-none transition-all outline-none md:px-4 md:text-xs;
   border-radius: 8px;
+  letter-spacing: 0.01em;
+}
+
+/* ── En-têtes de colonnes (noms des jours) ──────────────────────────── */
+.fc .fc-col-header-cell-cushion {
+  font-size: 0.75rem; /* 12px */
+  font-weight: 600;
+  color: #475569; /* slate-600 */
+  text-transform: capitalize;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+/* ── Numéros de jours (vue daygrid) ─────────────────────────────────── */
+.fc .fc-daygrid-day-number {
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 500;
+  color: #64748b; /* slate-500 */
+  text-decoration: none;
+}
+.fc .fc-day-today .fc-daygrid-day-number {
+  font-weight: 700;
+  color: var(--color-primary-600);
+}
+
+/* ── Labels des créneaux horaires ───────────────────────────────────── */
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-timegrid-axis-cushion {
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 500;
+  color: #94a3b8; /* slate-400 */
+  letter-spacing: 0.01em;
+}
+
+/* ── Entête "all-day" ───────────────────────────────────────────────── */
+.fc .fc-timegrid-axis-cushion {
+  font-size: 0.625rem; /* 10px */
+  font-weight: 600;
+  color: #cbd5e1; /* slate-300 */
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 .fc .fc-button-active,
 .fc .fc-button:focus-visible {
@@ -269,26 +326,29 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 /* ── Responsive mobile ──────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .fc .fc-daygrid-day-number {
-    @apply p-1 text-xs;
+    padding: 2px 4px;
+    font-size: 0.75rem;
   }
   .fc .fc-timegrid-axis-cushion {
-    @apply p-0 text-[10px];
+    padding: 0;
+    font-size: 0.5625rem; /* 9px */
   }
   .fc .fc-toolbar-chunk {
     @apply flex w-full justify-center;
   }
-  /* TimeGridWeek mobile : éviter le débordement horizontal */
   .fc .fc-timegrid-col-frame {
     min-width: 40px;
   }
   .fc .fc-col-header-cell-cushion {
-    @apply px-0.5 py-1 text-[10px];
+    padding: 4px 2px;
+    font-size: 0.625rem; /* 10px */
   }
   .fc .fc-timegrid-slot-label-cushion {
-    @apply px-0.5 text-[9px];
+    padding: 0 2px;
+    font-size: 0.5625rem; /* 9px */
   }
   .fc-timegrid-event .fc-event-title {
-    @apply text-[9px];
+    font-size: 0.625rem; /* 10px */
     display: -webkit-box;
     -webkit-line-clamp: 1;
     line-clamp: 1;
@@ -306,7 +366,24 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 }
 
 .mla-calendar-event {
-  @apply cursor-pointer rounded-md border-none px-1 py-0.5 text-[10px] font-medium shadow-sm transition-transform active:scale-95 md:px-2 md:text-xs;
+  @apply cursor-pointer rounded-md border-none px-1 py-0.5 shadow-sm transition-transform active:scale-95 md:px-2;
+  font-size: 0.6875rem; /* 11px — plus lisible que 10px */
+  font-weight: 600;
+  letter-spacing: 0.005em;
+  line-height: 1.35;
+}
+@media (min-width: 768px) {
+  .mla-calendar-event {
+    font-size: 0.75rem; /* 12px desktop */
+  }
+}
+
+/* Titre dans les événements timegrid */
+.fc-timegrid-event .fc-event-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.005em;
 }
 
 /* ── Indicateur événement personnel ────────────────────────────────── */
