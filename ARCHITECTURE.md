@@ -104,16 +104,67 @@ Les IDs sont des `str` (UUID v4 générés par la DB), jamais des entiers.
 ### Auth JWT
 
 ```
-Login → JWT (HS256) avec payload : sub, jti (UUID v4), exp, roles
+Login → JWT (HS256) avec payload : sub, jti (UUID v4), exp, roles, capabilities
      ↓
 Chaque requête → vérification signature → lookup JTI dans t_revoked_tokens
      ↓
-RoleChecker(["ADMIN", "RESPONSABLE_MLA"]) → extrait libelle.name des affectations
+RoleChecker / ScopedRoleChecker / CasbinGuard / CapabilityChecker
 ```
+
+Le champ `capabilities` dans le JWT contient la liste des codes de permission de l'utilisateur (ex : `["MEMBRE_READ", "PLANNING_WRITE"]`). Cela évite un aller-retour DB pour les checks de permissions fréquents.
 
 Le `RoleChecker` utilise `.name` des valeurs de `RoleName` enum (`"ADMIN"`, `"SUPER_ADMIN"`, etc.) — ne pas confondre avec `.value` (`"Admin"`, `"Super Admin"`).
 
-Superadmin bypass : si `RoleName.SUPER_ADMIN.name` est dans les rôles de l'user, toutes les vérifications de rôle passent automatiquement.
+Superadmin bypass : si `RoleName.SUPER_ADMIN.name` est dans les rôles de l'user, toutes les vérifications passent automatiquement.
+
+### Guards d'autorisation
+
+Quatre guards injectable via `Depends()` dans `core/auth/auth_dependencies.py` :
+
+| Guard | Usage |
+|---|---|
+| `RoleChecker(["ADMIN"])` | Vérifie qu'au moins un rôle actif correspond (temporellement valide) |
+| `ScopedRoleChecker(["ADMIN"])` | Comme `RoleChecker` + vérifie que le `ministere_id` de la requête est dans les contextes de l'affectation |
+| `CasbinGuard("planning", "write")` | Délègue au moteur Casbin RBAC with domains ; fallback sur `RoleChecker` si Casbin non initialisé |
+| `CapabilityChecker(["MEMBRE_READ"])` | Vérifie la présence d'une capability dans le JWT ; fallback sur les permissions DB |
+
+```python
+# Exemple d'utilisation dans un router
+router.get("/planning/full", dependencies=[
+    Depends(ScopedRoleChecker(["ADMIN", "RESPONSABLE_MLA"]))
+])
+```
+
+### Casbin — moteur RBAC with domains
+
+Le moteur Casbin (`core/auth/casbin_enforcer.py`) est construit au démarrage de l'application dans le `lifespan` FastAPI. Il stocke ses policies dans la table `casbin_rule`.
+
+```
+Modèle : (sub, dom, obj, act)
+  sub  = user.id
+  dom  = ministere_id (ou '*' pour global)
+  obj  = ressource (ex: "planning", "chants", "admin")
+  act  = action (ex: "read", "write")
+```
+
+Dégradation gracieuse : si `build_enforcer()` échoue au démarrage, l'application tourne en mode fallback `RoleChecker` sans bloquer le boot.
+
+```python
+# Reconstruction automatique si l'enforcer est périmé (après seed/reset)
+build_enforcer(db)
+enf = get_enforcer()  # → retourne l'enforcer courant ou None
+```
+
+### `get_active_campus`
+
+Dépendance qui résout et valide le campus actif de la requête :
+
+1. Header `X-Campus-Id` (priorité)
+2. Sinon `campus_principal_id` du membre
+3. Vérifie que l'utilisateur appartient bien à ce campus (`MembreCampusLink`)
+4. Super Admin : bypass du check d'appartenance
+
+Lève `AppException(ErrorRegistry.AUTH_CAMPUS_REQUIRED)` si aucun campus n'est résolvable.
 
 ---
 
@@ -272,3 +323,6 @@ Données de test dans `backend/src/conf/db/seed/data.py` — source de vérité 
 | `ErrorRegistry` centralisé | Un seul endroit pour modifier les messages d'erreur, tests plus simples |
 | TailwindCSS v4 CSS-first | Variables CSS natives, moins de configuration JS, meilleure performance |
 | Web Components pour `ui-core` | Réutilisables hors Nuxt si nécessaire, isolation des styles garantie |
+| Casbin RBAC with domains | Permissions dynamiques sans redéploiement ; `ministere_id` comme domaine permet l'isolation par ministère |
+| `capabilities` dans le JWT | Évite un aller-retour DB à chaque check de permission ; `CapabilityChecker` lis le JWT en priorité |
+| Dégradation gracieuse Casbin | Si le moteur échoue au boot, `CasbinGuard` repasse sur `RoleChecker` pour ne pas bloquer l'application |

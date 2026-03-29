@@ -6,9 +6,24 @@ from typing import Any, Dict, Optional
 import jwt
 from pwdlib import PasswordHash
 
+from core.exceptions.app_exception import AppException
+from core.message import ErrorRegistry
 from core.settings import settings as stng
 
 password_hash = PasswordHash.recommended()
+
+
+def validate_password_strength(password: str) -> None:
+    """Vérifie la complexité du nouveau mot de passe.
+
+    Règles : min 8 caractères, au moins 1 chiffre, au moins 1 caractère
+    non alphanumérique. Lève AppException(AUTH_009) si la règle n'est
+    pas respectée.
+    """
+    has_digit = any(c.isdigit() for c in password)
+    has_special = any(not c.isalnum() for c in password)
+    if len(password) < 8 or not has_digit or not has_special:
+        raise AppException(ErrorRegistry.AUTH_PASSWORD_TOO_WEAK)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

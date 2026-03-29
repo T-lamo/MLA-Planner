@@ -1,5 +1,10 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from '@tailwindcss/vite'
+
+// URL du backend : injectée à build-time via NUXT_PUBLIC_API_BASE en prod,
+// fallback sur localhost:8000 en dev.
+const apiOrigin = process.env.NUXT_PUBLIC_API_BASE?.replace(/\/+$/, '') || 'http://localhost:8000'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -34,6 +39,28 @@ export default defineNuxtConfig({
   },
 
   extends: ['./layers/base', './layers/auth', './layers/planning', './layers/songbook'],
+
+  // Headers de sécurité HTTP appliqués à toutes les routes
+  routeRules: {
+    '/**': {
+      headers: {
+        'X-Frame-Options': 'DENY',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+        // CSP : 'unsafe-inline' requis pour Nuxt SSR/hydration
+        'Content-Security-Policy': [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline'",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' data: https:",
+          "font-src 'self'",
+          `connect-src 'self' ${apiOrigin}`,
+          "frame-ancestors 'none'",
+        ].join('; '),
+      },
+    },
+  },
 
   vite: {
     plugins: [

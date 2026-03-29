@@ -44,7 +44,7 @@ Les comptes sont créés automatiquement au premier démarrage (seed idempotent)
 
 | Identifiant | Mot de passe | Rôle | Ministère |
 |---|---|---|---|
-| `superadmin` | `demo123!` | Super Admin | — |
+| `superadmin` | `plan123!` | Super Admin | — |
 | `amos` | `plan123!` | Admin | Louange |
 | `jean` | `plan123!` | Responsable | Technique |
 | `awa` | `plan123!` | Membre | Accueil |

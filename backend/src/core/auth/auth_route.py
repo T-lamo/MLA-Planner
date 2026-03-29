@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
@@ -9,6 +9,7 @@ from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from core.auth.auth_service import AuthService
 from core.auth.auth_utils import _affectation_valide
 from core.auth.models import PasswordChangeRequest, RefreshTokenRequest, Token
+from core.rate_limit import limiter
 from models import Utilisateur
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -25,7 +26,9 @@ def get_auth_service(db: Session = Depends(Database.get_session)) -> AuthService
 # LOGIN / TOKEN
 # ---------------------------
 @router.post("/token", response_model=Token)
+@limiter.limit("10/minute")
 async def login_for_access_token(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     auth_service: AuthService = Depends(get_auth_service),
 ) -> Any:

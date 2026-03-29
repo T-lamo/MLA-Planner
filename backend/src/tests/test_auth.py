@@ -106,7 +106,7 @@ def test_change_password_own_account(client: TestClient, test_user: Utilisateur)
     token, _ = create_access_token(data={"sub": test_user.username})
     headers = {"Authorization": f"Bearer {token}"}
 
-    payload = {"current_password": "password123", "new_password": "newsecurepassword"}
+    payload = {"current_password": "password123", "new_password": "newsecure1!"}
 
     # Correction : str(test_user.id) pour l'URL
     response = client.patch(
