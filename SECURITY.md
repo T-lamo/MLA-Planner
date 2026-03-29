@@ -73,15 +73,60 @@ Super Admin
 
 ### Implémentation backend
 
-```python
-# Injection via FastAPI Depends — déclaratif par endpoint
-router.get("/planning/full", dependencies=[Depends(RoleChecker(["ADMIN", "RESPONSABLE_MLA"]))])
+Quatre guards injectables via `Depends()` :
 
-# RoleChecker extrait les rôles depuis le payload JWT
-# Superadmin bypass automatique : si SUPER_ADMIN dans les rôles → toutes les vérifications passent
+```python
+# RoleChecker — rôle actif temporellement valide
+Depends(RoleChecker(["ADMIN", "RESPONSABLE_MLA"]))
+
+# ScopedRoleChecker — rôle + vérification du scope ministère
+Depends(ScopedRoleChecker(["ADMIN", "RESPONSABLE_MLA"]))
+# → l'affectation doit avoir un contexte couvrant le ministere_id de la requête
+
+# CasbinGuard — moteur RBAC with domains (Casbin)
+Depends(CasbinGuard("planning", "write", fallback_roles=["ADMIN"]))
+# → sub=user.id, dom=ministere_id, obj="planning", act="write"
+
+# CapabilityChecker — permission granulaire codée
+Depends(CapabilityChecker(["MEMBRE_READ"]))
+# → vérifie le champ 'capabilities' du JWT, fallback sur les permissions DB
 ```
 
-**Important** : `RoleChecker` compare avec les noms d'enum Python (`"ADMIN"`, `"SUPER_ADMIN"`) et non les valeurs JWT lisibles (`"Admin"`, `"Super Admin"`). La conversion est faite à l'intérieur du checker.
+**Important** : `RoleChecker` et `ScopedRoleChecker` comparent avec les noms d'enum Python (`"ADMIN"`, `"SUPER_ADMIN"`), pas les valeurs JWT lisibles (`"Admin"`, `"Super Admin"`). Superadmin bypass automatique sur tous les guards.
+
+### Casbin RBAC with domains
+
+Le moteur Casbin est initialisé au démarrage (`lifespan`) depuis la DB :
+
+```
+Modèle RBAC with domains :
+  (sub, dom, obj, act)
+  sub  = user.id
+  dom  = ministere_id ou '*' (global)
+  obj  = ressource : "planning", "chants", "admin"
+  act  = "read" | "write"
+```
+
+Policies par rôle : `(ADMIN, *, planning, write)`, `(MEMBRE_MLA, *, chants, read)`, etc.
+
+Groupings : chaque `AffectationRole` active génère `g(user_id, role, ministere_id)` ou `g(user_id, role, *)` si sans contexte.
+
+Dégradation gracieuse : si `build_enforcer()` échoue au boot, les guards repassent sur `RoleChecker` sans bloquer l'application.
+
+### `get_active_campus`
+
+Dépendance de résolution du campus actif :
+
+1. Header `X-Campus-Id` (priorité)
+2. `campus_principal_id` du membre
+3. Vérification `MembreCampusLink` (l'user appartient bien à ce campus)
+4. Super Admin : bypass du check d'appartenance
+
+Lève `AUTH_CAMPUS_REQUIRED` (400) ou `AUTH_CAMPUS_FORBIDDEN` (403) selon le cas.
+
+### Capabilities dans le JWT
+
+Le payload JWT contient désormais un champ `capabilities` : liste des codes de permission (`["MEMBRE_READ", "PLANNING_WRITE", …]`). Cela évite un aller-retour DB à chaque check de permission. `CapabilityChecker` lit ce champ en priorité, avec fallback sur les permissions DB pour les tokens émis avant ce changement.
 
 ### Implémentation frontend
 
@@ -185,17 +230,19 @@ En production : `ALLOWED_ORIGINS` doit contenir uniquement le domaine du fronten
 
 ## Points à renforcer avant mise en production
 
-| Priorité | Item | Action recommandée |
+| Priorité | Item | Statut |
 |---|---|---|
-| 🔴 Critique | `print()` dans `generic_exception_handler` | Remplacer par `logging.getLogger(__name__).exception(exc)` |
-| 🔴 Critique | Rate limiting absent | Ajouter `slowapi` ou un reverse proxy (Nginx/Cloudflare) sur `/auth/token` |
-| 🟠 Important | Rotation de `JWT_SECRET_KEY` | Mettre en place un mécanisme de rotation sans casser les sessions actives |
-| 🟠 Important | Audit log des actions sensibles | Logger les connexions, créations/suppressions de planning, changements de rôle |
-| 🟡 Moyen | HTTPS only enforcement | Redirection HTTP→HTTPS via Nginx ou Render settings |
-| 🟡 Moyen | Politique de mot de passe | Actuellement aucune validation de complexité côté API |
-| 🟡 Moyen | Expiration refresh token | Vérifier que les refresh tokens expirés sont bien nettoyés de la table `t_revoked_tokens` |
-| 🟢 Faible | Content Security Policy | Ajouter un header CSP via Nuxt `routeRules` |
-| 🟢 Faible | Dependency scanning | Intégrer `pip-audit` et `pnpm audit` dans la CI |
+| ✅ Résolu | `print()` → `logging.exception()` dans `generic_exception_handler` | Implémenté — détail masqué en `prod` |
+| ✅ Résolu | Rate limiting sur `/auth/token` | `slowapi` — 10 req/min par IP |
+| ✅ Résolu | Rotation de `JWT_SECRET_KEY` | Variable `JWT_SECRET_KEY_PREVIOUS` — tokens anciens acceptés pendant la rotation |
+| ✅ Résolu | Audit log des actions sensibles | `core/audit.py` — login, logout, changement de mot de passe, modifications de rôle |
+| ✅ Résolu | Politique de mot de passe | `validate_password_strength` — 8c + chiffre + caractère spécial |
+| ✅ Résolu | Purge des refresh tokens expirés | `purge_expired_tokens()` appelé à chaque login |
+| ✅ Résolu | Content Security Policy | Headers CSP + sécurité dans `nuxt.config.ts` via `routeRules` |
+| ✅ Résolu | Dependency scanning | `pip-audit` + `pnpm audit` — job `security-audit` dans la CI |
+| 🟡 Moyen | HTTPS only enforcement | Activer "Force HTTPS" dans les paramètres Render (aucun code requis) |
+| 🟠 Important | Rate limiting global | Ajouter Nginx/Cloudflare en reverse proxy pour protection DDoS complète |
+| 🟢 Faible | Rotation automatique `JWT_SECRET_KEY` | Script de rotation planifié + invalidation progressive |
 
 ---
 
@@ -203,9 +250,21 @@ En production : `ALLOWED_ORIGINS` doit contenir uniquement le domaine du fronten
 
 - ✅ JWT HS256 avec JTI blacklist (révocation immédiate au logout)
 - ✅ Cookies `HttpOnly` + `sameSite: strict` + `secure: true`
-- ✅ RBAC déclaratif via `RoleChecker` injectable
+- ✅ RBAC déclaratif via `RoleChecker` injectable (+ `ScopedRoleChecker` par ministère)
+- ✅ Moteur Casbin RBAC with domains — policies dynamiques sans redéploiement
+- ✅ `CapabilityChecker` — vérification granulaire des permissions via JWT
+- ✅ `get_active_campus` — résolution et validation du campus actif (`X-Campus-Id`)
 - ✅ Isolation multi-tenant par campus et ministère
+- ✅ Validité temporelle des affectations vérifiée à chaque check de rôle
 - ✅ Zéro `HTTPException` dans les services — erreurs contrôlées via `ErrorRegistry`
+- ✅ Rate limiting sur `/auth/token` (10 req/min par IP via `slowapi`)
+- ✅ Audit log (`core/audit.py`) — login, logout, changements de mot de passe et de rôle
+- ✅ Politique de mot de passe — 8c minimum + chiffre + caractère spécial
+- ✅ Purge automatique des tokens révoqués expirés (à chaque login)
+- ✅ Rotation `JWT_SECRET_KEY` sans coupure de session (`JWT_SECRET_KEY_PREVIOUS`)
+- ✅ Logging structuré — `logging.exception()` au lieu de `print()`, détail masqué en prod
+- ✅ Headers sécurité HTTP (CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`)
+- ✅ Dependency scanning automatique (`pip-audit` + `pnpm audit` dans la CI)
 - ✅ CORS whitelist explicite
 - ✅ Secrets exclusivement via variables d'environnement
 - ✅ `actif` vérifié à chaque requête (compte désactivé → 403 immédiat)

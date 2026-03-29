@@ -318,6 +318,14 @@ class ErrorRegistry:
         message="Vous n'êtes pas autorisé à accéder à ce campus.",
         http_status=status.HTTP_403_FORBIDDEN,
     )
+    AUTH_PASSWORD_TOO_WEAK = ErrorDetail(
+        code="AUTH_009",
+        message=(
+            "Le mot de passe doit contenir au moins 8 caractères, "
+            "un chiffre et un caractère spécial."
+        ),
+        http_status=status.HTTP_422_UNPROCESSABLE_CONTENT,
+    )
 
     # --- DOMAINE RÔLES ET CATÉGORIES (ROLE) ---
     ROLE_CAT_INVALID_CODE = ErrorDetail(
