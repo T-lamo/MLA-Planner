@@ -128,11 +128,15 @@ const calendarOptions = computed<CalendarOptions>(() => ({
         right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
       },
 
+  buttonIcons: false,
   buttonText: {
+    prev: '‹',
+    next: '›',
     today: isMobile.value ? 'Auj.' : "Aujourd'hui",
     week: 'Sem.',
     day: 'Jour',
     list: 'Liste',
+    month: 'Mois',
   },
 
   allDaySlot: true,
@@ -243,7 +247,7 @@ const calendarOptions = computed<CalendarOptions>(() => ({
 }
 
 /* ── Force la police système sur tous les éléments FC ───────────────── */
-/* FullCalendar injecte Arial/Helvetica — on hérite du body */
+/* FullCalendar injecte Arial/Helvetica — on hérite du body             */
 .fc,
 .fc * {
   font-family: inherit;
@@ -271,6 +275,15 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   @apply px-2 py-2 text-[10px] font-semibold shadow-none transition-all outline-none md:px-4 md:text-xs;
   border-radius: 8px;
   letter-spacing: 0.01em;
+}
+
+/* ── Flèches prev / next (caractères Unicode — police native) ────────── */
+.fc .fc-prev-button,
+.fc .fc-next-button {
+  font-size: 1.1rem;
+  line-height: 1;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
 }
 
 /* ── En-têtes de colonnes (noms des jours) ──────────────────────────── */

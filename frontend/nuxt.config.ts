@@ -1,5 +1,10 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from '@tailwindcss/vite'
+
+// URL du backend : injectée à build-time via NUXT_PUBLIC_API_BASE en prod,
+// fallback sur localhost:8000 en dev.
+const apiOrigin = process.env.NUXT_PUBLIC_API_BASE?.replace(/\/+$/, '') || 'http://localhost:8000'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -50,7 +55,7 @@ export default defineNuxtConfig({
           "style-src 'self' 'unsafe-inline'",
           "img-src 'self' data: https:",
           "font-src 'self'",
-          "connect-src 'self'",
+          `connect-src 'self' ${apiOrigin}`,
           "frame-ancestors 'none'",
         ].join('; '),
       },
