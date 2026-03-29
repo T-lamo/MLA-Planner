@@ -170,7 +170,6 @@ def test_add_categorie_creates_new(
     categorie, created = config_svc.add_categorie_to_ministere(str(ministere.id), nom)
     assert created is True
     assert categorie.libelle == nom
-    assert categorie.ministere_id == str(ministere.id)
 
 
 def test_add_categorie_reuses_existing(
@@ -375,10 +374,10 @@ def test_same_category_name_in_two_ministeres(
     test_campus: Campus,
 ) -> None:
     """
-    Même libellé dans deux ministères différents → deux instances
-    indépendantes avec codes distincts (pas de collision PK).
+    Catalogue global RC-158 : même libellé → même catégorie réutilisée.
+    Le 2ème appel retourne created=False (find-or-create sur libellé).
     """
-    nom_commun = "Chantres"
+    nom_commun = f"Chantres-{uuid4()}"
     min_a, _, _ = config_svc.add_ministere_to_campus(
         str(test_campus.id), f"MLA-{uuid4()}"
     )
@@ -390,8 +389,7 @@ def test_same_category_name_in_two_ministeres(
     cat_b, created_b = config_svc.add_categorie_to_ministere(str(min_b.id), nom_commun)
 
     assert created_a is True
-    assert created_b is True
-    assert cat_a.code != cat_b.code
+    # Catalogue global : la catégorie existait déjà, même code retourné
+    assert created_b is False
+    assert cat_a.code == cat_b.code
     assert cat_a.libelle == cat_b.libelle == nom_commun
-    assert cat_a.ministere_id == str(min_a.id)
-    assert cat_b.ministere_id == str(min_b.id)

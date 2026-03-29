@@ -1,6 +1,6 @@
 """role_libelle_varchar
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: e5f6a7b8c9d0
 Revises: f3a1b2c9d0e4
 Create Date: 2026-03-27 00:00:00.000000
 
@@ -15,7 +15,7 @@ import sqlmodel
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "a1b2c3d4e5f6"
+revision: str = "e5f6a7b8c9d0"
 down_revision: Union[str, Sequence[str], None] = "f3a1b2c9d0e4"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
