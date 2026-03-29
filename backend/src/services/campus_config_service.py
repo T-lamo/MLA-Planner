@@ -29,6 +29,7 @@ from models.schema_db_model import (
     CampusMinistereLink,
     CategorieRole,
     Ministere,
+    MinistereRoleConfig,
     Role,
     RoleCompetence,
     StatutAffectation,
@@ -46,7 +47,7 @@ class _SetupCounters(TypedDict):
     rbac_roles_created: int
 
 
-class CampusConfigService:
+class CampusConfigService:  # pylint: disable=too-many-public-methods
     """Service de configuration du campus — sans héritage BaseService."""
 
     def __init__(self, db: Session) -> None:
@@ -312,11 +313,11 @@ class CampusConfigService:
 
     def delete_categorie(
         self,
-        ministere_id: str,
+        ministere_id: str,  # noqa: ARG002 — catalogue global, pas d'ownership
         categorie_id: str,
     ) -> None:
         """
-        Supprime une catégorie si elle ne contient aucun rôle.
+        Supprime une catégorie du catalogue global si elle n'a aucun rôle.
         Lève CONF_CATEGORIE_HAS_ROLES si des rôles y sont liés.
         """
         cat = self.db.get(CategorieRole, categorie_id)
@@ -333,10 +334,25 @@ class CampusConfigService:
 
     def list_categories_of_ministere(
         self,
-        ministere_id: str,  # noqa: ARG002 — filtrage par ministère prévu en RC-160
+        ministere_id: str,
     ) -> List[CategorieRole]:
-        """Liste toutes les catégories du catalogue global."""
-        stmt = select(CategorieRole)
+        """
+        Retourne les catégories qui ont au moins un rôle actif
+        pour ce ministère (via t_ministere_role_config).
+        """
+        stmt = (
+            select(CategorieRole)
+            .join(
+                RoleCompetence,
+                col(RoleCompetence.categorie_code) == col(CategorieRole.code),
+            )
+            .join(
+                MinistereRoleConfig,
+                col(MinistereRoleConfig.role_code) == col(RoleCompetence.code),
+            )
+            .where(MinistereRoleConfig.ministere_id == ministere_id)
+            .distinct()
+        )
         return list(self.db.exec(stmt).all())
 
     # ------------------------------------------------------------------ #
@@ -391,27 +407,117 @@ class CampusConfigService:
         self.db.delete(role)
         self.db.flush()
 
-    def link_role_competence_to_categorie(
+    # ------------------------------------------------------------------ #
+    #  MÉTHODES PUBLIQUES — MinistereRoleConfig (RC-160)
+    # ------------------------------------------------------------------ #
+
+    def activate_role_for_ministere(
         self,
-        categorie_id: str,
+        ministere_id: str,
         role_code: str,
-    ) -> RoleCompetence:
+    ) -> Tuple[MinistereRoleConfig, bool]:
         """
-        Rattache un rôle compétence existant (autre catégorie) à cette
-        catégorie en modifiant son categorie_code.
+        Active un rôle pour un ministère (idempotent).
+
+        Retourne (config, created) :
+        - created=True si nouvellement activé
+        - created=False si déjà actif
         """
         normalized = role_code.strip().upper()
-        cat = self.db.get(CategorieRole, categorie_id)
+        if not self.db.get(Ministere, ministere_id):
+            raise AppException(ErrorRegistry.MINST_NOT_FOUND, id=ministere_id)
+        if not self.db.get(RoleCompetence, normalized):
+            raise AppException(ErrorRegistry.ROLE_NOT_FOUND, missing=normalized)
+        existing = self.db.get(MinistereRoleConfig, (ministere_id, normalized))
+        if existing:
+            return existing, False
+        config = MinistereRoleConfig(
+            ministere_id=ministere_id,
+            role_code=normalized,
+        )
+        self.db.add(config)
+        self.db.flush()
+        self.db.refresh(config)
+        return config, True
+
+    def deactivate_role_for_ministere(
+        self,
+        ministere_id: str,
+        role_code: str,
+    ) -> None:
+        """Désactive un rôle pour un ministère. Lève MINST_ROLE_NOT_FOUND si absent."""
+        normalized = role_code.strip().upper()
+        config = self.db.get(MinistereRoleConfig, (ministere_id, normalized))
+        if not config:
+            raise AppException(ErrorRegistry.MINST_ROLE_NOT_FOUND)
+        self.db.delete(config)
+        self.db.flush()
+
+    def activate_category_for_ministere(
+        self,
+        ministere_id: str,
+        categorie_code: str,
+    ) -> int:
+        """
+        Active tous les rôles d'une catégorie pour un ministère (idempotent).
+
+        Retourne le nombre de nouvelles activations.
+        """
+        if not self.db.get(Ministere, ministere_id):
+            raise AppException(ErrorRegistry.MINST_NOT_FOUND, id=ministere_id)
+        cat = self.db.get(CategorieRole, categorie_code)
         if not cat:
             raise AppException(ErrorRegistry.ROLE_CAT_NOT_FOUND)
-        role = self.db.get(RoleCompetence, normalized)
-        if not role:
-            raise AppException(ErrorRegistry.ROLE_NOT_FOUND, missing=normalized)
-        role.categorie_code = categorie_id
-        self.db.add(role)
-        self.db.flush()
-        self.db.refresh(role)
-        return role
+        stmt = select(RoleCompetence).where(
+            RoleCompetence.categorie_code == categorie_code
+        )
+        roles = list(self.db.exec(stmt).all())
+        created = 0
+        for role in roles:
+            existing = self.db.get(MinistereRoleConfig, (ministere_id, role.code))
+            if not existing:
+                self.db.add(
+                    MinistereRoleConfig(
+                        ministere_id=ministere_id,
+                        role_code=role.code,
+                    )
+                )
+                created += 1
+        if created:
+            self.db.flush()
+        return created
+
+    def list_roles_of_ministere(
+        self,
+        ministere_id: str,
+    ) -> List[RoleCompetence]:
+        """Retourne les rôles compétences actifs pour ce ministère."""
+        stmt = (
+            select(RoleCompetence)
+            .join(
+                MinistereRoleConfig,
+                col(MinistereRoleConfig.role_code) == col(RoleCompetence.code),
+            )
+            .where(MinistereRoleConfig.ministere_id == ministere_id)
+        )
+        return list(self.db.exec(stmt).all())
+
+    def list_categories_with_active_roles(
+        self,
+        ministere_id: str,
+    ) -> List[Tuple[CategorieRole, List[RoleCompetence]]]:
+        """
+        Retourne toutes les catégories du catalogue global, chacune
+        annotée avec la liste de ses rôles actifs pour ce ministère.
+        Les catégories sans rôle actif sont incluses (liste vide).
+        """
+        cats = list(self.db.exec(select(CategorieRole)).all())
+        active_roles = self.list_roles_of_ministere(ministere_id)
+        active_by_cat: Dict[str, List[RoleCompetence]] = {}
+        for role in active_roles:
+            bucket = active_by_cat.setdefault(role.categorie_code, [])
+            bucket.append(role)
+        return [(cat, active_by_cat.get(cat.code, [])) for cat in cats]
 
     # ------------------------------------------------------------------ #
     #  MÉTHODES PUBLIQUES — Mises à jour
@@ -543,18 +649,11 @@ class CampusConfigService:
         self,
         ministeres: List[Ministere],
     ) -> List[Dict[str, Any]]:
-        """Construit la liste des ministères avec leurs catégories."""
+        """Construit la liste des ministères avec leurs rôles actifs par catégorie."""
         result: List[Dict[str, Any]] = []
         for ministere in ministeres:
-            cats = self.list_categories_of_ministere(str(ministere.id))
-            cats_data: List[Dict[str, Any]] = [
-                {
-                    "code": c.code,
-                    "libelle": c.libelle,
-                    "description": c.description,
-                }
-                for c in cats
-            ]
+            cats_with_roles = self.list_categories_with_active_roles(str(ministere.id))
+            cats_data = self._format_cats_with_roles(cats_with_roles)
             result.append(
                 {
                     "id": str(ministere.id),
@@ -564,6 +663,22 @@ class CampusConfigService:
                 }
             )
         return result
+
+    def _format_cats_with_roles(
+        self,
+        cats_with_roles: List[Tuple[CategorieRole, List[RoleCompetence]]],
+    ) -> List[Dict[str, Any]]:
+        """Formate les catégories avec leurs rôles actifs pour le résumé."""
+        return [
+            {
+                "code": cat.code,
+                "libelle": cat.libelle,
+                "description": cat.description,
+                "roles_actifs": [{"code": r.code, "libelle": r.libelle} for r in roles],
+            }
+            for cat, roles in cats_with_roles
+            if roles  # n'inclut que les catégories avec au moins un rôle actif
+        ]
 
     def _get_statut_planning_codes(self) -> List[str]:
         """Retourne les codes de statuts planning présents en DB."""
