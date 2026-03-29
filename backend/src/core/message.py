@@ -573,6 +573,14 @@ class ErrorRegistry:
         message="Ce rôle n'est pas activé pour ce ministère.",
         http_status=status.HTTP_404_NOT_FOUND,
     )
+    ROLE_NOT_CONFIGURED_FOR_MINISTERE = ErrorDetail(
+        code="ROLE_008",
+        message=(
+            "Les rôles suivants ne sont configurés dans aucun "
+            "ministère du membre : {codes}."
+        ),
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
 
     # --- DOMAINE ÉQUIPE compléments ---
     TEAM_MEMBER_DUPLICATE = ErrorDetail(
