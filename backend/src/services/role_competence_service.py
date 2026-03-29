@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from sqlmodel import Session
 
@@ -50,11 +50,16 @@ class RoleCompetenceService(
 
         return self.repo.update(obj, update_data)
 
-    def list_grouped_by_category(self) -> List[Dict]:
-        roles = self.repo.get_all_with_categories()
+    def list_grouped_by_category(
+        self, ministere_id: Optional[str] = None
+    ) -> List[Dict]:
+        if ministere_id:
+            roles = self.repo.get_all_with_categories_for_ministere(ministere_id)
+        else:
+            roles = self.repo.get_all_with_categories()
 
         # Groupement manuel pour garder l'ordre du tri SQL
-        grouped_dict = {}
+        grouped_dict: Dict[str, Dict] = {}
         for r in roles:
             cat = r.categorie
             if cat.code not in grouped_dict:
