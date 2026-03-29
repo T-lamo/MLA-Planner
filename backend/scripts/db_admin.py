@@ -19,7 +19,11 @@ def recreate_db():
         sys.exit(1)
 
     print(f"⚠️  Destruction et recréation des tables : {engine.url.database}")
-    SQLModel.metadata.drop_all(engine)
+    from sqlalchemy import text
+
+    with engine.connect() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public;"))
+        conn.commit()
     SQLModel.metadata.create_all(engine)
     print("✅ Base de données remise à zéro.")
 

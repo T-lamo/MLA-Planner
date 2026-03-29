@@ -4,13 +4,6 @@ Service de configuration des campus.
 Permet au Super Admin de configurer entièrement l'application depuis le front
 (ministères, catégories de rôles, rôles compétence, RBAC, statuts)
 en remplacement du seed hardcodé.
-
-Migrations DB requises avant activation complète :
-  ALTER TABLE t_categorierole
-    ADD COLUMN IF NOT EXISTS ministere_id VARCHAR
-    REFERENCES t_ministere(id) ON DELETE SET NULL;
-  ALTER TABLE t_categorierole
-    ADD COLUMN IF NOT EXISTS description TEXT;
 """
 
 import re
@@ -87,17 +80,13 @@ class CampusConfigService:
         self,
         nom: str,
         *,
-        ministere_id: str,
         description: Optional[str] = None,
     ) -> Tuple[CategorieRole, bool]:
         """
-        Cherche une catégorie par libellé + ministere_id.
+        Cherche une catégorie par libellé dans le catalogue global.
         La crée si absente.
         """
-        stmt = select(CategorieRole).where(
-            CategorieRole.libelle == nom,
-            CategorieRole.ministere_id == ministere_id,
-        )
+        stmt = select(CategorieRole).where(CategorieRole.libelle == nom)
         existing = self.db.exec(stmt).first()
         if existing:
             return existing, False
@@ -111,7 +100,6 @@ class CampusConfigService:
         new_cat = CategorieRole(
             code=code,
             libelle=nom,
-            ministere_id=ministere_id,
             description=description,
         )
         self.db.add(new_cat)
@@ -320,11 +308,7 @@ class CampusConfigService:
         ministere = self.db.get(Ministere, ministere_id)
         if not ministere:
             raise AppException(ErrorRegistry.MINST_NOT_FOUND, id=ministere_id)
-        return self._find_or_create_categorie(
-            nom,
-            ministere_id=ministere_id,
-            description=description,
-        )
+        return self._find_or_create_categorie(nom, description=description)
 
     def delete_categorie(
         self,
@@ -336,7 +320,7 @@ class CampusConfigService:
         Lève CONF_CATEGORIE_HAS_ROLES si des rôles y sont liés.
         """
         cat = self.db.get(CategorieRole, categorie_id)
-        if not cat or cat.ministere_id != ministere_id:
+        if not cat:
             raise AppException(ErrorRegistry.ROLE_CAT_NOT_FOUND)
         count = len(cat.roles) if cat.roles else 0
         if count > 0:
@@ -349,10 +333,10 @@ class CampusConfigService:
 
     def list_categories_of_ministere(
         self,
-        ministere_id: str,
+        ministere_id: str,  # noqa: ARG002 — filtrage par ministère prévu en RC-160
     ) -> List[CategorieRole]:
-        """Liste les catégories d'un ministère."""
-        stmt = select(CategorieRole).where(CategorieRole.ministere_id == ministere_id)
+        """Liste toutes les catégories du catalogue global."""
+        stmt = select(CategorieRole)
         return list(self.db.exec(stmt).all())
 
     # ------------------------------------------------------------------ #
@@ -463,7 +447,7 @@ class CampusConfigService:
     ) -> CategorieRole:
         """Met à jour le libellé et/ou la description d'une catégorie."""
         cat = self.db.get(CategorieRole, categorie_id)
-        if not cat or cat.ministere_id != ministere_id:
+        if not cat:
             raise AppException(ErrorRegistry.ROLE_CAT_NOT_FOUND)
         if nom is not None:
             cat.libelle = nom
@@ -603,9 +587,7 @@ class CampusConfigService:
     ) -> None:
         """Configure une catégorie et ses rôles compétence."""
         cat, created = self._find_or_create_categorie(
-            cat_item.nom,
-            ministere_id=ministere_id,
-            description=cat_item.description,
+            cat_item.nom, description=cat_item.description
         )
         if created:
             counters["categories_created"] += 1
