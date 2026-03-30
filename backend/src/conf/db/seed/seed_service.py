@@ -44,6 +44,7 @@ from models import (
     TypeResponsabilite,
     Utilisateur,
 )
+from models.schema_db_model import MinistereRoleConfig
 
 from .data import (
     ACTIVITES_DATA,
@@ -51,6 +52,7 @@ from .data import (
     EQUIPE_MEMBRES_DATA,
     EQUIPES_DATA,
     MEMBRES_INFOS,
+    MINISTERE_ROLES_CONFIG,
     MINISTERES_DATA,
     PERMISSIONS,
     PLANNING_TEMPLATES_SEED,
@@ -111,6 +113,7 @@ class SeedService:
                 self._seed_referentiels_fixes()
 
                 min_map = self._seed_ministeres(campus_map=campus_map)
+                self._seed_ministere_role_configs(min_map)
                 pole_map = self._seed_poles(min_map)
 
                 # today partagé entre activités et plannings pour des dates cohérentes
@@ -239,6 +242,19 @@ class SeedService:
             min_map[m_nom] = ministere
 
         return min_map
+
+    def _seed_ministere_role_configs(self, min_map: dict[str, Ministere]) -> None:
+        """Active les rôles par ministère (t_ministere_role_config)."""
+        for entry in MINISTERE_ROLES_CONFIG:
+            ministere = min_map.get(str(entry["ministere_nom"]))
+            if not ministere:
+                continue
+            for role_code in entry["role_codes"]:
+                self._get_or_create(
+                    MinistereRoleConfig,
+                    ministere_id=str(ministere.id),
+                    role_code=str(role_code),
+                )
 
     def _seed_poles(self, min_map):
         p_map = {}
