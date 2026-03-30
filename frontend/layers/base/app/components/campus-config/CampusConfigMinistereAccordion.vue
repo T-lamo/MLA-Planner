@@ -69,23 +69,11 @@
             v-for="cat in ministere.categories"
             :key="cat.code"
             :categorie="cat"
-            :ministereId="ministere.id"
             :isOpen="openCategories.has(cat.code)"
             @toggle="toggleCategorie(cat.code)"
-            @delete="onDeleteCategorie"
-            @edit="(mId, cId) => emit('edit-categorie', mId, cId)"
           />
         </ul>
         <p v-else class="py-2 text-sm text-slate-400 italic">Aucune catégorie définie</p>
-
-        <button
-          class="text-primary-600 hover:text-primary-800 mt-3 flex items-center gap-1.5 text-sm font-medium transition-colors"
-          type="button"
-          @click.stop="emit('add-categorie', ministere.id)"
-        >
-          <Plus class="size-4" />
-          Catégorie
-        </button>
       </div>
     </Transition>
 
@@ -100,7 +88,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ChevronRight, Loader2, Pencil, Plus, Settings, ShieldCheck, X } from 'lucide-vue-next'
+import { ChevronRight, Loader2, Pencil, Settings, ShieldCheck, X } from 'lucide-vue-next'
 import type { CampusSummaryMinistere } from '~~/layers/base/types/campus-config'
 import { useCampusConfig } from '../../composables/useCampusConfig'
 import { useMLAConfirm } from '../../composables/useMLAConfirm'
@@ -114,10 +102,6 @@ const emit = defineEmits<{
   toggle: []
   remove: [ministereId: string]
   edit: [ministereId: string]
-  'add-categorie': [ministereId: string]
-  'init-rbac': [ministereId: string]
-  'edit-categorie': [ministereId: string, categorieId: string]
-  'delete-categorie': [ministereId: string, categorieId: string]
 }>()
 
 const campusConfig = useCampusConfig()
@@ -139,10 +123,6 @@ async function handleRemove(): Promise<void> {
   const ok = await confirm(`Retirer "${props.ministere.nom}" du campus ?`)
   if (!ok) return
   emit('remove', props.ministere.id)
-}
-
-function onDeleteCategorie(ministereId: string, categorieId: string): void {
-  emit('delete-categorie', ministereId, categorieId)
 }
 
 async function handleInitRbac(): Promise<void> {

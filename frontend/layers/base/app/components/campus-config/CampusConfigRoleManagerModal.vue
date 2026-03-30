@@ -11,7 +11,7 @@
     </div>
 
     <div v-else-if="catalog.length === 0" class="py-16 text-center text-sm text-slate-400 italic">
-      Aucun rôle dans le catalogue global.
+      Aucune catégorie dans le catalogue global.
     </div>
 
     <ul v-else class="space-y-4">
@@ -29,6 +29,24 @@
             >
               {{ item.categorie_code }}
             </span>
+            <button
+              class="rounded-full p-0.5 text-slate-400 transition-colors hover:text-slate-600"
+              title="Modifier la catégorie"
+              type="button"
+              @click.stop="
+                form.openEditCategorie(ministereId, item.categorie_code, item.categorie_libelle)
+              "
+            >
+              <Pencil class="size-3.5" />
+            </button>
+            <button
+              class="rounded-full p-0.5 text-slate-400 transition-colors hover:text-red-500"
+              title="Supprimer la catégorie"
+              type="button"
+              @click.stop="handleDeleteCategorie(item.categorie_code, item.categorie_libelle)"
+            >
+              <Trash2 class="size-3.5" />
+            </button>
           </div>
           <button
             class="border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
@@ -57,26 +75,69 @@
               <span class="ml-2 font-mono text-xs text-slate-400">{{ role.code }}</span>
             </div>
 
-            <!-- Toggle switch -->
+            <div class="ml-3 flex shrink-0 items-center gap-2">
+              <!-- Actions catalogue -->
+              <div class="flex items-center gap-1">
+                <button
+                  class="rounded-full p-1 text-slate-400 transition-colors hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Modifier la compétence"
+                  type="button"
+                  :disabled="loadingRoles.has(role.code)"
+                  @click.stop="
+                    form.openEditRole(
+                      item.categorie_code,
+                      role.code,
+                      role.libelle,
+                      role.description,
+                    )
+                  "
+                >
+                  <Pencil class="size-3" />
+                </button>
+                <button
+                  class="rounded-full p-1 text-slate-400 transition-colors hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  title="Supprimer la compétence"
+                  type="button"
+                  :disabled="loadingRoles.has(role.code)"
+                  @click.stop="handleDeleteRole(item.categorie_code, role.code, role.libelle)"
+                >
+                  <Trash2 class="size-3" />
+                </button>
+              </div>
+
+              <!-- Toggle switch -->
+              <button
+                class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                :class="isActive(role.code) ? 'bg-primary-600' : 'bg-slate-200'"
+                type="button"
+                :disabled="loadingRoles.has(role.code)"
+                :aria-pressed="isActive(role.code)"
+                :aria-label="
+                  isActive(role.code) ? `Désactiver ${role.libelle}` : `Activer ${role.libelle}`
+                "
+                @click="handleToggle(role.code)"
+              >
+                <span
+                  class="inline-block size-3.5 rounded-full bg-white shadow transition-transform"
+                  :class="isActive(role.code) ? 'translate-x-4' : 'translate-x-0.5'"
+                />
+                <Loader2
+                  v-if="loadingRoles.has(role.code)"
+                  class="absolute inset-0 m-auto size-3 animate-spin text-white"
+                />
+              </button>
+            </div>
+          </li>
+
+          <!-- Bouton + Compétence -->
+          <li class="pt-1">
             <button
-              class="relative ml-3 inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-              :class="isActive(role.code) ? 'bg-primary-600' : 'bg-slate-200'"
+              class="text-primary-600 hover:text-primary-800 flex items-center gap-1 text-xs font-medium transition-colors"
               type="button"
-              :disabled="loadingRoles.has(role.code)"
-              :aria-pressed="isActive(role.code)"
-              :aria-label="
-                isActive(role.code) ? `Désactiver ${role.libelle}` : `Activer ${role.libelle}`
-              "
-              @click="handleToggle(role.code)"
+              @click.stop="form.openAddRole(ministereId, item.categorie_code)"
             >
-              <span
-                class="inline-block size-3.5 rounded-full bg-white shadow transition-transform"
-                :class="isActive(role.code) ? 'translate-x-4' : 'translate-x-0.5'"
-              />
-              <Loader2
-                v-if="loadingRoles.has(role.code)"
-                class="absolute inset-0 m-auto size-3 animate-spin text-white"
-              />
+              <Plus class="size-3.5" />
+              Compétence
             </button>
           </li>
 
@@ -86,16 +147,27 @@
         </ul>
       </li>
     </ul>
+
+    <!-- Bouton + Catégorie -->
+    <div v-if="!isLoadingCatalog" class="mt-4 border-t border-slate-200 pt-4">
+      <button
+        class="text-primary-600 hover:text-primary-800 flex items-center gap-1.5 text-sm font-medium transition-colors"
+        type="button"
+        @click="form.openAddCategorie(ministereId)"
+      >
+        <Plus class="size-4" />
+        Nouvelle catégorie
+      </button>
+    </div>
   </AppDrawer>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { CheckSquare, Loader2 } from 'lucide-vue-next'
-import type { RolesByCategoryItem } from '~~/layers/base/types/role-competence'
+import { computed, ref, watch } from 'vue'
+import { CheckSquare, Loader2, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import { useCampusConfig } from '../../composables/useCampusConfig'
+import { useCampusConfigForm } from '../../composables/useCampusConfigForm'
 import { useMLAConfirm } from '../../composables/useMLAConfirm'
-import { RoleCompetenceRepository } from '../../repositories/RoleCompetenceRepository'
 
 const props = defineProps<{
   ministereId: string
@@ -107,10 +179,10 @@ const emit = defineEmits<{
 }>()
 
 const campusConfig = useCampusConfig()
+const form = useCampusConfigForm()
 const { confirm } = useMLAConfirm()
-const rcRepo = new RoleCompetenceRepository()
 
-const catalog = ref<RolesByCategoryItem[]>([])
+const catalog = computed(() => campusConfig.allCatalogByCategory.value)
 const activeRoleCodes = ref(new Set<string>())
 const isLoadingCatalog = ref(false)
 const loadingRoles = ref(new Set<string>())
@@ -124,8 +196,6 @@ async function loadData(): Promise<void> {
   isLoadingCatalog.value = true
   try {
     await campusConfig.refreshActiveRolesForMinistere(props.ministereId)
-    const [catalogItems] = await Promise.all([rcRepo.getByCategory()])
-    catalog.value = catalogItems
     const active = campusConfig.activeRolesForMinistere(props.ministereId)
     activeRoleCodes.value = new Set(active.map((r) => r.code))
   } catch {
@@ -176,6 +246,30 @@ async function handleActivateAll(categorieCode: string): Promise<void> {
     // Erreur déjà notifiée
   } finally {
     isActivatingCategory.value = null
+  }
+}
+
+async function handleDeleteCategorie(categorieCode: string, libelle: string): Promise<void> {
+  const ok = await confirm(`Supprimer la catégorie "${libelle}" du catalogue global ?`)
+  if (!ok) return
+  try {
+    await campusConfig.deleteCategorie(props.ministereId, categorieCode)
+  } catch {
+    // Erreur déjà notifiée
+  }
+}
+
+async function handleDeleteRole(
+  categorieCode: string,
+  roleCode: string,
+  libelle: string,
+): Promise<void> {
+  const ok = await confirm(`Supprimer la compétence "${libelle}" du catalogue global ?`)
+  if (!ok) return
+  try {
+    await campusConfig.deleteRoleCompetence(categorieCode, roleCode)
+  } catch {
+    // Erreur déjà notifiée
   }
 }
 
