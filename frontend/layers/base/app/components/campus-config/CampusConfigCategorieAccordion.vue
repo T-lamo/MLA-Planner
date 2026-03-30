@@ -22,7 +22,7 @@
       </button>
 
       <button
-        class="rounded-full p-1 text-slate-400 transition-colors hover:bg-(--color-primary-50) hover:text-(--color-primary-600)"
+        class="hover:bg-primary-50 hover:text-primary-600 rounded-full p-1 text-slate-400 transition-colors"
         title="Modifier la catégorie"
         type="button"
         @click.stop="emit('edit', ministereId, categorie.code)"
@@ -40,30 +40,27 @@
       </button>
     </div>
 
-    <!-- Corps catégorie -->
+    <!-- Corps catégorie : rôles actifs en lecture seule -->
     <Transition name="expand">
       <div v-if="isOpen" class="border-t border-slate-100 px-3 pt-2 pb-3">
-        <CampusConfigRoleCompetenceList
-          :roles="roles"
-          :categorieId="categorie.code"
-          @edit="(categorieId, roleCode) => emit('edit-role', categorieId, roleCode)"
-          @delete="onDeleteRole"
-        />
-        <button
-          class="mt-2 flex items-center gap-1 text-xs font-medium text-(--color-primary-600) transition-colors hover:text-(--color-primary-800)"
-          type="button"
-          @click.stop="emit('add-role', ministereId, categorie.code)"
-        >
-          <Plus class="size-3" />
-          Compétence
-        </button>
+        <div v-if="activeRoles.length > 0" class="flex flex-wrap gap-1.5">
+          <span
+            v-for="role in activeRoles"
+            :key="role.code"
+            class="border-primary-100 bg-primary-50 text-primary-700 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium"
+          >
+            {{ role.libelle }}
+          </span>
+        </div>
+        <p v-else class="text-xs text-slate-400 italic">Aucun rôle actif configuré</p>
       </div>
     </Transition>
   </li>
 </template>
 
 <script setup lang="ts">
-import { ChevronRight, Pencil, Plus, X } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { ChevronRight, Pencil, X } from 'lucide-vue-next'
 import type { CampusSummaryCategorie } from '~~/layers/base/types/campus-config'
 import type { RoleCompetenceRead } from '~~/layers/base/types/role-competence'
 import { useMLAConfirm } from '../../composables/useMLAConfirm'
@@ -72,28 +69,22 @@ const props = defineProps<{
   categorie: CampusSummaryCategorie
   ministereId: string
   isOpen: boolean
-  roles: RoleCompetenceRead[]
 }>()
 
 const emit = defineEmits<{
   toggle: []
   delete: [ministereId: string, categorieId: string]
   edit: [ministereId: string, categorieId: string]
-  'add-role': [ministereId: string, categorieId: string]
-  'edit-role': [categorieId: string, roleCode: string]
-  'delete-role': [categorieId: string, roleCode: string]
 }>()
 
 const { confirm } = useMLAConfirm()
+
+const activeRoles = computed<RoleCompetenceRead[]>(() => props.categorie.roles_actifs ?? [])
 
 async function handleDelete(): Promise<void> {
   const ok = await confirm(`Supprimer la catégorie "${props.categorie.libelle}" ?`)
   if (!ok) return
   emit('delete', props.ministereId, props.categorie.code)
-}
-
-function onDeleteRole(categorieId: string, roleCode: string): void {
-  emit('delete-role', categorieId, roleCode)
 }
 </script>
 

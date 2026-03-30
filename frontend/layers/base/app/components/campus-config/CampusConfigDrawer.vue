@@ -131,14 +131,6 @@
             Actuellement dans la catégorie
             <span class="font-mono font-semibold">{{ conflictingRole.categorie_code }}</span>
           </p>
-          <button
-            type="button"
-            class="mt-2 text-xs font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-900"
-            :disabled="isLinking"
-            @click="handleLinkExisting"
-          >
-            {{ isLinking ? 'Rattachement…' : 'Rattacher à cette catégorie' }}
-          </button>
         </div>
       </div>
       <div>
@@ -202,7 +194,6 @@ const {
   submitForm,
 } = useCampusConfigForm()
 
-const isLinking = ref(false)
 const isLinkingMinistere = ref(false)
 
 const conflictingMinistere = computed(() => {
@@ -218,7 +209,8 @@ const conflictingRole = computed(() => {
   if (drawerContext.value.mode !== 'add-role') return null
   const code = roleForm.code.trim().toUpperCase()
   if (!code) return null
-  return campusConfig.allRoleCompetences.value.find((r) => r.code === code) ?? null
+  const allRoles = campusConfig.allCatalogByCategory.value.flatMap((item) => item.roles)
+  return allRoles.find((r) => r.code === code) ?? null
 })
 
 const drawerTitle = computed((): string => {
@@ -244,21 +236,6 @@ const isEditMode = computed(() => drawerContext.value.mode?.startsWith('edit-') 
 
 async function handleSubmit(): Promise<void> {
   await submitForm(campusConfig)
-}
-
-async function handleLinkExisting(): Promise<void> {
-  const categorieId = drawerContext.value.categorieId
-  const role = conflictingRole.value
-  if (!role || !categorieId) return
-  isLinking.value = true
-  try {
-    await campusConfig.linkRoleCompetence(categorieId, role.code)
-    closeDrawer()
-  } catch {
-    // Erreur déjà notifiée par l'intercepteur
-  } finally {
-    isLinking.value = false
-  }
 }
 
 async function handleLinkMinistere(): Promise<void> {
