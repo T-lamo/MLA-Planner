@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { User, MapPin, Building2, ShieldCheck, Info, Award } from 'lucide-vue-next'
+import { User, MapPin, Building2, ShieldCheck, Info } from 'lucide-vue-next'
 import { useProfileFormLogic } from '../../composables/useProfileFormLogic'
 import { useDraftProfile } from '../../composables/useDraftProfile'
 import FormSection from '../FormSection.vue'
@@ -10,7 +10,6 @@ import ProfileBasicInfo from './ProfileBasicInfo.vue'
 import ProfileCampusSelector from './ProfileCampusSelector.vue'
 import ProfileMinistereManager from './ProfileMinistereManager.vue'
 import ProfileSecurityAccess from './ProfileSecurityAccess.vue'
-import ProfileRolesEditor from './ProfileRolesEditor.vue'
 
 import type { ProfilCreateFull, ProfilReadFull } from '~~/layers/base/types/profiles'
 import type { CampusRead } from '~~/layers/base/types/campus'
@@ -268,7 +267,7 @@ const handleSubmit = () => {
       </FormSection>
 
       <FormSection
-        title="Ministères & Pôles"
+        title="Ministères, Pôles & Rôles"
         :icon="Building2"
         :isOpen="activeSections.has('ministeres')"
         :badge="form.pole_ids.length > 0 ? form.pole_ids.length : undefined"
@@ -278,19 +277,11 @@ const handleSubmit = () => {
           :ministeres="ministeresDetailed"
           :ministereIds="form.ministere_ids"
           :poleIds="form.pole_ids"
+          :roleCodes="form.role_codes ?? []"
           @toggle-ministere="onToggleMin"
           @toggle-pole="onTogglePole"
+          @update:role-codes="(v) => (form.role_codes = v)"
         />
-      </FormSection>
-
-      <FormSection
-        title="Rôles & Compétences"
-        :icon="Award"
-        :isOpen="activeSections.has('roles')"
-        :badge="form.role_codes && form.role_codes.length > 0 ? form.role_codes.length : undefined"
-        @toggle="toggleSection('roles')"
-      >
-        <ProfileRolesEditor v-model="form.role_codes!" />
       </FormSection>
 
       <FormSection
