@@ -15,6 +15,10 @@ export const useRoleCompetenceStore = defineStore('roleCompetence', () => {
     categories.value.flatMap((cat) => cat.roles),
   )
 
+  // Cache par ministère
+  const categoriesByMinistere = ref<Record<string, RolesByCategoryItem[]>>({})
+  const loadingByMinistere = ref<Record<string, boolean>>({})
+
   // --- Actions ---
   async function fetchByCategory() {
     if (categories.value.length > 0) return
@@ -30,11 +34,28 @@ export const useRoleCompetenceStore = defineStore('roleCompetence', () => {
     }
   }
 
+  async function fetchByCategoryForMinistere(ministereId: string): Promise<void> {
+    if (categoriesByMinistere.value[ministereId]) return
+    loadingByMinistere.value = { ...loadingByMinistere.value, [ministereId]: true }
+    try {
+      const data = await repository.getByCategory(ministereId)
+      categoriesByMinistere.value = { ...categoriesByMinistere.value, [ministereId]: data }
+    } catch (e: unknown) {
+      error.value = e
+      throw e
+    } finally {
+      loadingByMinistere.value = { ...loadingByMinistere.value, [ministereId]: false }
+    }
+  }
+
   return {
     categories,
     loading,
     error,
     flatRoles,
+    categoriesByMinistere,
+    loadingByMinistere,
     fetchByCategory,
+    fetchByCategoryForMinistere,
   }
 })

@@ -26,6 +26,7 @@ from models.schema_db_model import (
     CampusMinistereLink,
     MembreCampusLink,
     MembreMinistereLink,
+    MinistereRoleConfig,
 )
 from repositories.membre_repository import _exclude_superadmin_clause
 from services.membre_service import MembreService
@@ -69,6 +70,29 @@ class ProfileService(
             return campus_ids[0]
         return None
 
+    def _validate_roles_for_membre(self, membre: Membre, role_codes: List[str]) -> None:
+        """Vérifie que chaque rôle est configuré dans au moins un ministère du membre.
+
+        Bypass si le membre n'a aucun ministère (création initiale).
+        """
+        ministere_ids = [str(m.id) for m in membre.ministeres]
+        if not ministere_ids:
+            return
+
+        stmt = select(MinistereRoleConfig.role_code).where(
+            col(MinistereRoleConfig.role_code).in_(role_codes),
+            col(MinistereRoleConfig.ministere_id).in_(  # pylint: disable=no-member
+                ministere_ids
+            ),
+        )
+        configured = set(self.db.exec(stmt).all())
+        unconfigured = [c for c in role_codes if c not in configured]
+        if unconfigured:
+            raise AppException(
+                ErrorRegistry.ROLE_NOT_CONFIGURED_FOR_MINISTERE,
+                codes=", ".join(unconfigured),
+            )
+
     def _sync_roles(self, membre: Membre, role_codes: List[str]):
         """
         Gère le différentiel des rôles (Ajout/Suppression) pour un membre.
@@ -83,6 +107,9 @@ class ProfileService(
                 found_codes = [r.code for r in db_roles]
                 missing = list(set(role_codes) - set(found_codes))
                 raise AppException(ErrorRegistry.ROLE_NOT_FOUND, missing=missing)
+
+            # 2. Vérifier que les rôles sont configurés pour les ministères du membre
+            self._validate_roles_for_membre(membre, role_codes)
 
         # 2. Récupérer les rôles actuels
         current_roles_map = {ra.role_code: ra for ra in membre.roles_assoc}

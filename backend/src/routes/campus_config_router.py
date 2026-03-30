@@ -13,15 +13,20 @@ from sqlmodel import Session
 from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker
 from models.campus_config_model import (
+    BatchActivateResult,
     CampusConfigSummary,
     CampusSetupPayload,
     CampusSetupResult,
     CategorieConfigCreate,
     CategorieConfigResponse,
     CategorieConfigUpdate,
+    CategorieWithActiveRoles,
     MinistereConfigCreate,
     MinistereConfigResponse,
     MinistereConfigUpdate,
+    MinistereRoleConfigRead,
+    MinistereRoleConfigResponse,
+    MinistereRolesListResponse,
     RbacRolesInitResponse,
     RoleCompetenceConfigCreate,
     RoleCompetenceConfigResponse,
@@ -279,25 +284,6 @@ def delete_role_competence(
     svc.delete_role_competence(categorie_id, role_code)
 
 
-@router.post(
-    "/categories/{categorie_id}/roles-competence/{role_code}/link",
-    response_model=RoleCompetenceConfigResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Rattacher un rôle compétence existant à une catégorie",
-)
-def link_role_competence_to_categorie(
-    categorie_id: str,
-    role_code: str,
-    svc: CampusConfigService = Depends(_get_svc),
-) -> Any:
-    """Réattache un rôle compétence existant (autre catégorie) à cette catégorie."""
-    role_comp = svc.link_role_competence_to_categorie(categorie_id, role_code)
-    return RoleCompetenceConfigResponse(
-        role_competence=RoleCompetenceRead.model_validate(role_comp),
-        created=False,
-    )
-
-
 @router.patch(
     "/ministeres/{ministere_id}",
     response_model=MinistereRead,
@@ -349,6 +335,97 @@ def update_role_competence_endpoint(
         libelle=body.libelle,
         description=body.description,
     )
+
+
+# ------------------------------------------------------------------ #
+#  MINISTÈRE ROLE CONFIG (RC-160)
+# ------------------------------------------------------------------ #
+
+
+@router.post(
+    "/ministeres/{ministere_id}/roles/{role_code}/activate",
+    response_model=MinistereRoleConfigResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Activer un rôle compétence pour un ministère",
+)
+def activate_role_for_ministere(
+    ministere_id: str,
+    role_code: str,
+    svc: CampusConfigService = Depends(_get_svc),
+) -> Any:
+    config, created = svc.activate_role_for_ministere(ministere_id, role_code)
+    return MinistereRoleConfigResponse(
+        config=MinistereRoleConfigRead.model_validate(config),
+        created=created,
+    )
+
+
+@router.delete(
+    "/ministeres/{ministere_id}/roles/{role_code}/activate",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Désactiver un rôle compétence pour un ministère",
+)
+def deactivate_role_for_ministere(
+    ministere_id: str,
+    role_code: str,
+    svc: CampusConfigService = Depends(_get_svc),
+) -> None:
+    svc.deactivate_role_for_ministere(ministere_id, role_code)
+
+
+@router.post(
+    "/ministeres/{ministere_id}/categories/{categorie_code}/activate-all",
+    response_model=BatchActivateResult,
+    status_code=status.HTTP_200_OK,
+    summary="Activer tous les rôles d'une catégorie pour un ministère",
+)
+def activate_category_for_ministere(
+    ministere_id: str,
+    categorie_code: str,
+    svc: CampusConfigService = Depends(_get_svc),
+) -> Any:
+    count = svc.activate_category_for_ministere(ministere_id, categorie_code)
+    return BatchActivateResult(
+        categorie_code=categorie_code,
+        roles_actives=count,
+    )
+
+
+@router.get(
+    "/ministeres/{ministere_id}/roles",
+    response_model=MinistereRolesListResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Lister les rôles actifs d'un ministère",
+)
+def list_roles_of_ministere(
+    ministere_id: str,
+    svc: CampusConfigService = Depends(_get_svc),
+) -> Any:
+    roles = svc.list_roles_of_ministere(ministere_id)
+    return MinistereRolesListResponse(
+        ministere_id=ministere_id,
+        roles=[RoleCompetenceRead.model_validate(r) for r in roles],
+    )
+
+
+@router.get(
+    "/ministeres/{ministere_id}/categories-with-roles",
+    response_model=List[CategorieWithActiveRoles],
+    status_code=status.HTTP_200_OK,
+    summary="Lister les catégories avec leurs rôles actifs pour un ministère",
+)
+def list_categories_with_active_roles(
+    ministere_id: str,
+    svc: CampusConfigService = Depends(_get_svc),
+) -> Any:
+    cats_with_roles = svc.list_categories_with_active_roles(ministere_id)
+    return [
+        CategorieWithActiveRoles(
+            categorie=CategorieRoleRead.model_validate(cat),
+            roles_actifs=[RoleCompetenceRead.model_validate(r) for r in roles],
+        )
+        for cat, roles in cats_with_roles
+    ]
 
 
 # ------------------------------------------------------------------ #

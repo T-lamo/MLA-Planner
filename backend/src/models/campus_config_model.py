@@ -124,6 +124,68 @@ class RbacRolesInitResponse(SQLModel):
     model_config = ConfigDict(from_attributes=True)  # type: ignore[assignment]
 
 
+# -------------------------
+# MINISTERE ROLE CONFIG (RC-160)
+# -------------------------
+
+
+class MinistereRoleConfigRead(SQLModel):
+    """Lien ministère ↔ rôle activé."""
+
+    ministere_id: str
+    role_code: str
+
+    model_config = ConfigDict(from_attributes=True)  # type: ignore[assignment]
+
+
+class MinistereRoleActivateRequest(SQLModel):
+    """Payload pour activer un rôle pour un ministère."""
+
+    role_code: str
+
+
+class MinistereRoleBatchRequest(SQLModel):
+    """Payload pour activer tous les rôles d'une catégorie pour un ministère."""
+
+    categorie_code: str
+
+
+class MinistereRoleConfigResponse(SQLModel):
+    """Réponse enrichie pour l'activation d'un rôle pour un ministère."""
+
+    config: MinistereRoleConfigRead
+    created: bool
+
+    model_config = ConfigDict(from_attributes=True)  # type: ignore[assignment]
+
+
+class MinistereRolesListResponse(SQLModel):
+    """Liste des rôles actifs d'un ministère."""
+
+    ministere_id: str
+    roles: List[RoleCompetenceRead]
+
+    model_config = ConfigDict(from_attributes=True)  # type: ignore[assignment]
+
+
+class CategorieWithActiveRoles(SQLModel):
+    """Catégorie avec ses rôles actifs pour un ministère donné."""
+
+    categorie: CategorieRoleRead
+    roles_actifs: List[RoleCompetenceRead]
+
+    model_config = ConfigDict(from_attributes=True)  # type: ignore[assignment]
+
+
+class BatchActivateResult(SQLModel):
+    """Résultat d'une activation en lot de rôles d'une catégorie."""
+
+    categorie_code: str
+    roles_actives: int
+
+    model_config = ConfigDict(from_attributes=True)  # type: ignore[assignment]
+
+
 class StatutsInitResponse(SQLModel):
     """Réponse pour l'initialisation des statuts planning et affectation."""
 
@@ -209,6 +271,13 @@ class CampusConfigSummary(SQLModel):
 
 # Re-exports pour accès depuis models/
 __all__ = [
+    "MinistereRoleConfigRead",
+    "MinistereRoleActivateRequest",
+    "MinistereRoleBatchRequest",
+    "MinistereRoleConfigResponse",
+    "MinistereRolesListResponse",
+    "CategorieWithActiveRoles",
+    "BatchActivateResult",
     "MinistereConfigCreate",
     "CategorieConfigCreate",
     "RoleCompetenceConfigCreate",

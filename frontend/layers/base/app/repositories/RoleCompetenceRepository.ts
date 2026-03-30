@@ -15,11 +15,11 @@ export class RoleCompetenceRepository extends GenericRepository<
     super('/roles-competences')
   }
 
-  async getByCategory(): Promise<RolesByCategoryItem[]> {
-    const { data } = await this.apiRequest<RolesByCategoryResponse>(
-      `${this.endpoint}/by-category/full`,
-      { method: 'GET' },
-    )
+  async getByCategory(ministereId?: string): Promise<RolesByCategoryItem[]> {
+    const url = ministereId
+      ? `${this.endpoint}/by-category/full?ministere_id=${encodeURIComponent(ministereId)}`
+      : `${this.endpoint}/by-category/full`
+    const { data } = await this.apiRequest<RolesByCategoryResponse>(url, { method: 'GET' })
     return data.data
   }
 }

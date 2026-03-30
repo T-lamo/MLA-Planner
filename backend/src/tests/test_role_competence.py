@@ -1,4 +1,14 @@
+from uuid import uuid4
+
 from fastapi import status
+from sqlmodel import Session
+
+from models.schema_db_model import (
+    CategorieRole,
+    Ministere,
+    MinistereRoleConfig,
+    RoleCompetence,
+)
 
 
 def test_create_role_success(client, admin_headers, test_cat):
@@ -85,3 +95,95 @@ def test_get_roles_grouped_empty_db(client, admin_headers):
     # Assert
     assert response.status_code == status.HTTP_200_OK
     assert "data" in response.json()
+
+
+# ------------------------------------------------------------------ #
+#  RC-161 — Filtre rôles par ministère
+# ------------------------------------------------------------------ #
+
+
+def _create_ministere_with_role(
+    session: Session,
+    cat: CategorieRole,
+) -> tuple:
+    """Helper : ministère + rôle + lien MinistereRoleConfig."""
+    ministere = Ministere(
+        nom=f"Min-{uuid4().hex[:6]}",
+        date_creation="2026-01-01",
+        actif=True,
+    )
+    session.add(ministere)
+    session.flush()
+    session.refresh(ministere)
+
+    role = RoleCompetence(
+        code=f"RC{uuid4().hex[:6].upper()}",
+        libelle="Rôle RC-161",
+        categorie_code=cat.code,
+    )
+    session.add(role)
+    session.flush()
+
+    cfg = MinistereRoleConfig(
+        ministere_id=str(ministere.id),
+        role_code=role.code,
+    )
+    session.add(cfg)
+    session.flush()
+    session.refresh(role)
+    return ministere, role
+
+
+def test_get_roles_grouped_filtered_by_ministere(
+    client, session: Session, admin_headers, test_cat: CategorieRole
+):
+    """Avec ministere_id, seuls les rôles activés pour ce ministère sont retournés."""
+    ministere, role = _create_ministere_with_role(session, test_cat)
+
+    url = f"/roles-competences/by-category/full?ministere_id={ministere.id}"
+    response = client.get(url, headers=admin_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()["data"]
+    all_codes = [r["code"] for cat in data for r in cat["roles"]]
+    assert role.code in all_codes
+
+
+def test_get_roles_grouped_filter_excludes_other_ministere(
+    client, session: Session, admin_headers, test_cat: CategorieRole
+):
+    """Les rôles d'un autre ministère sont absents du filtre."""
+    min_a, role_a = _create_ministere_with_role(session, test_cat)
+    _, role_b = _create_ministere_with_role(session, test_cat)
+
+    url = f"/roles-competences/by-category/full?ministere_id={min_a.id}"
+    response = client.get(url, headers=admin_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()["data"]
+    all_codes = [r["code"] for cat in data for r in cat["roles"]]
+    assert role_a.code in all_codes
+    assert role_b.code not in all_codes
+
+
+def test_get_roles_grouped_unknown_ministere_returns_empty(client, admin_headers):
+    """ministere_id inconnu → data vide (aucun rôle activé)."""
+    url = f"/roles-competences/by-category/full?ministere_id={uuid4()}"
+    response = client.get(url, headers=admin_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["data"] == []
+
+
+def test_get_roles_grouped_no_filter_returns_all(
+    client, session: Session, admin_headers, test_cat: CategorieRole
+):
+    """Sans ministere_id, tous les rôles du catalogue sont retournés."""
+    _, role = _create_ministere_with_role(session, test_cat)
+
+    response = client.get("/roles-competences/by-category/full", headers=admin_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()["data"]
+    all_codes = [r["code"] for cat in data for r in cat["roles"]]
+    assert role.code in all_codes
