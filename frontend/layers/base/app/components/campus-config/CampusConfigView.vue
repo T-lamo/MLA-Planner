@@ -90,9 +90,6 @@
           @toggle="toggleMinistere(min.id)"
           @remove="handleRemoveMinistere"
           @edit="handleEditMinistere"
-          @add-categorie="form.openAddCategorie"
-          @edit-categorie="handleEditCategorie"
-          @delete-categorie="handleDeleteCategorie"
         />
       </ul>
 
@@ -142,12 +139,11 @@ const {
   ministeres,
   selectCampus,
   removeMinistere,
-  deleteCategorie,
   initStatuts,
 } = useCampusConfig()
 
 const form = useCampusConfigForm()
-const { openEditMinistere, openEditCategorie } = form
+const { openEditMinistere } = form
 const setup = useCampusSetup()
 
 const openMinisteres = ref(new Set<string>())
@@ -170,14 +166,6 @@ async function handleRemoveMinistere(ministereId: string): Promise<void> {
   }
 }
 
-async function handleDeleteCategorie(ministereId: string, categorieId: string): Promise<void> {
-  try {
-    await deleteCategorie(ministereId, categorieId)
-  } catch {
-    // Erreur déjà notifiée par l'intercepteur
-  }
-}
-
 async function handleInitStatuts(): Promise<void> {
   isInitialisingStatuts.value = true
   try {
@@ -193,12 +181,5 @@ function handleEditMinistere(ministereId: string): void {
   const min = ministeres.value.find((m) => m.id === ministereId)
   if (!min) return
   openEditMinistere(ministereId, min.nom, min.description)
-}
-
-function handleEditCategorie(ministereId: string, categorieId: string): void {
-  const min = ministeres.value.find((m) => m.id === ministereId)
-  const cat = min?.categories.find((c) => c.code === categorieId)
-  if (!cat) return
-  openEditCategorie(ministereId, categorieId, cat.libelle, cat.description)
 }
 </script>
