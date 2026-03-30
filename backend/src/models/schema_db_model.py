@@ -88,6 +88,26 @@ class PlanningChantLink(SQLModel, table=True):  # type: ignore
     ordre: int = Field(default=0)
 
 
+class MinistereRoleConfig(SQLModel, table=True):  # type: ignore
+    """Catalogue des rôles activés par ministère (N:N)."""
+
+    __tablename__ = "t_ministere_role_config"
+    __table_args__ = {"extend_existing": True}
+
+    ministere_id: str = Field(
+        foreign_key="t_ministere.id",
+        primary_key=True,
+        ondelete="CASCADE",
+    )
+    role_code: str = Field(
+        foreign_key="t_rolecompetence.code",
+        primary_key=True,
+        ondelete="CASCADE",
+    )
+    ministere: Optional["Ministere"] = Relationship(back_populates="roles_config")
+    role: Optional["RoleCompetence"] = Relationship(back_populates="ministeres_config")
+
+
 # -------------------------
 # 1. RÉFÉRENTIELS & POLYVALENCE
 # -------------------------
@@ -97,13 +117,6 @@ class CategorieRole(CategorieRoleBase, table=True):  # type: ignore
     __tablename__ = "t_categorierole"
     __table_args__ = {"extend_existing": True}
     roles: List["RoleCompetence"] = Relationship(back_populates="categorie")
-    # Relation vers le ministère parent (Campus Configuration)
-    # Migration requise :
-    # ALTER TABLE t_categorierole
-    #   ADD COLUMN ministere_id VARCHAR REFERENCES t_ministere(id)
-    #   ON DELETE SET NULL;
-    # ALTER TABLE t_categorierole ADD COLUMN description TEXT;
-    ministere: Optional["Ministere"] = Relationship(back_populates="categories_roles")
 
 
 class RoleCompetence(RoleCompetenceBase, table=True):  # type: ignore
@@ -111,6 +124,10 @@ class RoleCompetence(RoleCompetenceBase, table=True):  # type: ignore
     __table_args__ = {"extend_existing": True}
     categorie: Optional[CategorieRole] = Relationship(back_populates="roles")
     membres_assoc: List["MembreRole"] = Relationship(back_populates="role")
+    ministeres_config: List["MinistereRoleConfig"] = Relationship(
+        back_populates="role",
+        sa_relationship_kwargs={"passive_deletes": True},
+    )
 
 
 class MembreRole(MembreRoleBase, table=True):  # type: ignore
@@ -200,8 +217,10 @@ class Ministere(MinistereBase, table=True):  # type: ignore
         back_populates="ministeres", link_model=MembreMinistereLink
     )
     equipes: List["Equipe"] = Relationship(back_populates="ministere")
-    # Relation inverse des catégories (Campus Configuration)
-    categories_roles: List["CategorieRole"] = Relationship(back_populates="ministere")
+    roles_config: List["MinistereRoleConfig"] = Relationship(
+        back_populates="ministere",
+        sa_relationship_kwargs={"passive_deletes": True},
+    )
     indisponibilites: List["Indisponibilite"] = Relationship(back_populates="ministere")
 
 
@@ -553,6 +572,7 @@ __all__ = [
     "MembreCampusLink",
     "MembreMinistereLink",
     "MembrePoleLink",
+    "MinistereRoleConfig",
     "CategorieRole",
     "RoleCompetence",
     "Slot",

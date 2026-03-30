@@ -563,6 +563,24 @@ class ErrorRegistry:
         message="Le rôle avec le code '{code}' existe déjà.",
         http_status=status.HTTP_409_CONFLICT,
     )
+    MINST_ROLE_ALREADY_ACTIVE = ErrorDetail(
+        code="ROLE_006",
+        message="Ce rôle est déjà activé pour ce ministère.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    MINST_ROLE_NOT_FOUND = ErrorDetail(
+        code="ROLE_007",
+        message="Ce rôle n'est pas activé pour ce ministère.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    ROLE_NOT_CONFIGURED_FOR_MINISTERE = ErrorDetail(
+        code="ROLE_008",
+        message=(
+            "Les rôles suivants ne sont configurés dans aucun "
+            "ministère du membre : {codes}."
+        ),
+        http_status=status.HTTP_400_BAD_REQUEST,
+    )
 
     # --- DOMAINE ÉQUIPE compléments ---
     TEAM_MEMBER_DUPLICATE = ErrorDetail(

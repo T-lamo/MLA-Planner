@@ -1,5 +1,6 @@
 import { BaseRepository } from './BaseRepository'
 import type {
+  BatchActivateResult,
   CampusConfigSummary,
   CampusSetupPayload,
   CampusSetupResult,
@@ -7,10 +8,13 @@ import type {
   CategorieConfigResponse,
   CategorieConfigUpdate,
   CategorieRoleRead,
+  CategorieWithActiveRoles,
   MinistereConfigCreate,
   MinistereConfigResponse,
   MinistereConfigUpdate,
   MinistereRead,
+  MinistereRoleConfigResponse,
+  MinistereRolesListResponse,
   RbacRolesInitResponse,
   RoleCompetenceConfigApiResponse,
   RoleCompetenceConfigCreate,
@@ -106,11 +110,44 @@ export class CampusConfigRepository extends BaseRepository {
     return data
   }
 
-  async linkRoleCompetence(categorieId: string, roleCode: string): Promise<void> {
-    await this.apiRequest<RoleCompetenceConfigApiResponse>(
-      `/config/categories/${categorieId}/roles-competence/${encodeURIComponent(roleCode)}/link`,
+  async activateRole(ministereId: string, roleCode: string): Promise<MinistereRoleConfigResponse> {
+    const { data } = await this.apiRequest<MinistereRoleConfigResponse>(
+      `/config/ministeres/${ministereId}/roles/${encodeURIComponent(roleCode)}/activate`,
       { method: 'POST' },
     )
+    return data
+  }
+
+  async deactivateRole(ministereId: string, roleCode: string): Promise<void> {
+    await this.apiRequest<undefined>(
+      `/config/ministeres/${ministereId}/roles/${encodeURIComponent(roleCode)}/activate`,
+      { method: 'DELETE' },
+    )
+  }
+
+  async activateAllRolesForCategory(
+    ministereId: string,
+    categorieCode: string,
+  ): Promise<BatchActivateResult> {
+    const { data } = await this.apiRequest<BatchActivateResult>(
+      `/config/ministeres/${ministereId}/categories/${encodeURIComponent(categorieCode)}/activate-all`,
+      { method: 'POST' },
+    )
+    return data
+  }
+
+  async listActiveRoles(ministereId: string): Promise<MinistereRolesListResponse> {
+    const { data } = await this.apiRequest<MinistereRolesListResponse>(
+      `/config/ministeres/${ministereId}/roles`,
+    )
+    return data
+  }
+
+  async listCategoriesWithActiveRoles(ministereId: string): Promise<CategorieWithActiveRoles[]> {
+    const { data } = await this.apiRequest<CategorieWithActiveRoles[]>(
+      `/config/ministeres/${ministereId}/categories-with-roles`,
+    )
+    return data
   }
 
   async updateMinistere(

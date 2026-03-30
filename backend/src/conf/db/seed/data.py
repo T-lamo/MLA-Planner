@@ -274,6 +274,31 @@ ROLES_COMPETENCES = [
     {"code": "ANIMATEUR_JEUNESSE", "libelle": "Animateur Jeunesse", "cat": "YOUTH"},
 ]
 
+
+class MinistereRolesConfigEntry(TypedDict):
+    ministere_nom: str
+    role_codes: List[str]
+
+
+MINISTERE_ROLES_CONFIG: List[MinistereRolesConfigEntry] = [
+    {
+        "ministere_nom": "Louange et Adoration",
+        "role_codes": ["SOPRANO", "ALTO", "TENOR", "PIANO", "BATTERIE"],
+    },
+    {
+        "ministere_nom": "Technique",
+        "role_codes": ["SON", "LUMIERE", "VIDEO"],
+    },
+    {
+        "ministere_nom": "Accueil",
+        "role_codes": ["HOTE_ACCUEIL"],
+    },
+    {
+        "ministere_nom": "Jeunesse",
+        "role_codes": ["ANIMATEUR_JEUNESSE"],
+    },
+]
+
 MINISTERES_DATA = [
     {
         "nom": "Louange et Adoration",
