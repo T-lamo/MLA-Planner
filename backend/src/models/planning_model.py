@@ -187,11 +187,30 @@ class ViewContext(BaseModel):
     is_ready_for_publish: bool
 
 
+class PlanningChantRead(BaseModel):
+    """Chant dans le répertoire d'un planning (vue légère)."""
+
+    id: str
+    titre: str
+    artiste: Optional[str] = None
+    youtube_url: Optional[str] = None
+    categorie_code: Optional[str] = None
+    ordre: int = 0
+    model_config = {"from_attributes": True}
+
+
+class PlanningRepertoireUpdate(BaseModel):
+    """Payload pour remplacer le répertoire complet d'un planning."""
+
+    chant_ids: List[str]
+
+
 class PlanningFullRead(PlanningServiceBase):
     id: str
     template_id: Optional[str] = None
     activite: Optional[ActiviteFullRead] = None
     slots: List[SlotFullRead] = []
+    chants: List[PlanningChantRead] = []
     view_context: Optional[ViewContext] = None
     model_config = {"from_attributes": True}
 
@@ -221,4 +240,7 @@ __all__ = [
     "MemberSummaryRead",
     "ViewContext",
     "ActiviteFullRead",
+    # Répertoire de chants
+    "PlanningChantRead",
+    "PlanningRepertoireUpdate",
 ]

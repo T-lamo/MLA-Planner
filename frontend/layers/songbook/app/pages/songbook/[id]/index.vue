@@ -39,7 +39,7 @@ const {
 const showYoutubePlayer = ref(false)
 
 // ── Toggle accords/paroles ─────────────────────────────────────────────────
-const showChords = ref(true)
+const showChords = ref(false)
 
 // ── Transposition ──────────────────────────────────────────────────────────
 const semitones = ref(0)

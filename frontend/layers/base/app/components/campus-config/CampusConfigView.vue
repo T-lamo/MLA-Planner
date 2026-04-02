@@ -59,7 +59,12 @@
         v-if="selectedCampusId"
         type="button"
         class="ml-auto flex items-center gap-2 rounded-lg border border-(--color-primary-200) bg-(--color-primary-50) px-3 py-2 text-sm font-medium text-(--color-primary-700) transition-colors hover:bg-(--color-primary-100)"
-        @click="setup.open(ministeres, allRoleCompetences)"
+        @click="
+          setup.open(
+            ministeres,
+            allCatalogByCategory.flatMap((item) => item.roles),
+          )
+        "
       >
         <Zap class="size-4" />
         Configuration initiale
@@ -85,12 +90,6 @@
           @toggle="toggleMinistere(min.id)"
           @remove="handleRemoveMinistere"
           @edit="handleEditMinistere"
-          @add-categorie="form.openAddCategorie"
-          @edit-categorie="handleEditCategorie"
-          @add-role="form.openAddRole"
-          @edit-role="handleEditRole"
-          @delete-categorie="handleDeleteCategorie"
-          @delete-role="handleDeleteRole"
         />
       </ul>
 
@@ -135,18 +134,16 @@ const {
   campuses,
   selectedCampusId,
   summary,
-  allRoleCompetences,
+  allCatalogByCategory,
   isLoading,
   ministeres,
   selectCampus,
   removeMinistere,
-  deleteCategorie,
-  deleteRoleCompetence,
   initStatuts,
 } = useCampusConfig()
 
 const form = useCampusConfigForm()
-const { openEditMinistere, openEditCategorie, openEditRole } = form
+const { openEditMinistere } = form
 const setup = useCampusSetup()
 
 const openMinisteres = ref(new Set<string>())
@@ -169,22 +166,6 @@ async function handleRemoveMinistere(ministereId: string): Promise<void> {
   }
 }
 
-async function handleDeleteCategorie(ministereId: string, categorieId: string): Promise<void> {
-  try {
-    await deleteCategorie(ministereId, categorieId)
-  } catch {
-    // Erreur déjà notifiée par l'intercepteur
-  }
-}
-
-async function handleDeleteRole(categorieId: string, roleCode: string): Promise<void> {
-  try {
-    await deleteRoleCompetence(categorieId, roleCode)
-  } catch {
-    // Erreur déjà notifiée par l'intercepteur
-  }
-}
-
 async function handleInitStatuts(): Promise<void> {
   isInitialisingStatuts.value = true
   try {
@@ -200,20 +181,5 @@ function handleEditMinistere(ministereId: string): void {
   const min = ministeres.value.find((m) => m.id === ministereId)
   if (!min) return
   openEditMinistere(ministereId, min.nom, min.description)
-}
-
-function handleEditCategorie(ministereId: string, categorieId: string): void {
-  const min = ministeres.value.find((m) => m.id === ministereId)
-  const cat = min?.categories.find((c) => c.code === categorieId)
-  if (!cat) return
-  openEditCategorie(ministereId, categorieId, cat.libelle, cat.description)
-}
-
-function handleEditRole(categorieId: string, roleCode: string): void {
-  const role = allRoleCompetences.value.find(
-    (r) => r.categorie_code === categorieId && r.code === roleCode,
-  )
-  if (!role) return
-  openEditRole(categorieId, roleCode, role.libelle, role.description)
 }
 </script>

@@ -13,7 +13,10 @@ from models import (
 )
 from models.schema_db_model import (
     Campus,
+    CategorieRole,
     Membre,
+    MinistereRoleConfig,
+    RoleCompetence,
 )
 from services.profile_service import ProfileService
 
@@ -504,3 +507,121 @@ class TestProfileService:
             ProfilUpdateFull(campus_principal_id=campus2.id),
         )
         assert updated.campus_principal_id == campus2.id
+
+
+# ------------------------------------------------------------------ #
+#  RC-162 — Assignation sécurisée des rôles
+# ------------------------------------------------------------------ #
+
+
+def _setup_ministere_role(session: Session, ministere_id: str) -> RoleCompetence:
+    """Helper : crée catégorie + rôle + lien MinistereRoleConfig."""
+    cat = CategorieRole(
+        code=f"CAT_{uuid4().hex[:4].upper()}",
+        libelle="Cat RC162",
+    )
+    session.add(cat)
+    session.flush()
+
+    role = RoleCompetence(
+        code=f"RC162_{uuid4().hex[:4].upper()}",
+        libelle="Rôle RC-162",
+        categorie_code=cat.code,
+    )
+    session.add(role)
+    session.flush()
+
+    cfg = MinistereRoleConfig(
+        ministere_id=ministere_id,
+        role_code=role.code,
+    )
+    session.add(cfg)
+    session.flush()
+    session.refresh(role)
+    return role
+
+
+def _create_profil_with_ministere(session: Session, seed_data: dict) -> tuple:
+    """Helper : crée un profil lié à seed_data['min_id']."""
+    service = ProfileService(session)
+    profil_in = ProfilCreateFull(
+        nom="RC162",
+        prenom="Test",
+        email=f"rc162_{uuid4().hex[:6]}@test.com",
+        campus_ids=[seed_data["campus_id"]],
+        ministere_ids=[seed_data["min_id"]],
+        utilisateur=UtilisateurCreate(
+            username=f"rc162_{uuid4().hex[:6]}",
+            password="Password123!",
+            email=f"rc162_{uuid4().hex[:6]}@test.com",
+        ),
+    )
+    profil = service.create(profil_in)
+    return service, profil
+
+
+def test_sync_roles_allows_configured_role(session: Session, seed_data: dict) -> None:
+    """Un rôle configuré pour le ministère du membre est accepté."""
+    role = _setup_ministere_role(session, seed_data["min_id"])
+    service, profil = _create_profil_with_ministere(session, seed_data)
+
+    updated = service.update(profil.id, ProfilUpdateFull(role_codes=[role.code]))
+    codes = [r.role_code for r in updated.roles_assoc]
+    assert role.code in codes
+
+
+def test_sync_roles_rejects_unconfigured_role(
+    session: Session, seed_data: dict
+) -> None:
+    """Un rôle non configuré pour aucun ministère du membre → ROLE_008."""
+    cat = CategorieRole(
+        code=f"NOCAT_{uuid4().hex[:4].upper()}", libelle="No Config Cat"
+    )
+    session.add(cat)
+    session.flush()
+    role_no_cfg = RoleCompetence(
+        code=f"NOCFG_{uuid4().hex[:4].upper()}",
+        libelle="Rôle sans config",
+        categorie_code=cat.code,
+    )
+    session.add(role_no_cfg)
+    session.flush()
+
+    service, profil = _create_profil_with_ministere(session, seed_data)
+
+    with pytest.raises(AppException) as exc_info:
+        service.update(profil.id, ProfilUpdateFull(role_codes=[role_no_cfg.code]))
+    assert exc_info.value.code == "ROLE_008"
+
+
+def test_sync_roles_bypasses_validation_without_ministere(
+    session: Session, seed_data: dict
+) -> None:
+    """Un membre sans ministère peut recevoir des rôles (bypass)."""
+    cat = CategorieRole(code=f"BYCAT_{uuid4().hex[:4].upper()}", libelle="Bypass Cat")
+    session.add(cat)
+    session.flush()
+    role = RoleCompetence(
+        code=f"BYPASS_{uuid4().hex[:4].upper()}",
+        libelle="Rôle Bypass",
+        categorie_code=cat.code,
+    )
+    session.add(role)
+    session.flush()
+
+    service = ProfileService(session)
+    profil_in = ProfilCreateFull(
+        nom="BYPASS",
+        prenom="NoMin",
+        email=f"bypass_{uuid4().hex[:6]}@test.com",
+        campus_ids=[seed_data["campus_id"]],
+        role_codes=[role.code],
+        utilisateur=UtilisateurCreate(
+            username=f"bypass_{uuid4().hex[:6]}",
+            password="Password123!",
+            email=f"bypass_{uuid4().hex[:6]}@test.com",
+        ),
+    )
+    result = service.create(profil_in)
+    codes = [r.role_code for r in result.roles_assoc]
+    assert role.code in codes

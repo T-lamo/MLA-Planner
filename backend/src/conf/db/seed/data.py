@@ -144,7 +144,9 @@ PERMISSIONS: dict[str, list[str]] = {
         "CHANT_READ",
         "CHANT_WRITE",
         "MEMBRE_READ",
-        "MEMBRE_WRITE",
+        "MEMBRE_CREATE",
+        "MEMBRE_UPDATE",
+        "MEMBRE_DELETE",
         "INDISPO_WRITE",
         "CAMPUS_ADMIN",
     ],
@@ -162,7 +164,9 @@ PERMISSIONS: dict[str, list[str]] = {
         "CHANT_READ",
         "CHANT_WRITE",
         "MEMBRE_READ",
-        "MEMBRE_WRITE",
+        "MEMBRE_CREATE",
+        "MEMBRE_UPDATE",
+        "MEMBRE_DELETE",
         "INDISPO_WRITE",
         "CAMPUS_ADMIN",
     ],
@@ -178,6 +182,7 @@ PERMISSIONS: dict[str, list[str]] = {
         "CHANT_READ",
         "CHANT_WRITE",
         "MEMBRE_READ",
+        "MEMBRE_UPDATE",
         "INDISPO_WRITE",
     ],
     "Membre MLA": [
@@ -200,8 +205,10 @@ CAPABILITY_CODES: list[str] = [
     "CHANT_READ",
     "CHANT_WRITE",
     "INDISPO_WRITE",
+    "MEMBRE_CREATE",
+    "MEMBRE_DELETE",
     "MEMBRE_READ",
-    "MEMBRE_WRITE",
+    "MEMBRE_UPDATE",
     "MINISTERE_MANAGE",
     "PLANNING_PUBLISH",
     "PLANNING_READ",
@@ -265,6 +272,31 @@ ROLES_COMPETENCES = [
     {"code": "VIDEO", "libelle": "Opérateur Vidéo", "cat": "TECH"},
     {"code": "HOTE_ACCUEIL", "libelle": "Hôte d'Accueil", "cat": "ACCUEIL"},
     {"code": "ANIMATEUR_JEUNESSE", "libelle": "Animateur Jeunesse", "cat": "YOUTH"},
+]
+
+
+class MinistereRolesConfigEntry(TypedDict):
+    ministere_nom: str
+    role_codes: List[str]
+
+
+MINISTERE_ROLES_CONFIG: List[MinistereRolesConfigEntry] = [
+    {
+        "ministere_nom": "Louange et Adoration",
+        "role_codes": ["SOPRANO", "ALTO", "TENOR", "PIANO", "BATTERIE"],
+    },
+    {
+        "ministere_nom": "Technique",
+        "role_codes": ["SON", "LUMIERE", "VIDEO"],
+    },
+    {
+        "ministere_nom": "Accueil",
+        "role_codes": ["HOTE_ACCUEIL"],
+    },
+    {
+        "ministere_nom": "Jeunesse",
+        "role_codes": ["ANIMATEUR_JEUNESSE"],
+    },
 ]
 
 MINISTERES_DATA = [

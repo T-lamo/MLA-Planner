@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="drawer-fade">
-      <div v-if="isOpen" class="fixed inset-0 z-[10000] flex justify-end">
+      <div v-if="isOpen" class="fixed inset-0 flex justify-end" :style="{ zIndex }">
         <div class="absolute inset-0 bg-slate-900/20" @click="handleClose"></div>
 
         <Transition name="drawer-slide">
@@ -72,9 +72,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { X, Maximize2, Minimize2 } from 'lucide-vue-next'
+import { useDrawerStack } from '../composables/useDrawerStack'
 
 const scrollEl = ref<HTMLElement | null>(null)
 const showTopFade = ref(false)
@@ -101,28 +101,29 @@ const emit = defineEmits<{
   (e: 'size-change', size: DrawerSize): void
 }>()
 
-// État interne de la taille
-const currentSize = ref<DrawerSize>(props.initialSize || 'standard')
+// ---- Stacking dynamique ----
+const { acquire, release } = useDrawerStack()
+const stackDepth = ref(0)
+let acquired = false
 
-// Calcul des classes de largeur
-const sizeClasses = computed(() => {
-  return {
-    'w-full md:max-w-md': currentSize.value === 'standard',
-    'w-full md:w-1/2': currentSize.value === 'half',
-    'w-full': currentSize.value === 'full',
-  }
-})
+const zIndex = computed(() => 10000 + (stackDepth.value - 1) * 10)
 
-// Logique du bouton d'expansion (cycle : standard -> half -> full -> standard)
+// ---- Taille ----
+const currentSize = ref<DrawerSize>(props.initialSize ?? 'standard')
+
+const sizeClasses = computed(() => ({
+  'w-full md:max-w-md': currentSize.value === 'standard',
+  'w-full md:w-1/2': currentSize.value === 'half',
+  'w-full': currentSize.value === 'full',
+}))
+
 const toggleExpand = () => {
   if (currentSize.value === 'standard') currentSize.value = 'half'
   else if (currentSize.value === 'half') currentSize.value = 'full'
   else currentSize.value = 'standard'
-
   emit('size-change', currentSize.value)
 }
 
-// Icone dynamique selon l'état
 const expandIcon = computed(() => {
   if (currentSize.value === 'full') return Minimize2
   return Maximize2
@@ -134,22 +135,33 @@ const expandTitle = computed(() => {
   return 'Réduire'
 })
 
-// Reset de la taille à la fermeture pour retrouver l'état initial à la prochaine ouverture
 const handleClose = () => {
   emit('close')
-  // Optionnel : décommenter pour reset la taille à chaque fermeture
-  // setTimeout(() => currentSize.value = 'standard', 300)
 }
 
-// Bloquer le scroll du body quand le drawer est ouvert
 watch(
   () => props.isOpen,
   (val) => {
+    if (val && !acquired) {
+      stackDepth.value = acquire()
+      acquired = true
+    } else if (!val && acquired) {
+      release()
+      acquired = false
+      stackDepth.value = 0
+    }
     if (typeof document !== 'undefined') {
       document.body.style.overflow = val ? 'hidden' : ''
     }
   },
 )
+
+onBeforeUnmount(() => {
+  if (acquired) {
+    release()
+    acquired = false
+  }
+})
 </script>
 
 <style scoped>

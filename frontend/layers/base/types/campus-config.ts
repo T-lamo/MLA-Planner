@@ -1,3 +1,5 @@
+import type { RoleCompetenceRead } from './role-competence'
+
 // ---- Requêtes (alignées sur les schémas Pydantic backend) ----
 
 export interface MinistereConfigCreate {
@@ -94,6 +96,7 @@ export interface CampusSummaryCategorie {
   code: string
   libelle: string
   description?: string
+  roles_actifs?: RoleCompetenceRead[]
 }
 
 export interface CampusSummaryMinistere {
@@ -146,6 +149,33 @@ export interface CampusSetupResult {
   rbac_roles_created: number
   statuts_initialises: boolean
   summary: CampusConfigSummary
+}
+
+// ---- MinistereRoleConfig (RC-160) ----
+
+export interface MinistereRoleConfigRead {
+  ministere_id: string
+  role_code: string
+}
+
+export interface MinistereRoleConfigResponse {
+  config: MinistereRoleConfigRead
+  created: boolean
+}
+
+export interface MinistereRolesListResponse {
+  ministere_id: string
+  roles: RoleCompetenceRead[]
+}
+
+export interface CategorieWithActiveRoles {
+  categorie: CategorieRoleRead
+  roles_actifs: RoleCompetenceRead[]
+}
+
+export interface BatchActivateResult {
+  categorie_code: string
+  roles_actives: number
 }
 
 // ---- UI ----

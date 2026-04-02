@@ -29,6 +29,7 @@ from models import (
     Organisation,
     Pays,
     Permission,
+    PlanningChantLink,
     PlanningService,
     PlanningTemplate,
     PlanningTemplateRole,
@@ -43,6 +44,7 @@ from models import (
     TypeResponsabilite,
     Utilisateur,
 )
+from models.schema_db_model import MinistereRoleConfig
 
 from .data import (
     ACTIVITES_DATA,
@@ -50,6 +52,7 @@ from .data import (
     EQUIPE_MEMBRES_DATA,
     EQUIPES_DATA,
     MEMBRES_INFOS,
+    MINISTERE_ROLES_CONFIG,
     MINISTERES_DATA,
     PERMISSIONS,
     PLANNING_TEMPLATES_SEED,
@@ -110,6 +113,7 @@ class SeedService:
                 self._seed_referentiels_fixes()
 
                 min_map = self._seed_ministeres(campus_map=campus_map)
+                self._seed_ministere_role_configs(min_map)
                 pole_map = self._seed_poles(min_map)
 
                 # today partagé entre activités et plannings pour des dates cohérentes
@@ -131,6 +135,9 @@ class SeedService:
 
                 # 6. SONGBOOK
                 self._seed_songbook(campus_paris.id)
+
+                # 6b. RÉPERTOIRE : attacher des chants aux plannings
+                self._seed_planning_repertoire(campus_paris.id, act_map)
 
                 # 7. PLANNING TEMPLATES
                 self._seed_planning_templates(campus_paris.id, min_map, user_list)
@@ -235,6 +242,19 @@ class SeedService:
             min_map[m_nom] = ministere
 
         return min_map
+
+    def _seed_ministere_role_configs(self, min_map: dict[str, Ministere]) -> None:
+        """Active les rôles par ministère (t_ministere_role_config)."""
+        for entry in MINISTERE_ROLES_CONFIG:
+            ministere = min_map.get(str(entry["ministere_nom"]))
+            if not ministere:
+                continue
+            for role_code in entry["role_codes"]:
+                self._get_or_create(
+                    MinistereRoleConfig,
+                    ministere_id=str(ministere.id),
+                    role_code=str(role_code),
+                )
 
     def _seed_poles(self, min_map):
         p_map = {}
@@ -904,4 +924,30 @@ class SeedService:
                     "paroles_chords": data["paroles_chords"],
                     "version": 1,
                 },
+            )
+
+    def _seed_planning_repertoire(self, campus_id: str, act_map: dict) -> None:
+        """Attache les 3 premiers chants du campus au premier planning Louange."""
+        louange_key = next((k for k in act_map if "louange" in k.lower()), None)
+        if not louange_key:
+            return
+        act = act_map[louange_key]
+        planning = self.db.exec(
+            select(PlanningService)
+            .where(PlanningService.activite_id == act.id)
+            .where(PlanningService.deleted_at == None)  # noqa: E711
+        ).first()
+        if not planning:
+            return
+
+        chants = self.db.exec(
+            select(Chant).where(Chant.campus_id == campus_id).limit(3)
+        ).all()
+
+        for ordre, chant in enumerate(chants):
+            self._get_or_create(
+                PlanningChantLink,
+                planning_id=planning.id,
+                chant_id=chant.id,
+                defaults={"ordre": ordre},
             )
