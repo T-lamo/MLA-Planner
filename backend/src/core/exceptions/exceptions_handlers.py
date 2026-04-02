@@ -1,4 +1,6 @@
 # src/core/exception_handlers.py
+import logging
+
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -6,6 +8,9 @@ from starlette.datastructures import FormData
 from starlette.status import HTTP_422_UNPROCESSABLE_CONTENT
 
 from core.exceptions.app_exception import AppException
+from core.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 def _serialize_errors(errors: list[dict]) -> list[dict]:
@@ -50,11 +55,13 @@ def register_exception_handlers(app):
         _request: Request,
         exc: Exception,
     ):
-        # Log the exception details here
-        print(f"Exception: {exc}")
+        logger.exception("Unhandled exception: %s", exc)
+        detail = (
+            str(exc) if settings.ENV != "prod" else "Une erreur interne est survenue."
+        )
         return JSONResponse(
             status_code=500,
-            content={"error": "InternalServerError", "detail": str(exc)},
+            content={"error": "InternalServerError", "detail": detail},
         )
 
     @app.exception_handler(AppException)

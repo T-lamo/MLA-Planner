@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import type { CampusRead } from '~~/layers/base/types/campus'
 import type {
+  BatchActivateResult,
   CampusConfigSummary,
   CampusSetupPayload,
   CampusSetupResult,
@@ -25,7 +26,8 @@ import { RoleCompetenceRepository } from '../repositories/RoleCompetenceReposito
 const campuses = ref<CampusRead[]>([])
 const selectedCampusId = ref<string>('')
 const summary = ref<CampusConfigSummary | null>(null)
-const allRoleCompetences = ref<RoleCompetenceRead[]>([])
+const allCatalogByCategory = ref<RolesByCategoryItem[]>([])
+const activeRolesByMinistere = ref<Record<string, RoleCompetenceRead[]>>({})
 const allMinisteres = ref<MinistereRead[]>([])
 const isLoading = ref(false)
 
@@ -53,12 +55,12 @@ export const useCampusConfig = () => {
     return ministeres.value.find((m) => m.id === ministereId)?.categories ?? []
   }
 
-  function rolesForCategorie(categorieId: string): RoleCompetenceRead[] {
-    return allRoleCompetences.value.filter((r) => r.categorie_code === categorieId)
+  function activeRolesForMinistere(ministereId: string): RoleCompetenceRead[] {
+    return activeRolesByMinistere.value[ministereId] ?? []
   }
 
   // -----------------------------------------------------------------------
-  // Chargement interne (sans notification — le intercepteur useApiFetch gère)
+  // Chargement interne
   // -----------------------------------------------------------------------
 
   async function refreshSummary(): Promise<void> {
@@ -70,10 +72,21 @@ export const useCampusConfig = () => {
     }
   }
 
-  async function refreshRoleCompetences(): Promise<void> {
+  async function refreshCatalog(): Promise<void> {
     try {
-      const items: RolesByCategoryItem[] = await rcRepo.getByCategory()
-      allRoleCompetences.value = items.flatMap((item) => item.roles)
+      allCatalogByCategory.value = await rcRepo.getByCategory()
+    } catch {
+      // Non bloquant
+    }
+  }
+
+  async function refreshActiveRolesForMinistere(ministereId: string): Promise<void> {
+    try {
+      const result = await repo.listActiveRoles(ministereId)
+      activeRolesByMinistere.value = {
+        ...activeRolesByMinistere.value,
+        [ministereId]: result.roles,
+      }
     } catch {
       // Non bloquant
     }
@@ -98,7 +111,7 @@ export const useCampusConfig = () => {
       if (campuses.value.length > 0 && !selectedCampusId.value) {
         selectedCampusId.value = campuses.value[0]!.id
       }
-      await Promise.all([refreshSummary(), refreshRoleCompetences(), refreshAllMinisteres()])
+      await Promise.all([refreshSummary(), refreshCatalog(), refreshAllMinisteres()])
     } catch {
       // Erreur déjà notifiée par l'intercepteur useApiFetch
     } finally {
@@ -152,19 +165,39 @@ export const useCampusConfig = () => {
   ): Promise<void> {
     await repo.addRoleCompetence(categorieId, payload)
     notify.success('Compétence ajoutée')
-    await Promise.all([refreshSummary(), refreshRoleCompetences()])
+    await Promise.all([refreshSummary(), refreshCatalog()])
   }
 
   async function deleteRoleCompetence(categorieId: string, roleCode: string): Promise<void> {
     await repo.deleteRoleCompetence(categorieId, roleCode)
     notify.success('Compétence supprimée')
-    await refreshRoleCompetences()
+    await refreshCatalog()
   }
 
-  async function linkRoleCompetence(categorieId: string, roleCode: string): Promise<void> {
-    await repo.linkRoleCompetence(categorieId, roleCode)
-    notify.success('Compétence rattachée')
-    await Promise.all([refreshSummary(), refreshRoleCompetences()])
+  async function activateRole(ministereId: string, roleCode: string): Promise<void> {
+    await repo.activateRole(ministereId, roleCode)
+    notify.success('Rôle activé')
+    await Promise.all([refreshActiveRolesForMinistere(ministereId), refreshSummary()])
+  }
+
+  async function deactivateRole(ministereId: string, roleCode: string): Promise<void> {
+    await repo.deactivateRole(ministereId, roleCode)
+    notify.success('Rôle désactivé')
+    await Promise.all([refreshActiveRolesForMinistere(ministereId), refreshSummary()])
+  }
+
+  async function activateAllRolesForCategory(
+    ministereId: string,
+    categorieCode: string,
+  ): Promise<BatchActivateResult> {
+    const result = await repo.activateAllRolesForCategory(ministereId, categorieCode)
+    notify.success(
+      result.roles_actives > 0
+        ? `${result.roles_actives} rôle(s) activé(s)`
+        : 'Tous les rôles étaient déjà actifs',
+    )
+    await Promise.all([refreshActiveRolesForMinistere(ministereId), refreshSummary()])
+    return result
   }
 
   async function updateMinistere(
@@ -193,7 +226,7 @@ export const useCampusConfig = () => {
   ): Promise<void> {
     await repo.updateRoleCompetence(categorieId, roleCode, payload)
     notify.success('Compétence mise à jour')
-    await refreshRoleCompetences()
+    await refreshCatalog()
   }
 
   async function initRbac(ministereId: string): Promise<void> {
@@ -215,7 +248,7 @@ export const useCampusConfig = () => {
     if (result.roles_created > 0) parts.push(`${result.roles_created} rôles`)
     const detail = parts.length > 0 ? ` — ${parts.join(', ')} créé(s)` : ''
     notify.success(`Campus configuré${detail}`)
-    await Promise.all([refreshSummary(), refreshRoleCompetences()])
+    await Promise.all([refreshSummary(), refreshCatalog()])
     return result
   }
 
@@ -224,7 +257,8 @@ export const useCampusConfig = () => {
     campuses,
     selectedCampusId,
     summary,
-    allRoleCompetences,
+    allCatalogByCategory,
+    activeRolesByMinistere,
     allMinisteres,
     isLoading,
 
@@ -234,7 +268,7 @@ export const useCampusConfig = () => {
 
     // Fonctions dérivées
     categoriesForMinistere,
-    rolesForCategorie,
+    activeRolesForMinistere,
 
     // Actions
     loadCampuses,
@@ -246,7 +280,10 @@ export const useCampusConfig = () => {
     deleteCategorie,
     addRoleCompetence,
     deleteRoleCompetence,
-    linkRoleCompetence,
+    activateRole,
+    deactivateRole,
+    activateAllRolesForCategory,
+    refreshActiveRolesForMinistere,
     updateMinistere,
     updateCategorie,
     updateRoleCompetence,

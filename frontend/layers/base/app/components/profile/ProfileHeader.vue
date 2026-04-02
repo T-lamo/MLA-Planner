@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Plus } from 'lucide-vue-next'
+import CanGuard from '../ui/CanGuard.vue'
 
 defineProps<{
   total: number
   isFetching: boolean
+  contextLabel?: string
 }>()
 
 defineEmits<{
@@ -16,12 +18,18 @@ defineEmits<{
     <div>
       <h1 class="text-2xl font-bold text-slate-900">Gestion des Profils</h1>
       <p class="text-sm text-slate-500">
-        {{ isFetching ? 'Chargement...' : `${total} profils au total` }}
+        <template v-if="isFetching">Chargement…</template>
+        <template v-else>
+          {{ total }} membre{{ total !== 1 ? 's' : '' }}
+          <span v-if="contextLabel"> · {{ contextLabel }}</span>
+        </template>
       </p>
     </div>
-    <button class="btn btn-primary" @click="$emit('add')">
-      <Plus class="size-5" />
-      <span>Ajouter un profil</span>
-    </button>
+    <CanGuard capability="MEMBRE_CREATE">
+      <button class="btn btn-primary" @click="$emit('add')">
+        <Plus class="size-5" />
+        <span>Ajouter un profil</span>
+      </button>
+    </CanGuard>
   </header>
 </template>

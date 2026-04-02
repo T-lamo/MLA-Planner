@@ -12,9 +12,11 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, delete, select
 
 from conf.db.database import Database
-from core.auth.auth_dependencies import CasbinGuard
+from core.audit import audit
+from core.auth.auth_dependencies import CasbinGuard, get_current_active_user
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
+from models import Utilisateur
 from models.permission_model import (
     PermissionCodeRead,
     RoleCreate,
@@ -97,6 +99,7 @@ def list_roles_with_permissions(
 def create_role(
     payload: RoleCreate,
     db: Session = _DB,
+    current_user: Utilisateur = Depends(get_current_active_user),
 ) -> RoleWithPermissionsRead:
     existing = db.exec(
         select(Role).where(cast(Any, Role.libelle) == payload.libelle)
@@ -107,6 +110,7 @@ def create_role(
     db.add(role)
     db.flush()
     db.refresh(role)
+    audit("role_created", user_id=current_user.id, role_libelle=payload.libelle)
     return RoleWithPermissionsRead(id=role.id, libelle=role.libelle, permissions=[])
 
 
@@ -116,7 +120,11 @@ def create_role(
     summary="Supprimer un rôle (interdit s'il a des affectations)",
     dependencies=[_WRITE_GUARD],
 )
-def delete_role(role_id: str, db: Session = _DB) -> None:
+def delete_role(
+    role_id: str,
+    db: Session = _DB,
+    current_user: Utilisateur = Depends(get_current_active_user),
+) -> None:
     role = db.get(Role, role_id)
     if not role:
         raise AppException(ErrorRegistry.CORE_RESOURCE_NOT_FOUND)
@@ -125,6 +133,12 @@ def delete_role(role_id: str, db: Session = _DB) -> None:
     ).first()
     if has_affectations:
         raise AppException(ErrorRegistry.CORE_RESOURCE_IN_USE)
+    audit(
+        "role_deleted",
+        user_id=current_user.id,
+        role_id=role_id,
+        role_libelle=role.libelle,
+    )
     db.exec(  # type: ignore[call-overload]
         delete(RolePermission).where(cast(Any, RolePermission.role_id) == role_id)
     )
@@ -141,7 +155,9 @@ def delete_role(role_id: str, db: Session = _DB) -> None:
 def update_role_permissions(
     role_id: str,
     payload: RolePermissionsUpdate,
+    *,
     db: Session = _DB,
+    current_user: Utilisateur = Depends(get_current_active_user),
 ) -> RoleWithPermissionsRead:
     role = db.get(Role, role_id)
     if not role:
@@ -169,4 +185,10 @@ def update_role_permissions(
     updated = db.exec(stmt).first()
     if not updated:  # pragma: no cover
         raise AppException(ErrorRegistry.CORE_RESOURCE_NOT_FOUND)
+    audit(
+        "role_permissions_updated",
+        user_id=current_user.id,
+        role_id=role_id,
+        permissions=",".join(payload.permission_codes),
+    )
     return _role_to_read(updated)

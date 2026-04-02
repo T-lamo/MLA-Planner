@@ -2,6 +2,7 @@
 import { ArrowLeft, ChevronRight, Trash2 } from 'lucide-vue-next'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
 import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
+import ArtisteSelect from '../../../components/ArtisteSelect.vue'
 import type { ChantContenuCreate, ChantContenuRead } from '../../../types/chant'
 
 const route = useRoute()
@@ -233,16 +234,7 @@ onMounted(async () => {
               <label class="mb-1 block text-sm font-medium text-(--color-neutral-700)">
                 Artiste / Groupe
               </label>
-              <input
-                v-model="form.artiste"
-                type="text"
-                list="artistes-list"
-                placeholder="Ex : Hillsong, ICC Worship…"
-                class="w-full rounded-lg border border-(--color-neutral-300) px-3 py-2 text-sm focus:border-(--color-primary-400) focus:outline-none"
-              />
-              <datalist id="artistes-list">
-                <option v-for="a in artistesSuggestions" :key="a" :value="a" />
-              </datalist>
+              <ArtisteSelect v-model="form.artiste" :suggestions="artistesSuggestions" />
             </div>
             <div>
               <label class="mb-1 block text-sm font-medium text-(--color-neutral-700)">

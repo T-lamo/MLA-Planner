@@ -42,6 +42,12 @@ export const useAuthStore = defineStore('auth', () => {
   const isResponsableMLA = computed(() => can('PLANNING_WRITE') && !can('CAMPUS_ADMIN'))
   const hasAdminAccess = computed(() => can('CAMPUS_ADMIN'))
 
+  /** Droits module Membres — lecture et écriture granulaire. */
+  const canReadMembres = computed(() => can('MEMBRE_READ'))
+  const canCreateMembres = computed(() => can('MEMBRE_CREATE'))
+  const canUpdateMembres = computed(() => can('MEMBRE_UPDATE'))
+  const canDeleteMembres = computed(() => can('MEMBRE_DELETE'))
+
   /** Droits module Carnet de chants. */
   const canManageChants = computed(() => can('CHANT_WRITE'))
 
@@ -154,6 +160,10 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isResponsableMLA,
     hasAdminAccess,
+    canReadMembres,
+    canCreateMembres,
+    canUpdateMembres,
+    canDeleteMembres,
     canManageChants,
     canManagePlanning,
     can,

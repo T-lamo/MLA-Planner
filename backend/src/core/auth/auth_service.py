@@ -4,12 +4,14 @@ from typing import Any, Dict, List, Optional
 import jwt
 from sqlmodel import Session
 
+from core.audit import audit
 from core.auth.auth_repository import AuthRepository
 from core.auth.auth_utils import _affectation_valide
 from core.auth.security import (
     create_access_token,
     create_refresh_token,
     get_password_hash,
+    validate_password_strength,
     verify_password,
 )
 from core.exceptions.app_exception import AppException
@@ -71,6 +73,7 @@ class AuthService:
             "sub": user.username,
             "user_id": user.id,
             "context": self._build_user_context(user),
+            "capabilities": self._build_capabilities(user),
         }
         token, expire = create_access_token(data=token_data)
         new_refresh = create_refresh_token(data={"sub": user.username})[0]
@@ -108,11 +111,15 @@ class AuthService:
         user = self.repo.get_user_by_username(username)
 
         if not user or not verify_password(password, user.password):
+            audit("login_failed", username=username)
             raise AppException(ErrorRegistry.AUTH_INVALID_CREDENTIALS)
 
         if not user.actif:
+            audit("login_blocked", user_id=user.id, username=user.username)
             raise AppException(ErrorRegistry.AUTH_ACCOUNT_DISABLED)
 
+        self.repo.purge_expired_tokens()
+        audit("login", user_id=user.id, username=user.username)
         return self._build_token_response(user)
 
     def refresh_access_token(self, refresh_token_str: str) -> Dict[str, Any]:
@@ -167,9 +174,11 @@ class AuthService:
         if not verify_password(current_password, user.password):
             raise AppException(ErrorRegistry.AUTH_CURRENT_PASSWORD_INCORRECT)
 
+        validate_password_strength(new_password)
         hashed_new_password: str = get_password_hash(new_password)
         self.repo.update_password(user, hashed_new_password)
         self.db.commit()
+        audit("password_changed", user_id=utilisateur_id)
 
     def logout(self, token_payload: dict) -> None:
         """
@@ -184,3 +193,8 @@ class AuthService:
         expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
         self.repo.add_to_blacklist(jti=jti, expires_at=expires_at)
         self.db.commit()
+        audit(
+            "logout",
+            user_id=token_payload.get("user_id"),
+            username=token_payload.get("sub"),
+        )

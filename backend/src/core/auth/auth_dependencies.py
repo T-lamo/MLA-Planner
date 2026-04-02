@@ -23,33 +23,46 @@ def get_current_active_user(
     db: Session = Depends(Database.get_session),
     token: str = Depends(OAuth2PasswordBearer(tokenUrl="/auth/token")),
 ) -> Utilisateur:
+    # 1. Décodage du payload — essaie la clé courante, puis la clé précédente
+    payload: dict = {}
     try:
-        # 1. Décodage du payload
         payload = jwt.decode(
             token, stng.JWT_SECRET_KEY, algorithms=[stng.JWT_ALGORITHM]
         )
-
-        username = payload.get("sub")
-        jti = payload.get("jti")  # <-- Nouvel identifiant du token
-
-        # 2. Tes validations strictes sur le format du token
-        if not isinstance(username, str) or username is None:
+    except JWTError as primary_exc:
+        if stng.JWT_SECRET_KEY_PREVIOUS:
+            try:
+                payload = jwt.decode(
+                    token,
+                    stng.JWT_SECRET_KEY_PREVIOUS,
+                    algorithms=[stng.JWT_ALGORITHM],
+                )
+            except JWTError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Session expirée ou corrompue",
+                ) from exc
+        else:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token invalide: sub manquant ou incorrect",
-            )
+                detail="Session expirée ou corrompue",
+            ) from primary_exc
 
-        if not jti:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token invalide: jti manquant",
-            )
+    username = payload.get("sub")
+    jti = payload.get("jti")
 
-    except JWTError as exc:
+    # 2. Validations strictes sur le format du token
+    if not isinstance(username, str) or username is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session expirée ou corrompue",
-        ) from exc
+            detail="Token invalide: sub manquant ou incorrect",
+        )
+
+    if not jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token invalide: jti manquant",
+        )
 
     repo = AuthRepository(db)
 
@@ -107,6 +120,49 @@ class RoleChecker:
                 detail="Droits insuffisants pour cette action",
             )
         return user_roles
+
+
+class CapabilityChecker:
+    """Vérifie si l'utilisateur possède au moins une des capabilities requises.
+
+    Priorité : champ 'capabilities' du JWT payload.
+    Fallback : lecture directe depuis les affectations/permissions chargées en DB.
+    Super Admin bypasse le check.
+    """
+
+    def __init__(self, required: list[str]) -> None:
+        self.required = required
+
+    def __call__(
+        self, user: Utilisateur = Depends(get_current_active_user)
+    ) -> Utilisateur:
+        if _is_super_admin(user):
+            return user
+
+        caps = self._resolve_caps(user)
+
+        if not any(cap in caps for cap in self.required):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Droits insuffisants pour cette action",
+            )
+        return user
+
+    @staticmethod
+    def _resolve_caps(user: Utilisateur) -> list[str]:
+        """Caps depuis JWT si disponibles, sinon depuis les affectations DB."""
+        payload = getattr(user, "_current_token_payload", {})
+        raw = payload.get("capabilities") if isinstance(payload, dict) else None
+        if isinstance(raw, list):
+            return [c for c in raw if isinstance(c, str)]
+        # Fallback : tokens émis avant l'ajout du champ capabilities au JWT
+        caps: set[str] = set()
+        for aff in user.affectations:
+            if aff.role and _affectation_valide(aff):
+                for perm in aff.role.permissions:
+                    if perm.code:
+                        caps.add(perm.code)
+        return list(caps)
 
 
 class ScopedRoleChecker:
@@ -199,9 +255,11 @@ class CasbinGuard:
         self,
         request: Request,
         user: Utilisateur = Depends(get_current_active_user),
+        db: Session = Depends(Database.get_session),
     ) -> list[str]:
         from .casbin_enforcer import (  # pylint: disable=import-outside-toplevel
             WILDCARD_DOMAIN,
+            build_enforcer,
             get_enforcer,
         )
 
@@ -219,10 +277,22 @@ class CasbinGuard:
         )
 
         if not enf.enforce(user.id, domain, self.obj, self.act):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Droits insuffisants pour cette action",
-            )
+            # L'enforcer peut être périmé après un reset/seed DB.
+            # Si le fallback confirme que l'utilisateur a bien le rôle
+            # en base, on reconstruit l'enforcer et on réessaie une fois.
+            try:
+                self._fallback(user)
+                build_enforcer(db)
+                enf = get_enforcer()
+            except HTTPException:
+                enf = None
+
+            if enf is None or not enf.enforce(user.id, domain, self.obj, self.act):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Droits insuffisants pour cette action",
+                )
+
         return [user.id]
 
 

@@ -104,6 +104,11 @@ class ErrorRegistry:
         message="Accès refusé : vous n'appartenez pas à ce campus.",
         http_status=status.HTTP_403_FORBIDDEN,
     )
+    PLAN_018 = ErrorDetail(
+        code="PLAN_018",
+        message="Chant introuvable dans ce campus.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
     TMPL_003 = ErrorDetail(
         code="TMPL_003",
         message="Template introuvable.",
@@ -313,6 +318,14 @@ class ErrorRegistry:
         message="Vous n'êtes pas autorisé à accéder à ce campus.",
         http_status=status.HTTP_403_FORBIDDEN,
     )
+    AUTH_PASSWORD_TOO_WEAK = ErrorDetail(
+        code="AUTH_009",
+        message=(
+            "Le mot de passe doit contenir au moins 8 caractères, "
+            "un chiffre et un caractère spécial."
+        ),
+        http_status=status.HTTP_422_UNPROCESSABLE_CONTENT,
+    )
 
     # --- DOMAINE RÔLES ET CATÉGORIES (ROLE) ---
     ROLE_CAT_INVALID_CODE = ErrorDetail(
@@ -398,6 +411,11 @@ class ErrorRegistry:
         code="PROF_004",
         message="Le campus principal doit être parmi les campus affectés au membre.",
         http_status=status.HTTP_400_BAD_REQUEST,
+    )
+    PROFIL_MINISTERE_ACCESS_DENIED = ErrorDetail(
+        code="PROF_005",
+        message="Accès refusé : vous n'appartenez pas à ce ministère.",
+        http_status=status.HTTP_403_FORBIDDEN,
     )
 
     # --- DOMAINE CORE / GÉNÉRIQUE (CORE) ---
@@ -544,6 +562,24 @@ class ErrorRegistry:
         code="ROLE_005",
         message="Le rôle avec le code '{code}' existe déjà.",
         http_status=status.HTTP_409_CONFLICT,
+    )
+    MINST_ROLE_ALREADY_ACTIVE = ErrorDetail(
+        code="ROLE_006",
+        message="Ce rôle est déjà activé pour ce ministère.",
+        http_status=status.HTTP_409_CONFLICT,
+    )
+    MINST_ROLE_NOT_FOUND = ErrorDetail(
+        code="ROLE_007",
+        message="Ce rôle n'est pas activé pour ce ministère.",
+        http_status=status.HTTP_404_NOT_FOUND,
+    )
+    ROLE_NOT_CONFIGURED_FOR_MINISTERE = ErrorDetail(
+        code="ROLE_008",
+        message=(
+            "Les rôles suivants ne sont configurés dans aucun "
+            "ministère du membre : {codes}."
+        ),
+        http_status=status.HTTP_400_BAD_REQUEST,
     )
 
     # --- DOMAINE ÉQUIPE compléments ---

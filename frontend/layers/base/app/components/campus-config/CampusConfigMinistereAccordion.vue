@@ -21,7 +21,7 @@
       </button>
 
       <button
-        class="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-(--color-primary-300) hover:bg-(--color-primary-50) hover:text-(--color-primary-700)"
+        class="hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors"
         title="Modifier le ministère"
         type="button"
         @click.stop="emit('edit', ministere.id)"
@@ -30,7 +30,17 @@
       </button>
 
       <button
-        class="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-(--color-primary-300) hover:bg-(--color-primary-50) hover:text-(--color-primary-700)"
+        class="hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors"
+        title="Gérer les rôles de ce ministère"
+        type="button"
+        @click.stop="isRoleManagerOpen = true"
+      >
+        <Settings class="size-3.5" />
+        <span class="hidden sm:inline">Rôles</span>
+      </button>
+
+      <button
+        class="hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700 flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-600 transition-colors"
         title="Initialiser les 4 rôles RBAC standards"
         type="button"
         :disabled="isInitialisingRbac"
@@ -59,35 +69,26 @@
             v-for="cat in ministere.categories"
             :key="cat.code"
             :categorie="cat"
-            :ministereId="ministere.id"
             :isOpen="openCategories.has(cat.code)"
-            :roles="campusConfig.rolesForCategorie(cat.code)"
             @toggle="toggleCategorie(cat.code)"
-            @delete="onDeleteCategorie"
-            @edit="(mId, cId) => emit('edit-categorie', mId, cId)"
-            @add-role="onAddRole"
-            @edit-role="(cId, rc) => emit('edit-role', cId, rc)"
-            @delete-role="onDeleteRole"
           />
         </ul>
         <p v-else class="py-2 text-sm text-slate-400 italic">Aucune catégorie définie</p>
-
-        <button
-          class="mt-3 flex items-center gap-1.5 text-sm font-medium text-(--color-primary-600) transition-colors hover:text-(--color-primary-800)"
-          type="button"
-          @click.stop="emit('add-categorie', ministere.id)"
-        >
-          <Plus class="size-4" />
-          Catégorie
-        </button>
       </div>
     </Transition>
+
+    <!-- Modal gestion des rôles -->
+    <CampusConfigRoleManagerModal
+      :ministereId="ministere.id"
+      :isOpen="isRoleManagerOpen"
+      @close="isRoleManagerOpen = false"
+    />
   </li>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { ChevronRight, Loader2, Pencil, Plus, ShieldCheck, X } from 'lucide-vue-next'
+import { ChevronRight, Loader2, Pencil, Settings, ShieldCheck, X } from 'lucide-vue-next'
 import type { CampusSummaryMinistere } from '~~/layers/base/types/campus-config'
 import { useCampusConfig } from '../../composables/useCampusConfig'
 import { useMLAConfirm } from '../../composables/useMLAConfirm'
@@ -101,13 +102,6 @@ const emit = defineEmits<{
   toggle: []
   remove: [ministereId: string]
   edit: [ministereId: string]
-  'add-categorie': [ministereId: string]
-  'init-rbac': [ministereId: string]
-  'edit-categorie': [ministereId: string, categorieId: string]
-  'delete-categorie': [ministereId: string, categorieId: string]
-  'add-role': [ministereId: string, categorieId: string]
-  'edit-role': [categorieId: string, roleCode: string]
-  'delete-role': [categorieId: string, roleCode: string]
 }>()
 
 const campusConfig = useCampusConfig()
@@ -115,6 +109,7 @@ const { confirm } = useMLAConfirm()
 
 const openCategories = ref(new Set<string>())
 const isInitialisingRbac = ref(false)
+const isRoleManagerOpen = ref(false)
 
 function toggleCategorie(code: string): void {
   if (openCategories.value.has(code)) {
@@ -128,18 +123,6 @@ async function handleRemove(): Promise<void> {
   const ok = await confirm(`Retirer "${props.ministere.nom}" du campus ?`)
   if (!ok) return
   emit('remove', props.ministere.id)
-}
-
-function onDeleteCategorie(ministereId: string, categorieId: string): void {
-  emit('delete-categorie', ministereId, categorieId)
-}
-
-function onAddRole(ministereId: string, categorieId: string): void {
-  emit('add-role', ministereId, categorieId)
-}
-
-function onDeleteRole(categorieId: string, roleCode: string): void {
-  emit('delete-role', categorieId, roleCode)
 }
 
 async function handleInitRbac(): Promise<void> {

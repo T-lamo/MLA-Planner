@@ -1,5 +1,6 @@
 import type { PaginatedResponse } from '../../types/api'
 import type { CampusRead } from '../../types/campus'
+import type { MinistereSimple } from '../../types/ministere'
 import type {
   ProfilCreateFull,
   ProfilReadFull,
@@ -73,5 +74,20 @@ export class ProfileRepository extends GenericRepository<
       `${this.endpoint}/campus/${campusId}/all`,
     )
     return (data as unknown as { data: ProfilReadFull[] }).data
+  }
+
+  async getAllByMinistere(ministereId: string, campusId?: string): Promise<ProfilReadFull[]> {
+    const { data } = await this.apiRequest<{ data: ProfilReadFull[] }>(
+      `${this.endpoint}/ministere/${ministereId}`,
+      { query: campusId ? { campus_id: campusId } : undefined },
+    )
+    return (data as unknown as { data: ProfilReadFull[] }).data
+  }
+
+  async getMyMinisteresByCampus(campusId: string): Promise<MinistereSimple[]> {
+    const { data } = await this.apiRequest<MinistereSimple[]>(
+      `/profiles/me/ministeres/by-campus/${campusId}`,
+    )
+    return data
   }
 }

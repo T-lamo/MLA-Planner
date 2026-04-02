@@ -31,13 +31,20 @@ def force_test_db():
 def setup_database():
     """
     Initialise le schéma de base de données une seule fois pour toute la session.
+
+    Utilise DROP SCHEMA CASCADE pour garantir un reset propre même
+    quand des colonnes FK ont été retirées du modèle SQLModel
+    (la DB peut conserver des contraintes inconnues du metadata).
     """
-    # Création des tables sur le vrai Postgres
-    SQLModel.metadata.drop_all(engine)
+    with engine.connect() as conn:
+        conn.execute(
+            __import__("sqlalchemy").text(
+                "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+            )
+        )
+        conn.commit()
     SQLModel.metadata.create_all(engine)
     yield
-    # Optionnel : on peut drop à la fin, mais en CI le
-    # container est détruit de toute façon
 
 
 @pytest.fixture(name="session")

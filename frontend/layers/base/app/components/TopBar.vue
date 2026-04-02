@@ -27,11 +27,6 @@
     </div>
 
     <div class="flex items-center gap-2 md:gap-4">
-      <button class="btn btn-primary px-3 md:px-4">
-        <Plus class="size-5 md:size-4" />
-        <span class="hidden md:inline">Créer Planning</span>
-      </button>
-
       <NuxtLink
         to="/planning/mes-affectations"
         class="relative rounded-full p-2 text-slate-500 hover:bg-slate-50"
@@ -50,7 +45,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import { ChevronRight, Plus, Menu, Bell } from 'lucide-vue-next'
+import { ChevronRight, Menu, Bell } from 'lucide-vue-next'
 import { useUIStore } from '../stores/useUiStore'
 import { useMyAffectationsStore } from '~~/layers/planning/app/stores/useMyAffectationsStore'
 

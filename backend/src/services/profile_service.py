@@ -21,7 +21,13 @@ from models import (
 )
 from models.base_pagination import PaginatedResponse
 from models.ministere_model import MinistereSimple
-from models.schema_db_model import AffectationRole, CampusMinistereLink
+from models.schema_db_model import (
+    AffectationRole,
+    CampusMinistereLink,
+    MembreCampusLink,
+    MembreMinistereLink,
+    MinistereRoleConfig,
+)
 from repositories.membre_repository import _exclude_superadmin_clause
 from services.membre_service import MembreService
 
@@ -64,6 +70,29 @@ class ProfileService(
             return campus_ids[0]
         return None
 
+    def _validate_roles_for_membre(self, membre: Membre, role_codes: List[str]) -> None:
+        """Vérifie que chaque rôle est configuré dans au moins un ministère du membre.
+
+        Bypass si le membre n'a aucun ministère (création initiale).
+        """
+        ministere_ids = [str(m.id) for m in membre.ministeres]
+        if not ministere_ids:
+            return
+
+        stmt = select(MinistereRoleConfig.role_code).where(
+            col(MinistereRoleConfig.role_code).in_(role_codes),
+            col(MinistereRoleConfig.ministere_id).in_(  # pylint: disable=no-member
+                ministere_ids
+            ),
+        )
+        configured = set(self.db.exec(stmt).all())
+        unconfigured = [c for c in role_codes if c not in configured]
+        if unconfigured:
+            raise AppException(
+                ErrorRegistry.ROLE_NOT_CONFIGURED_FOR_MINISTERE,
+                codes=", ".join(unconfigured),
+            )
+
     def _sync_roles(self, membre: Membre, role_codes: List[str]):
         """
         Gère le différentiel des rôles (Ajout/Suppression) pour un membre.
@@ -78,6 +107,9 @@ class ProfileService(
                 found_codes = [r.code for r in db_roles]
                 missing = list(set(role_codes) - set(found_codes))
                 raise AppException(ErrorRegistry.ROLE_NOT_FOUND, missing=missing)
+
+            # 2. Vérifier que les rôles sont configurés pour les ministères du membre
+            self._validate_roles_for_membre(membre, role_codes)
 
         # 2. Récupérer les rôles actuels
         current_roles_map = {ra.role_code: ra for ra in membre.roles_assoc}
@@ -273,6 +305,53 @@ class ProfileService(
             for m in profil.ministeres
             if m.id in campus_min_ids
         ]
+
+    def list_by_ministere(
+        self,
+        ministere_id: str,
+        *,
+        requesting_membre_id: Optional[str] = None,
+        bypass_check: bool = False,
+        campus_id: Optional[str] = None,
+    ) -> List[ProfilReadFull]:
+        """Membres liés à un ministère donné, optionnellement filtrés par campus.
+
+        bypass_check=True pour les admins (CAMPUS_ADMIN).
+        Sinon, requesting_membre_id doit appartenir au ministère.
+        campus_id filtre les résultats sur un campus spécifique.
+        """
+        if not bypass_check:
+            if not requesting_membre_id:
+                raise AppException(ErrorRegistry.PROFIL_MINISTERE_ACCESS_DENIED)
+            membre = self._get_db_obj(requesting_membre_id)
+            if not any(m.id == ministere_id for m in membre.ministeres):
+                raise AppException(ErrorRegistry.PROFIL_MINISTERE_ACCESS_DENIED)
+        try:
+            statement = (
+                select(Membre)
+                .join(
+                    MembreMinistereLink,
+                    cast(Any, MembreMinistereLink.membre_id == Membre.id),
+                )
+                .where(MembreMinistereLink.ministere_id == ministere_id)
+                .where(col(cast(Any, Membre.deleted_at)) == None)  # noqa: E711
+            )
+            if campus_id:
+                statement = statement.join(
+                    MembreCampusLink,
+                    cast(Any, MembreCampusLink.membre_id == Membre.id),
+                ).where(MembreCampusLink.campus_id == campus_id)
+            statement = statement.options(
+                selectinload(cast(Any, Membre.utilisateur)),
+                selectinload(cast(Any, Membre.campuses)),
+            ).distinct()
+            items = self.db.exec(statement).unique().all()
+            return [ProfilReadFull.model_validate(i) for i in items]
+        except AppException:
+            raise
+        except Exception as e:
+            logger.error(f"Erreur list_by_ministere: {e}")
+            raise AppException(ErrorRegistry.CORE_DATABASE_ERROR) from e
 
     def list_all(self, campus_id: Optional[str] = None) -> List[ProfilReadFull]:
         try:

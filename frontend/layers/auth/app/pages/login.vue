@@ -19,7 +19,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/useAuthStore'
 import { useGlobalLoader } from '~~/layers/base/app/composables/useLoader'
 import type { EnhancedApiError } from '~~/layers/base/types/api'
@@ -38,9 +38,6 @@ interface LoginEvent {
 
 const authStore = useAuthStore()
 const route = useRoute()
-// Capturé en setup() synchrone : le contexte Nuxt n'est plus garanti
-// dans un callback async déclenché par un CustomEvent Web Component.
-const router = useRouter()
 const { notifyError } = useErrorHandler()
 const { withLoader } = useGlobalLoader()
 
@@ -58,15 +55,13 @@ const onLogin = async (event: LoginEvent) => {
 
       // SuperAdmin → toujours /admin/campuses, ignore le redirect query
       if (authStore.isSuperAdmin) {
-        await router.push('/admin/campuses')
+        await navigateTo('/admin/campuses')
         return
       }
 
       const rawRedirect = (route.query.redirect as string) || '/planning/calendar'
-      // Si redirect=/ on va directement au calendrier pour éviter la double-navigation
-      // index.vue → navigateTo() qui laisserait la page login visible.
       const redirectPath = rawRedirect === '/' ? '/planning/calendar' : rawRedirect
-      await router.push(redirectPath)
+      await navigateTo(redirectPath)
     } catch (error: unknown) {
       const err = error as EnhancedApiError
       notifyError(err)
