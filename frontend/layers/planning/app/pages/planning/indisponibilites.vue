@@ -12,6 +12,7 @@ import {
 import AppDrawer from '~~/layers/base/app/components/AppDrawer.vue'
 import AppSelect from '~~/layers/base/app/components/ui/AppSelect.vue'
 import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
+import AppPagination from '~~/layers/base/app/components/ui/AppPagination.vue'
 import { useIndisponibiliteStore } from '~~/layers/base/app/stores/useIndisponibiliteStore'
 import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
@@ -64,6 +65,7 @@ watch(
 
 async function applyFilters() {
   if (uiStore.selectedCampusId && authStore.hasAdminAccess) {
+    store.paginationAdmin.resetPagination()
     await store.fetchByCampus(uiStore.selectedCampusId)
   }
 }
@@ -310,6 +312,21 @@ const isFormValid = computed(
               </button>
             </div>
           </template>
+
+          <template #pagination>
+            <AppPagination
+              :currentPage="store.paginationAdmin.currentPage.value"
+              :totalPages="store.paginationAdmin.totalPages.value"
+              :total="store.paginationAdmin.total.value"
+              :loading="store.loading"
+              @change="
+                (page) => {
+                  store.paginationAdmin.goToPage(page)
+                  store.fetchByCampus(uiStore.selectedCampusId)
+                }
+              "
+            />
+          </template>
         </AppTable>
       </div>
     </template>
@@ -362,6 +379,18 @@ const isFormValid = computed(
             <Trash2 class="size-4" />
           </button>
         </div>
+        <AppPagination
+          :currentPage="store.paginationMine.currentPage.value"
+          :totalPages="store.paginationMine.totalPages.value"
+          :total="store.paginationMine.total.value"
+          :loading="store.loading"
+          @change="
+            (page) => {
+              store.paginationMine.goToPage(page)
+              store.fetchMine()
+            }
+          "
+        />
       </div>
     </template>
 

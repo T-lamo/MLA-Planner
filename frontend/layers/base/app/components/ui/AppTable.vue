@@ -47,6 +47,9 @@
         </template>
       </tbody>
     </table>
+    <div v-if="$slots.pagination" class="mt-4">
+      <slot name="pagination" />
+    </div>
   </div>
 </template>
 

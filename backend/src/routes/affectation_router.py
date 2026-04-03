@@ -1,7 +1,5 @@
 # src/routes/affectation_router.py
-from typing import List
-
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session
 
 from conf.db.database import Database
@@ -9,6 +7,7 @@ from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from mla_enum.custom_enum import AffectationStatusCode
 from models import AffectationCreate, AffectationRead, AffectationUpdate, Utilisateur
 from models.affectation_model import AffectationMemberRead
+from models.base_pagination import PaginatedResponse
 from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.affectation_service import AffectationService
 
@@ -19,16 +18,20 @@ from .base_route_factory import CRUDRouterFactory
 me_router = APIRouter(prefix="/affectations", tags=["Affectations"])
 
 
-@me_router.get("/me", response_model=List[AffectationMemberRead])
+@me_router.get("/me", response_model=PaginatedResponse[AffectationMemberRead])
 def get_my_affectations(
+    limit: int = Query(20, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     current_user: Utilisateur = Depends(get_current_active_user),
     db: Session = Depends(Database.get_db_for_route),
-) -> List[AffectationMemberRead]:
-    """Retourne les affectations du membre connecté."""
+) -> PaginatedResponse[AffectationMemberRead]:
+    """Retourne les affectations paginées du membre connecté."""
     if not current_user.membre_id:
-        return []
+        return PaginatedResponse(total=0, limit=limit, offset=offset, data=[])
     service = AffectationService(db)
-    return service.get_my_affectations(current_user.membre_id)
+    return service.get_my_affectations(
+        current_user.membre_id, limit=limit, offset=offset
+    )
 
 
 @me_router.get("/me/pending-count", response_model=int)

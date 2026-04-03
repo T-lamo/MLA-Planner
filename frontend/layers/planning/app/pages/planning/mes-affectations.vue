@@ -15,6 +15,7 @@ import {
 import { useMyAffectationsStore } from '../../stores/useMyAffectationsStore'
 import type { AffectationMemberRead, AffectationStatus } from '../../types/planning.types'
 import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
+import AppPagination from '~~/layers/base/app/components/ui/AppPagination.vue'
 
 definePageMeta({ layout: 'default' })
 
@@ -323,6 +324,21 @@ const affColumns = [
                   Accepter
                 </button>
               </div>
+            </template>
+
+            <template #pagination>
+              <AppPagination
+                :currentPage="store.currentPage"
+                :totalPages="store.totalPages"
+                :total="store.total"
+                :loading="store.loading"
+                @change="
+                  (page) => {
+                    store.goToPage(page)
+                    store.fetchMyAffectations()
+                  }
+                "
+              />
             </template>
           </AppTable>
         </div>
