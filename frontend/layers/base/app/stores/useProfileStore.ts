@@ -28,7 +28,7 @@ export const useProfileStore = defineStore('profile', () => {
     setTotal,
     goToPage,
     resetPagination,
-  } = usePagination(50)
+  } = usePagination(20)
 
   async function fetchProfiles() {
     // 1. Sécurité : On s'assure d'avoir l'ID du campus

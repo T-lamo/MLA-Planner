@@ -51,7 +51,7 @@ const {
   setTotal: ministreSetTotal,
   goToPage: ministreGoToPage,
   resetPagination: ministreResetPagination,
-} = usePagination(50)
+} = usePagination(20)
 
 // Toujours basé sur les ministères de l'utilisateur — admin ou pas
 const ministeresOptions = computed(() => [
