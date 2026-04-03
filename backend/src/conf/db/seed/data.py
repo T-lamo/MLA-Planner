@@ -259,6 +259,12 @@ CATEGORIES_ROLES = [
     {"code": "TECH", "libelle": "Technique et Médias"},
     {"code": "ACCUEIL", "libelle": "Accueil et Hospitalité"},
     {"code": "YOUTH", "libelle": "Jeunesse et Animation"},
+    {"code": "INTERC", "libelle": "Intercession et Prière"},
+    {"code": "ENSEIGN", "libelle": "Enseignement"},
+    {"code": "COM", "libelle": "Communication et Médias"},
+    {"code": "GEST", "libelle": "Gestion et Intendance"},
+    {"code": "ARTS", "libelle": "Arts Créatifs et Danse"},
+    {"code": "SONO", "libelle": "Sonorisation"},
 ]
 
 ROLES_COMPETENCES = [
@@ -272,6 +278,17 @@ ROLES_COMPETENCES = [
     {"code": "VIDEO", "libelle": "Opérateur Vidéo", "cat": "TECH"},
     {"code": "HOTE_ACCUEIL", "libelle": "Hôte d'Accueil", "cat": "ACCUEIL"},
     {"code": "ANIMATEUR_JEUNESSE", "libelle": "Animateur Jeunesse", "cat": "YOUTH"},
+    {"code": "PRIEUR", "libelle": "Intercesseur", "cat": "INTERC"},
+    {"code": "ENSEIGNANT", "libelle": "Enseignant", "cat": "ENSEIGN"},
+    {"code": "GRAPHISTE", "libelle": "Graphiste", "cat": "COM"},
+    {"code": "PHOTOGRAPHE", "libelle": "Photographe", "cat": "COM"},
+    {"code": "RESEAUX_SOCIAUX", "libelle": "Réseaux Sociaux", "cat": "COM"},
+    {"code": "INTENDANT", "libelle": "Intendant", "cat": "GEST"},
+    {"code": "DANSEUR", "libelle": "Danseur", "cat": "ARTS"},
+    {"code": "COMEDIEN", "libelle": "Comédien", "cat": "ARTS"},
+    {"code": "CHOREO", "libelle": "Chorégraphe", "cat": "ARTS"},
+    {"code": "SONORISATEUR", "libelle": "Sonorisateur", "cat": "SONO"},
+    {"code": "MIXEUR", "libelle": "Mixeur", "cat": "SONO"},
 ]
 
 
@@ -297,6 +314,30 @@ MINISTERE_ROLES_CONFIG: List[MinistereRolesConfigEntry] = [
         "ministere_nom": "Jeunesse",
         "role_codes": ["ANIMATEUR_JEUNESSE"],
     },
+    {
+        "ministere_nom": "Enseignement",
+        "role_codes": ["ENSEIGNANT"],
+    },
+    {
+        "ministere_nom": "Intercession",
+        "role_codes": ["PRIEUR"],
+    },
+    {
+        "ministere_nom": "Communication",
+        "role_codes": ["GRAPHISTE", "PHOTOGRAPHE", "RESEAUX_SOCIAUX"],
+    },
+    {
+        "ministere_nom": "Intendance",
+        "role_codes": ["INTENDANT"],
+    },
+    {
+        "ministere_nom": "MCAD",
+        "role_codes": ["DANSEUR", "COMEDIEN", "CHOREO"],
+    },
+    {
+        "ministere_nom": "Sonorisation",
+        "role_codes": ["SONORISATEUR", "MIXEUR"],
+    },
 ]
 
 MINISTERES_DATA = [
@@ -309,6 +350,11 @@ MINISTERES_DATA = [
     {"nom": "Technique", "date_creation": datetime(2021, 3, 1), "actif": True},
     {"nom": "Accueil", "date_creation": datetime(2022, 1, 15), "actif": True},
     {"nom": "Jeunesse", "date_creation": datetime(2022, 9, 1), "actif": True},
+    {"nom": "Intercession", "date_creation": datetime(2023, 1, 1), "actif": True},
+    {"nom": "Communication", "date_creation": datetime(2023, 6, 1), "actif": True},
+    {"nom": "Intendance", "date_creation": datetime(2023, 9, 1), "actif": True},
+    {"nom": "MCAD", "date_creation": datetime(2024, 1, 1), "actif": True},
+    {"nom": "Sonorisation", "date_creation": datetime(2024, 3, 1), "actif": True},
 ]
 
 POLES_DATA = {
@@ -336,6 +382,41 @@ POLES_DATA = {
     ],
     "Jeunesse": [
         {"nom": "Ados", "description": "Groupe adolescents", "active": True},
+        {"nom": "Enfants", "description": "Groupe enfants", "active": True},
+    ],
+    "Intercession": [
+        {
+            "nom": "Prière du Matin",
+            "description": "Groupe prière matin",
+            "active": True,
+        },
+        {
+            "nom": "Intercession",
+            "description": "Équipe intercession",
+            "active": True,
+        },
+    ],
+    "Communication": [
+        {
+            "nom": "Médias Numériques",
+            "description": "Réseaux sociaux et contenus",
+            "active": True,
+        },
+        {
+            "nom": "Photo et Design",
+            "description": "Photographie et graphisme",
+            "active": True,
+        },
+    ],
+    "Intendance": [
+        {"nom": "Logistique", "description": "Gestion et intendance", "active": True},
+    ],
+    "MCAD": [
+        {"nom": "Danse", "description": "Équipe de danse", "active": True},
+        {"nom": "Théâtre", "description": "Équipe théâtre et mime", "active": True},
+    ],
+    "Sonorisation": [
+        {"nom": "Régie Sono", "description": "Sonorisation en direct", "active": True},
     ],
 }
 
@@ -411,6 +492,105 @@ ACTIVITES_DATA: List[ActiviteData] = [
         "day_offset": 19,
         "heure_debut": 14,
         "heure_fin": 18,
+    },
+    {
+        "type": "Reunion Intercession",
+        "lieu": "Salle de Prière",
+        "ministere_nom": "Intercession",
+        "day_offset": 3,
+        "heure_debut": 6,
+        "heure_fin": 8,
+    },
+    {
+        "type": "Cours Enseignement Biblique",
+        "lieu": "Salle B",
+        "ministere_nom": "Enseignement",
+        "day_offset": 5,
+        "heure_debut": 10,
+        "heure_fin": 12,
+    },
+    {
+        "type": "Session Communication",
+        "lieu": "Studio Médias",
+        "ministere_nom": "Communication",
+        "day_offset": 12,
+        "heure_debut": 14,
+        "heure_fin": 17,
+    },
+    {
+        "type": "Reunion Intendance",
+        "lieu": "Bureau",
+        "ministere_nom": "Intendance",
+        "day_offset": 8,
+        "heure_debut": 9,
+        "heure_fin": 11,
+    },
+    {
+        "type": "Repetition MCAD",
+        "lieu": "Salle de Danse",
+        "ministere_nom": "MCAD",
+        "day_offset": 13,
+        "heure_debut": 15,
+        "heure_fin": 18,
+    },
+    {
+        "type": "Service Sonorisation Dim",
+        "lieu": "Régie Principale",
+        "ministere_nom": "Sonorisation",
+        "day_offset": 7,
+        "heure_debut": 7,
+        "heure_fin": 21,
+    },
+]
+
+ACTIVITES_TOULOUSE: List[ActiviteData] = [
+    {
+        "type": "Culte Dominical Toulouse",
+        "lieu": "Sanctuaire Toulouse",
+        "ministere_nom": "Louange et Adoration",
+        "day_offset": 7,
+        "heure_debut": 10,
+        "heure_fin": 20,
+    },
+    {
+        "type": "Repetition Louange Toulouse",
+        "lieu": "Salle Louange Toulouse",
+        "ministere_nom": "Louange et Adoration",
+        "day_offset": 11,
+        "heure_debut": 18,
+        "heure_fin": 21,
+    },
+    {
+        "type": "Accueil Culte Toulouse",
+        "lieu": "Hall Toulouse",
+        "ministere_nom": "Accueil",
+        "day_offset": 7,
+        "heure_debut": 9,
+        "heure_fin": 19,
+    },
+    {
+        "type": "Reunion Jeunesse Toulouse",
+        "lieu": "Salle Jeunesse Toulouse",
+        "ministere_nom": "Jeunesse",
+        "day_offset": 20,
+        "heure_debut": 15,
+        "heure_fin": 18,
+    },
+    {
+        "type": "Intercession Toulouse",
+        "lieu": "Salle Prière Toulouse",
+        "ministere_nom": "Intercession",
+        "day_offset": 4,
+        "heure_debut": 6,
+        "heure_fin": 8,
+    },
+    {
+        "type": "Service Sono Toulouse",
+        "lieu": "Régie Toulouse",
+        "ministere_nom": "Sonorisation",
+        "day_offset": 7,
+        "heure_debut": 8,
+        "heure_fin": 20,
     },
 ]
 
