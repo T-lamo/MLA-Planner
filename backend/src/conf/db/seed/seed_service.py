@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, Type, TypeVar
@@ -6,8 +7,6 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session, SQLModel, select
 
 from core.auth.security import get_password_hash
-from models import Slot  # Nouveau
-from models import StatutAffectation  # Nouveau
 from models import (
     Activite,
     Affectation,
@@ -20,6 +19,7 @@ from models import (
     ChantContenu,
     Equipe,
     EquipeMembre,
+    Indisponibilite,
     Membre,
     MembreCampusLink,
     MembreMinistereLink,
@@ -40,6 +40,8 @@ from models import (
     Role,
     RoleCompetence,
     RolePermission,
+    Slot,
+    StatutAffectation,
     StatutPlanning,
     TypeResponsabilite,
     Utilisateur,
@@ -48,6 +50,7 @@ from models.schema_db_model import MinistereRoleConfig
 
 from .data import (
     ACTIVITES_DATA,
+    ACTIVITES_TOULOUSE,
     CATEGORIES_ROLES,
     EQUIPE_MEMBRES_DATA,
     EQUIPES_DATA,
@@ -71,6 +74,11 @@ from .data import (
     TYPES_RESPONSABILITE,
     USER_PASSWORD,
     MembreInfo,
+)
+from .data_extra import (
+    INDISPONIBILITES_SEED,
+    MEMBRES_SUPPLEMENTAIRES,
+    IndisponibiliteData,
 )
 
 T = TypeVar("T", bound=SQLModel)
@@ -126,6 +134,7 @@ class SeedService:
                 self._seed_membres_et_competences(
                     user_list, campus_map, min_map, pole_map
                 )
+                self._seed_membres_supplementaires(campus_map, min_map, pole_map)
 
                 # 5. OPÉRATIONNEL & PLANNING (Cœur de la modification)
                 eq_map = self._seed_equipes(min_map)
@@ -141,6 +150,14 @@ class SeedService:
 
                 # 7. PLANNING TEMPLATES
                 self._seed_planning_templates(campus_paris.id, min_map, user_list)
+
+                # 8. ACTIVITÉS TOULOUSE
+                self._seed_activites_toulouse(
+                    campus_map["Campus Toulouse"].id, min_map, today
+                )
+
+                # 9. INDISPONIBILITÉS
+                self._seed_indisponibilites()
 
             self.logger.info("✅ Seed terminé avec succès !")
         except SQLAlchemyError as e:
@@ -882,6 +899,106 @@ class SeedService:
                 template_role_id=role_id,
                 membre_id=membre_id,
             )
+
+    # --- MEMBRES SUPPLÉMENTAIRES ---
+
+    def _seed_membre_simple(
+        self,
+        info: MembreInfo,
+        *,
+        campus_map: dict,
+        min_map: dict,
+        pole_map: dict,
+    ) -> None:
+        """Crée un membre sans compte Utilisateur (idempotent)."""
+        membre, _ = self._get_or_create(
+            Membre,
+            email=info["email"],
+            defaults={
+                "nom": info["nom"],
+                "prenom": info["prenom"],
+                "actif": True,
+            },
+        )
+        self._link_member_to_entities(
+            membre.id, info, c_map=campus_map, m_map=min_map, p_map=pole_map
+        )
+        self._assign_member_roles(membre.id, info.get("roles") or [])
+        campus_names = info.get("campus_names") or []
+        if campus_names and campus_names[0] in campus_map:
+            principal_id = campus_map[campus_names[0]].id
+            if membre.campus_principal_id != principal_id:
+                membre.campus_principal_id = principal_id
+                self.db.add(membre)
+                self.db.flush()
+
+    def _seed_membres_supplementaires(
+        self, campus_map: dict, min_map: dict, pole_map: dict
+    ) -> None:
+        """Seed les 57 membres supplémentaires sans compte Utilisateur."""
+        self.logger.info(
+            "👥 Membres supplémentaires (%d)...", len(MEMBRES_SUPPLEMENTAIRES)
+        )
+        for info in MEMBRES_SUPPLEMENTAIRES:
+            self._seed_membre_simple(
+                info, campus_map=campus_map, min_map=min_map, pole_map=pole_map
+            )
+
+    # --- ACTIVITÉS TOULOUSE ---
+
+    def _seed_activites_toulouse(
+        self, campus_id: str, min_map: dict, today: datetime
+    ) -> None:
+        """Seed les activités du Campus Toulouse."""
+        self.logger.info("📅 Activités Toulouse...")
+        for a in ACTIVITES_TOULOUSE:
+            min_nom = a.get("ministere_nom", "Louange et Adoration")
+            ministere = min_map.get(min_nom)
+            if not ministere:
+                continue
+            jour = today + timedelta(days=a.get("day_offset", 7))
+            self._get_or_create(
+                Activite,
+                type=a["type"],
+                defaults={
+                    "campus_id": campus_id,
+                    "lieu": a.get("lieu", "Lieu par défaut"),
+                    "date_creation": today,
+                    "date_debut": jour.replace(hour=a.get("heure_debut", 9)),
+                    "date_fin": jour.replace(hour=a.get("heure_fin", 21)),
+                    "ministere_organisateur_id": ministere.id,
+                },
+            )
+
+    # --- INDISPONIBILITÉS ---
+
+    def _seed_indisponibilites(self) -> None:
+        """Seed les indisponibilités des membres (idempotent)."""
+        self.logger.info("🚫 Indisponibilités (%d)...", len(INDISPONIBILITES_SEED))
+        for data in INDISPONIBILITES_SEED:
+            self._seed_one_indisponibilite(data)
+
+    def _seed_one_indisponibilite(self, data: IndisponibiliteData) -> None:
+        """Crée une indisponibilité pour un membre identifié par email."""
+        membre = self.db.exec(
+            select(Membre).where(Membre.email == data["membre_email"])
+        ).first()
+        if not membre:
+            self.logger.warning(
+                "Membre '%s' introuvable — indisponibilité ignorée.",
+                data["membre_email"],
+            )
+            return
+        self._get_or_create(
+            Indisponibilite,
+            membre_id=membre.id,
+            date_debut=data["date_debut"],
+            date_fin=data["date_fin"],
+            defaults={
+                "motif": data.get("motif"),
+                "validee": data.get("validee", False),
+            },
+        )
 
     # --- SONGBOOK ---
 
