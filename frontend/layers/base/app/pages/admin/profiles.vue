@@ -6,6 +6,7 @@ import ProfileHeader from '../../components/profile/ProfileHeader.vue'
 import ProfileCard from '../../components/profile/ProfileCard.vue'
 import ProfileFormDrawer from '../../components/profile/ProfileFormDrawer.vue'
 import AppSelect from '../../components/ui/AppSelect.vue'
+import AppPagination from '../../components/ui/AppPagination.vue'
 import CanGuard from '../../components/ui/CanGuard.vue'
 
 import type {
@@ -305,6 +306,20 @@ const handleDelete = async (id: string) => {
             @delete="handleDelete"
           />
         </TransitionGroup>
+
+        <AppPagination
+          v-if="!selectedMinistereId"
+          :currentPage="profileStore.currentPage"
+          :totalPages="profileStore.totalPages"
+          :total="profileStore.total"
+          :loading="isFetching"
+          @change="
+            (page) => {
+              profileStore.goToPage(page)
+              profileStore.fetchProfiles()
+            }
+          "
+        />
       </template>
 
       <ProfileFormDrawer

@@ -315,9 +315,9 @@ const isFormValid = computed(
 
           <template #pagination>
             <AppPagination
-              :currentPage="store.paginationAdmin.currentPage.value"
-              :totalPages="store.paginationAdmin.totalPages.value"
-              :total="store.paginationAdmin.total.value"
+              :currentPage="store.paginationAdmin.currentPage"
+              :totalPages="store.paginationAdmin.totalPages"
+              :total="store.paginationAdmin.total"
               :loading="store.loading"
               @change="
                 (page) => {
@@ -380,9 +380,9 @@ const isFormValid = computed(
           </button>
         </div>
         <AppPagination
-          :currentPage="store.paginationMine.currentPage.value"
-          :totalPages="store.paginationMine.totalPages.value"
-          :total="store.paginationMine.total.value"
+          :currentPage="store.paginationMine.currentPage"
+          :totalPages="store.paginationMine.totalPages"
+          :total="store.paginationMine.total"
           :loading="store.loading"
           @change="
             (page) => {
