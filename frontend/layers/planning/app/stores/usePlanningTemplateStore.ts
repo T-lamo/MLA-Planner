@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { usePagination } from '~~/layers/base/app/stores/utils/usePagination'
 import { PlanningRepository } from '../repositories/PlanningRepository'
 import type {
   GenerateSeriesForm,
@@ -17,10 +18,27 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
   const selectedTemplate = ref<PlanningTemplateReadFull | null>(null)
   const isLoading = ref(false)
 
+  const {
+    pagination,
+    total,
+    currentPage,
+    totalPages,
+    hasNext,
+    hasPrev,
+    setTotal,
+    goToPage,
+    resetPagination,
+  } = usePagination(20)
+
   async function fetchTemplates(ministereId?: string): Promise<void> {
     isLoading.value = true
     try {
-      templates.value = await repo.listTemplates(ministereId)
+      const res = await repo.listTemplates(ministereId, {
+        limit: pagination.limit,
+        offset: pagination.offset,
+      })
+      templates.value = res.data
+      setTotal(res.total)
     } finally {
       isLoading.value = false
     }
@@ -83,6 +101,14 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
     templates,
     selectedTemplate,
     isLoading,
+    pagination,
+    total,
+    currentPage,
+    totalPages,
+    hasNext,
+    hasPrev,
+    goToPage,
+    resetPagination,
     fetchTemplates,
     fetchTemplate,
     updateTemplate,

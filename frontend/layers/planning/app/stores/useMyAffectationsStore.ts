@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { usePagination } from '~~/layers/base/app/stores/utils/usePagination'
 import { AffectationRepository } from '../repositories/AffectationRepository'
 import type { AffectationMemberRead, AffectationStatus } from '../types/planning.types'
 
@@ -11,10 +12,27 @@ export const useMyAffectationsStore = defineStore('myAffectations', () => {
   const pendingCount = ref(0)
   const loading = ref(false)
 
+  const {
+    pagination,
+    total,
+    currentPage,
+    totalPages,
+    hasNext,
+    hasPrev,
+    setTotal,
+    goToPage,
+    resetPagination,
+  } = usePagination(20)
+
   async function fetchMyAffectations() {
     loading.value = true
     try {
-      affectations.value = await repo.getMyAffectations()
+      const res = await repo.getMyAffectations({
+        limit: pagination.limit,
+        offset: pagination.offset,
+      })
+      affectations.value = res.data
+      setTotal(res.total)
     } finally {
       loading.value = false
     }
@@ -47,6 +65,14 @@ export const useMyAffectationsStore = defineStore('myAffectations', () => {
     affectations,
     pendingCount,
     loading,
+    pagination,
+    total,
+    currentPage,
+    totalPages,
+    hasNext,
+    hasPrev,
+    goToPage,
+    resetPagination,
     fetchMyAffectations,
     refreshPendingCount,
     acceptAffectation,

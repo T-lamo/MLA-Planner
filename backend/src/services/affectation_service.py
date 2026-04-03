@@ -9,6 +9,7 @@ from core.workflow_engine import WorkflowEngine, affectation_transitions
 from mla_enum.custom_enum import AffectationStatusCode, PlanningStatusCode
 from models import Affectation, PlanningService, Slot
 from models.affectation_model import AffectationMemberRead
+from models.base_pagination import PaginatedResponse
 from repositories.planning_repository import PlanningRepository
 from services.validation_engine import ValidationEngine
 
@@ -137,11 +138,20 @@ class AffectationService:
         self.db.flush()
         return affectation
 
-    def get_my_affectations(self, membre_id: str) -> List[AffectationMemberRead]:
-        """Retourne les affectations enrichies du membre connecté."""
+    def get_my_affectations(
+        self,
+        membre_id: str,
+        *,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> PaginatedResponse[AffectationMemberRead]:
+        """Retourne les affectations paginées du membre connecté."""
         stmt = select(Affectation).where(Affectation.membre_id == membre_id)
-        affectations = self.db.exec(stmt).all()
-        return [AffectationMemberRead.model_validate(a) for a in affectations]
+        all_items = self.db.exec(stmt).all()
+        total = len(all_items)
+        page = all_items[offset : offset + limit]
+        data = [AffectationMemberRead.model_validate(a) for a in page]
+        return PaginatedResponse(total=total, limit=limit, offset=offset, data=data)
 
     def get_pending_count(self, membre_id: str) -> int:
         """Nombre d'affectations en statut PROPOSE pour le membre."""

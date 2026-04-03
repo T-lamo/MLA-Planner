@@ -1,10 +1,17 @@
 import { BaseRepository } from '~~/layers/base/app/repositories/BaseRepository'
+import type { PaginatedResponse } from '~~/layers/base/types/shared'
 import type { AffectationMemberRead, AffectationStatus } from '../types/planning.types'
 
 export class AffectationRepository extends BaseRepository {
-  async getMyAffectations(): Promise<AffectationMemberRead[]> {
-    const { data } = await this.apiRequest<AffectationMemberRead[]>('/affectations/me')
-    return data as unknown as AffectationMemberRead[]
+  async getMyAffectations(params: {
+    limit: number
+    offset: number
+  }): Promise<PaginatedResponse<AffectationMemberRead>> {
+    const { data } = await this.apiRequest<PaginatedResponse<AffectationMemberRead>>(
+      '/affectations/me',
+      { query: params },
+    )
+    return data
   }
 
   async getPendingCount(): Promise<number> {
