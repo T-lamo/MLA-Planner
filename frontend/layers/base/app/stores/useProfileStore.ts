@@ -1,10 +1,11 @@
 // stores/useProfileStore.ts
 import { defineStore } from 'pinia'
-import { ref, reactive, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useUIStore } from './useUiStore'
 import type { ProfilReadFull, ProfilCreateFull, ProfilUpdateFull } from '../../types/profiles'
 import type { MinistereSimple } from '../../types/ministere'
 import { ProfileRepository } from '../repositories/ProfileRepository'
+import { usePagination } from './utils/usePagination'
 
 export const useProfileStore = defineStore('profile', () => {
   const uiStore = useUIStore()
@@ -12,16 +13,22 @@ export const useProfileStore = defineStore('profile', () => {
   const repository = new ProfileRepository()
 
   const profiles = ref<ProfilReadFull[]>([])
-  const total = ref(0)
   const loading = ref(false)
   const myMinisteres = ref<MinistereSimple[]>([])
   const profilesByMinistere = ref<Record<string, ProfilReadFull[]>>({})
   const loadingMinistere = ref(false)
 
-  const pagination = reactive({
-    limit: 10,
-    offset: 0,
-  })
+  const {
+    pagination,
+    total,
+    currentPage,
+    totalPages,
+    hasNext,
+    hasPrev,
+    setTotal,
+    goToPage,
+    resetPagination,
+  } = usePagination(50)
 
   async function fetchProfiles() {
     // 1. Sécurité : On s'assure d'avoir l'ID du campus
@@ -38,7 +45,7 @@ export const useProfileStore = defineStore('profile', () => {
 
       if (data) {
         profiles.value = data.data
-        total.value = data.total
+        setTotal(data.total)
       }
     } catch {
       // errors are handled by the global fetch interceptor
@@ -84,7 +91,7 @@ export const useProfileStore = defineStore('profile', () => {
 
     // 2. Mise à jour optimiste immédiate (Interface fluide)
     profiles.value = profiles.value.filter((p) => p.id !== id)
-    total.value--
+    setTotal(backupTotal - 1)
 
     try {
       // 3. Tentative de suppression côté serveur
@@ -95,7 +102,7 @@ export const useProfileStore = defineStore('profile', () => {
     } catch {
       // 4. ÉCHEC : Rollback vers l'état précédent
       profiles.value = backupProfiles
-      total.value = backupTotal
+      setTotal(backupTotal)
 
       // errors are handled by the global fetch interceptor
     }
@@ -132,7 +139,7 @@ export const useProfileStore = defineStore('profile', () => {
   watch(
     () => uiStore.selectedCampusId,
     () => {
-      pagination.offset = 0
+      resetPagination()
       fetchProfiles()
     },
     { immediate: true },
@@ -146,6 +153,12 @@ export const useProfileStore = defineStore('profile', () => {
     profilesByMinistere,
     loadingMinistere,
     pagination,
+    currentPage,
+    totalPages,
+    hasNext,
+    hasPrev,
+    goToPage,
+    resetPagination,
     fetchProfiles,
     createProfile,
     updateProfile,
