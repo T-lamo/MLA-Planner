@@ -134,8 +134,8 @@ const affColumns = [
   { key: 'activite_type', label: 'Activité' },
   { key: 'slot_nom', label: 'Créneau' },
   { key: 'ministere_nom', label: 'Ministère', width: 'hidden lg:table-cell' },
-  { key: 'statut_affectation_code', label: 'Statut' },
-  { key: 'actions', label: '' },
+  { key: 'statut_affectation_code', label: 'Statut', width: 'w-28' },
+  { key: 'actions', label: '', align: 'right' as const, width: 'w-48' },
 ]
 </script>
 
@@ -295,7 +295,7 @@ const affColumns = [
 
             <template #cell-statut_affectation_code="{ value }">
               <span
-                class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+                class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap"
                 :class="STATUS_CONFIG[value as AffectationStatus].badge"
               >
                 {{ STATUS_CONFIG[value as AffectationStatus].label }}
@@ -307,10 +307,11 @@ const affColumns = [
                 v-if="
                   (row as unknown as AffectationMemberRead).statut_affectation_code === 'PROPOSE'
                 "
-                class="flex items-center gap-1.5"
+                class="flex items-center justify-end gap-1.5"
               >
                 <button
                   class="flex items-center gap-1 rounded-lg border border-rose-200 px-2.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                  title="Refuser"
                   @click="store.refuseAffectation((row as unknown as AffectationMemberRead).id)"
                 >
                   <XCircle class="size-3.5" />
@@ -318,6 +319,7 @@ const affColumns = [
                 </button>
                 <button
                   class="btn btn-primary btn-sm"
+                  title="Accepter"
                   @click="store.acceptAffectation((row as unknown as AffectationMemberRead).id)"
                 >
                   <CheckCircle2 class="size-3.5" />

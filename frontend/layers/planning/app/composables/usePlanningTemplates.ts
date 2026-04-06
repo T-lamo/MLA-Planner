@@ -97,7 +97,7 @@ export function usePlanningTemplates() {
   async function loadTemplates(ministereId?: string): Promise<void> {
     templateError.value = null
     try {
-      templateItems.value = await repo.listTemplates(ministereId)
+      templateItems.value = (await repo.listTemplates(ministereId)).data
     } catch (e) {
       templateError.value = handleError(e, 'Erreur lors du chargement des templates')
     }

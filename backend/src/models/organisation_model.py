@@ -4,8 +4,6 @@ from typing import List, Optional
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
-from models.pays_model import PaysRead
-
 
 # -------------------------
 # BASE
@@ -20,6 +18,10 @@ class OrganisationBase(SQLModel):
     )
     date_creation: date = Field(
         description="Date de création (format ISO ou texte, ex: 2020-01-01)"
+    )
+    parent_id: Optional[str] = Field(
+        default=None,
+        description="UUID de l'organisation parente (hiérarchie)",
     )
 
     @field_validator("nom")
@@ -44,7 +46,8 @@ class OrganisationCreate(OrganisationBase):
 # -------------------------
 class OrganisationUpdate(SQLModel):
     nom: Optional[str] = None
-    dateCreation: Optional[str] = None
+    date_creation: Optional[date] = None
+    parent_id: Optional[str] = None
 
 
 # -------------------------
@@ -52,9 +55,9 @@ class OrganisationUpdate(SQLModel):
 # -------------------------
 class OrganisationRead(OrganisationBase):
     id: str
-    date_creation: date  # Permet
-    # Optionnel: on peut inclure le nombre de pays rattachés
-    pays: List["PaysRead"]
+    date_creation: date
+    parent_id: Optional[str] = None
+    children: List["OrganisationRead"] = []
 
 
 __all__ = [

@@ -33,8 +33,6 @@ from .model_base import *  # noqa: F401,F403
 from .model_base import __all__ as response
 from .organisation_model import *  # noqa: F401,F403
 from .organisation_model import __all__ as organisation
-from .pays_model import *  # noqa: F401,F403
-from .pays_model import __all__ as pays
 from .permission_model import *  # noqa: F401,F403
 from .permission_model import __all__ as permission_model
 from .planning_model import *  # noqa: F401,F403
@@ -75,7 +73,6 @@ __all__: List[str] = (
     + list(pole_model)
     + list(voix_model)
     + list(organisation)
-    + list(pays)
     + list(campus)
     + list(category_role)
     + list(role_competence)

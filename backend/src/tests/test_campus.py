@@ -14,13 +14,13 @@ MembreRead.model_rebuild()
 # --- TESTS DE CRÉATION (POST) ---
 
 
-def test_create_campus_as_superadmin(client, superadmin_headers, test_pays):
+def test_create_campus_as_superadmin(client, superadmin_headers, test_org):
     """Vérifie la création réussie par un superadmin."""
     payload = {
         "nom": f"Campus SuperAdmin {uuid4()}",
         "ville": "Abidjan",
         "timezone": "Africa/Abidjan",
-        "pays_id": test_pays.id,
+        "organisation_id": test_org.id,
     }
     response = client.post(
         "/campuses/", json=jsonable_encoder(payload), headers=superadmin_headers
@@ -32,9 +32,9 @@ def test_create_campus_as_superadmin(client, superadmin_headers, test_pays):
     assert data["nom"] == payload["nom"]
 
 
-def test_create_campus_as_user_forbidden(client, user_headers, test_pays):
+def test_create_campus_as_user_forbidden(client, user_headers, test_org):
     """Vérifie la sécurité (403)."""
-    payload = {"nom": "Hacker Campus", "ville": "X", "pays_id": test_pays.id}
+    payload = {"nom": "Hacker Campus", "ville": "X", "organisation_id": test_org.id}
     # Toujours utiliser jsonable_encoder quand le payload contient un UUID
     response = client.post(
         "/campuses/", json=jsonable_encoder(payload), headers=user_headers
@@ -42,12 +42,12 @@ def test_create_campus_as_user_forbidden(client, user_headers, test_pays):
     assert response.status_code == status.HTTP_403_FORBIDDEN
 
 
-def test_create_campus_invalid_pays(client, superadmin_headers):
-    """Vérifie l'erreur 404 sur pays inexistant."""
+def test_create_campus_invalid_org(client, superadmin_headers):
+    """Vérifie l'erreur 404 sur organisation inexistante."""
     payload = {
         "nom": "Campus Perdu",
         "ville": "Nulle part",
-        "pays_id": uuid4(),
+        "organisation_id": str(uuid4()),
     }
     response = client.post(
         "/campuses/", json=jsonable_encoder(payload), headers=superadmin_headers
