@@ -17,6 +17,9 @@ class CampusBase(SQLModel):
     ville: str = Field(
         min_length=2, max_length=100, description="Ville où se situe le campus"
     )
+    pays: Optional[str] = Field(
+        default="France", max_length=100, description="Pays du campus"
+    )
     timezone: str = Field(
         default="Europe/Paris", description="Fuseau horaire (ex: Africa/Abidjan)"
     )
@@ -33,7 +36,9 @@ class CampusBase(SQLModel):
 # CREATE
 # -------------------------
 class CampusCreate(CampusBase):
-    pays_id: str = Field(max_length=36, description="UUID du pays rattaché")
+    organisation_id: str = Field(
+        max_length=36, description="UUID de l'organisation rattachée"
+    )
 
 
 # -------------------------
@@ -42,8 +47,9 @@ class CampusCreate(CampusBase):
 class CampusUpdate(SQLModel):
     nom: Optional[str] = None
     ville: Optional[str] = None
+    pays: Optional[str] = None
     timezone: Optional[str] = None
-    pays_id: Optional[str] = None
+    organisation_id: Optional[str] = None
 
 
 # -------------------------
@@ -51,15 +57,13 @@ class CampusUpdate(SQLModel):
 # -------------------------
 class CampusRead(CampusBase):
     id: str
-    pays_id: str
+    organisation_id: str
     model_config = ConfigDict(from_attributes=True)  # type: ignore
 
 
 class CampusReadWithDetails(CampusRead):
     membres: List["MembreSimple"] = []
     ministeres: List["MinistereSimple"] = []
-    # Note : On inclut généralement PaysRead ici si importé,
-    # sinon on reste sur les types simples pour éviter les cycles.
 
 
 __all__ = [

@@ -25,6 +25,15 @@ class ActiviteData(TypedDict):
 class OrganisationData(TypedDict):
     nom: str
     date_creation: datetime
+    parent_nom: Optional[str]
+
+
+class CampusData(TypedDict):
+    nom: str
+    ville: str
+    timezone: str
+    pays: str
+    org_nom: str
 
 
 class PlanningTemplateRoleSeedData(TypedDict):
@@ -232,24 +241,33 @@ SUPERADMIN_PASSWORD = "plan123!"
 USER_PASSWORD = "plan123!"
 
 # --- GEOGRAPHIE ---
-# Ajout des dates de création et codes pays pour éviter les NotNullViolation
 SEED_ORGANISATIONS: List[OrganisationData] = [
-    OrganisationData(nom="ICC Europe", date_creation=datetime(2010, 1, 1))
+    OrganisationData(
+        nom="ICC Europe",
+        date_creation=datetime(2010, 1, 1),
+        parent_nom=None,
+    ),
+    OrganisationData(
+        nom="ICC Occitanie",
+        date_creation=datetime(2015, 6, 1),
+        parent_nom="ICC Europe",
+    ),
 ]
-SEED_PAYS = [{"nom": "France", "code": "FR", "org_nom": "ICC Europe"}]
-SEED_CAMPUS = [
-    {
-        "nom": "Campus Paris",
-        "ville": "Paris",
-        "timezone": "Europe/Paris",
-        "pays_nom": "France",
-    },
-    {
-        "nom": "Campus Toulouse",  # Nouveau Campus
-        "ville": "Toulouse",
-        "timezone": "Europe/Paris",
-        "pays_nom": "France",
-    },
+SEED_CAMPUS: List[CampusData] = [
+    CampusData(
+        nom="Campus Toulouse",
+        ville="Toulouse",
+        pays="France",
+        timezone="Europe/Paris",
+        org_nom="ICC Occitanie",
+    ),
+    CampusData(
+        nom="Campus Cugnaux",
+        ville="Cugnaux",
+        pays="France",
+        timezone="Europe/Paris",
+        org_nom="ICC Occitanie",
+    ),
 ]
 
 # --- NOUVEAU SCHÉMA MÉTIER ---
@@ -543,50 +561,50 @@ ACTIVITES_DATA: List[ActiviteData] = [
     },
 ]
 
-ACTIVITES_TOULOUSE: List[ActiviteData] = [
+ACTIVITES_CUGNAUX: List[ActiviteData] = [
     {
-        "type": "Culte Dominical Toulouse",
-        "lieu": "Sanctuaire Toulouse",
+        "type": "Culte Dominical Cugnaux",
+        "lieu": "Sanctuaire Cugnaux",
         "ministere_nom": "Louange et Adoration",
         "day_offset": 7,
         "heure_debut": 10,
         "heure_fin": 20,
     },
     {
-        "type": "Repetition Louange Toulouse",
-        "lieu": "Salle Louange Toulouse",
+        "type": "Repetition Louange Cugnaux",
+        "lieu": "Salle Louange Cugnaux",
         "ministere_nom": "Louange et Adoration",
         "day_offset": 11,
         "heure_debut": 18,
         "heure_fin": 21,
     },
     {
-        "type": "Accueil Culte Toulouse",
-        "lieu": "Hall Toulouse",
+        "type": "Accueil Culte Cugnaux",
+        "lieu": "Hall Cugnaux",
         "ministere_nom": "Accueil",
         "day_offset": 7,
         "heure_debut": 9,
         "heure_fin": 19,
     },
     {
-        "type": "Reunion Jeunesse Toulouse",
-        "lieu": "Salle Jeunesse Toulouse",
+        "type": "Reunion Jeunesse Cugnaux",
+        "lieu": "Salle Jeunesse Cugnaux",
         "ministere_nom": "Jeunesse",
         "day_offset": 20,
         "heure_debut": 15,
         "heure_fin": 18,
     },
     {
-        "type": "Intercession Toulouse",
-        "lieu": "Salle Prière Toulouse",
+        "type": "Intercession Cugnaux",
+        "lieu": "Salle Prière Cugnaux",
         "ministere_nom": "Intercession",
         "day_offset": 4,
         "heure_debut": 6,
         "heure_fin": 8,
     },
     {
-        "type": "Service Sono Toulouse",
-        "lieu": "Régie Toulouse",
+        "type": "Service Sono Cugnaux",
+        "lieu": "Régie Cugnaux",
         "ministere_nom": "Sonorisation",
         "day_offset": 7,
         "heure_debut": 8,
@@ -607,7 +625,7 @@ MEMBRES_INFOS: List[MembreInfo] = [
         "prenom": "Amos",
         "email": "amos@exemple.com",
         "roles": ["TENOR", "PIANO"],
-        "campus_names": ["Campus Paris", "Campus Toulouse"],
+        "campus_names": ["Campus Toulouse", "Campus Cugnaux"],
         "ministere_names": ["Louange et Adoration"],
         "pole_names": ["Chorale", "Musiciens"],
     },

@@ -126,7 +126,7 @@ const adminColumns = [
   { key: 'date_fin', label: 'Au' },
   { key: 'motif', label: 'Motif' },
   { key: 'validee', label: 'Statut' },
-  { key: 'actions', label: 'Actions' },
+  { key: 'actions', label: 'Actions', align: 'right' as const, width: 'w-24' },
 ]
 const isFormValid = computed(
   () => newForm.date_debut && newForm.date_fin && newForm.date_fin >= newForm.date_debut,
@@ -294,7 +294,7 @@ const isFormValid = computed(
           </template>
 
           <template #cell-actions="{ row }">
-            <div class="flex items-center gap-1">
+            <div class="flex items-center justify-end gap-1">
               <button
                 v-if="!(row as unknown as IndisponibiliteReadFull).validee"
                 class="btn btn-ghost btn-icon text-emerald-600 hover:bg-emerald-50"

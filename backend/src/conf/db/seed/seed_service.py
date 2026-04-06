@@ -27,7 +27,6 @@ from models import (
     MembreRole,
     Ministere,
     Organisation,
-    Pays,
     Permission,
     PlanningChantLink,
     PlanningService,
@@ -49,8 +48,8 @@ from models import (
 from models.schema_db_model import MinistereRoleConfig
 
 from .data import (
+    ACTIVITES_CUGNAUX,
     ACTIVITES_DATA,
-    ACTIVITES_TOULOUSE,
     CATEGORIES_ROLES,
     EQUIPE_MEMBRES_DATA,
     EQUIPES_DATA,
@@ -65,7 +64,6 @@ from .data import (
     ROLES_COMPETENCES,
     SEED_CAMPUS,
     SEED_ORGANISATIONS,
-    SEED_PAYS,
     SONGBOOK_CATEGORIES,
     SONGBOOK_CHANTS,
     STATUTS_PLANNING,
@@ -97,9 +95,8 @@ class SeedService:
             with self.db.begin():
                 # 1. GÉOGRAPHIE
                 org_map = self._seed_organisations()
-                pays_map = self._seed_pays(org_map)
-                campus_map = self._seed_campus(pays_map)
-                campus_paris = campus_map["Campus Paris"]
+                campus_map = self._seed_campus(org_map)
+                campus_paris = campus_map["Campus Toulouse"]
 
                 # 2. RBAC & SÉCURITÉ
                 role_map = self._seed_roles(ROLES)
@@ -151,9 +148,9 @@ class SeedService:
                 # 7. PLANNING TEMPLATES
                 self._seed_planning_templates(campus_paris.id, min_map, user_list)
 
-                # 8. ACTIVITÉS TOULOUSE
-                self._seed_activites_toulouse(
-                    campus_map["Campus Toulouse"].id, min_map, today
+                # 8. ACTIVITÉS CUGNAUX
+                self._seed_activites_cugnaux(
+                    campus_map["Campus Cugnaux"].id, min_map, today
                 )
 
                 # 9. INDISPONIBILITÉS
@@ -192,37 +189,35 @@ class SeedService:
 
     # --- GEOGRAPHIE & STRUCTURE ---
 
-    def _seed_organisations(self):
-        return {
-            d["nom"]: self._get_or_create(
+    def _seed_organisations(self) -> dict:
+        # First pass: create all orgs without parent_id
+        org_map: dict = {}
+        for d in SEED_ORGANISATIONS:
+            org, _ = self._get_or_create(
                 Organisation,
                 nom=d["nom"],
                 defaults={"date_creation": d["date_creation"]},
-            )[0]
-            for d in SEED_ORGANISATIONS
-        }
+            )
+            org_map[d["nom"]] = org
+        # Second pass: assign parent_id
+        for d in SEED_ORGANISATIONS:
+            if d.get("parent_nom"):
+                parent = org_map[d["parent_nom"]]
+                org = org_map[d["nom"]]
+                if org.parent_id != parent.id:
+                    org.parent_id = parent.id
+                    self.db.add(org)
+        return org_map
 
-    def _seed_pays(self, org_map):
-        return {
-            d["nom"]: self._get_or_create(
-                Pays,
-                nom=d["nom"],
-                defaults={
-                    "code": d["code"],
-                    "organisation_id": org_map[d["org_nom"]].id,
-                },
-            )[0]
-            for d in SEED_PAYS
-        }
-
-    def _seed_campus(self, pays_map):
+    def _seed_campus(self, org_map: dict) -> dict:
         return {
             d["nom"]: self._get_or_create(
                 Campus,
                 nom=d["nom"],
                 defaults={
-                    "pays_id": pays_map[d["pays_nom"]].id,
+                    "organisation_id": org_map[d["org_nom"]].id,
                     "ville": d["ville"],
+                    "pays": d["pays"],
                     "timezone": d["timezone"],
                 },
             )[0]
@@ -355,7 +350,7 @@ class SeedService:
         """Gère les liaisons Many-to-Many (Campus, Ministères, Pôles)."""
 
         # Campus
-        for c_name in info.get("campus_names") or ["Campus Paris"]:
+        for c_name in info.get("campus_names") or ["Campus Toulouse"]:
             if c_name in c_map:
                 self._get_or_create(
                     MembreCampusLink, membre_id=m_id, campus_id=c_map[c_name].id
@@ -946,12 +941,12 @@ class SeedService:
 
     # --- ACTIVITÉS TOULOUSE ---
 
-    def _seed_activites_toulouse(
+    def _seed_activites_cugnaux(
         self, campus_id: str, min_map: dict, today: datetime
     ) -> None:
-        """Seed les activités du Campus Toulouse."""
-        self.logger.info("📅 Activités Toulouse...")
-        for a in ACTIVITES_TOULOUSE:
+        """Seed les activités du Campus Cugnaux."""
+        self.logger.info("📅 Activités Cugnaux...")
+        for a in ACTIVITES_CUGNAUX:
             min_nom = a.get("ministere_nom", "Louange et Adoration")
             ministere = min_map.get(min_nom)
             if not ministere:
