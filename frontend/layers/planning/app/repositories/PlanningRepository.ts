@@ -1,4 +1,5 @@
 import { BaseRepository } from '~~/layers/base/app/repositories/BaseRepository'
+import type { PaginatedResponse } from '~~/layers/base/types/shared'
 import type { MinistereSimple } from '~~/layers/base/types/ministere'
 import type {
   ApplyTemplateResult,
@@ -147,10 +148,15 @@ export class PlanningRepository extends BaseRepository {
 
   // ── US-95 : bibliothèque de templates ───────────────────────────────────
 
-  async listTemplates(ministereId?: string): Promise<PlanningTemplateListItem[]> {
-    return this.unwrap<PlanningTemplateListItem[]>('/planning-templates', {
-      query: ministereId ? { ministere_id: ministereId } : undefined,
-    })
+  async listTemplates(
+    ministereId?: string,
+    params?: { limit: number; offset: number },
+  ): Promise<PaginatedResponse<PlanningTemplateListItem>> {
+    const { data } = await this.apiRequest<PaginatedResponse<PlanningTemplateListItem>>(
+      '/planning-templates',
+      { query: { ...(ministereId ? { ministere_id: ministereId } : {}), ...params } },
+    )
+    return data
   }
 
   async getTemplateFull(id: string): Promise<PlanningTemplateReadFull> {

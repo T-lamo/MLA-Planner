@@ -6,6 +6,7 @@ from sqlmodel import Session
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models import Membre
+from models.base_pagination import PaginatedResponse
 from models.indisponibilite_model import (
     IndisponibiliteCreate,
     IndisponibiliteReadFull,
@@ -102,10 +103,23 @@ class IndisponibiliteService:
         self.db.refresh(obj)
         return obj
 
-    def get_for_membre(self, membre_id: str) -> list[IndisponibiliteReadFull]:
-        """Vue membre : toutes ses indisponibilités."""
+    def get_for_membre(
+        self,
+        membre_id: str,
+        *,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> PaginatedResponse[IndisponibiliteReadFull]:
+        """Vue membre : indisponibilités paginées."""
         rows = self.repo.get_by_membre(membre_id)
-        return [self._build_full(r) for r in rows]
+        total = len(rows)
+        page = rows[offset : offset + limit]
+        return PaginatedResponse(
+            total=total,
+            limit=limit,
+            offset=offset,
+            data=[self._build_full(r) for r in page],
+        )
 
     def delete_by_membre(self, indisp_id: str, membre_id: str) -> None:
         """Suppression par le membre (seulement si non validée)."""
@@ -137,8 +151,10 @@ class IndisponibiliteService:
         ministere_id: Optional[str] = None,
         date_debut: Optional[str] = None,
         date_fin: Optional[str] = None,
-    ) -> list[IndisponibiliteReadFull]:
-        """Vue admin : indisponibilités filtrées d'un campus."""
+        limit: int = 20,
+        offset: int = 0,
+    ) -> PaginatedResponse[IndisponibiliteReadFull]:
+        """Vue admin : indisponibilités filtrées et paginées d'un campus."""
         rows = self.repo.get_by_campus(campus_id)
         rows = self._apply_filters(
             rows,
@@ -147,7 +163,14 @@ class IndisponibiliteService:
             date_debut=date_debut,
             date_fin=date_fin,
         )
-        return [self._build_full(r) for r in rows]
+        total = len(rows)
+        page = rows[offset : offset + limit]
+        return PaginatedResponse(
+            total=total,
+            limit=limit,
+            offset=offset,
+            data=[self._build_full(r) for r in page],
+        )
 
     def _apply_filters(
         self,

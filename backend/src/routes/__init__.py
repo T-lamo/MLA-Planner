@@ -21,7 +21,6 @@ from .membre_role_router import router as membre_role
 from .membre_router import router as member
 from .ministere_router import router as ministre
 from .organisation_router import router as organisation
-from .pays_router import router as pays
 from .planning_router import router as planning  # Doit être après slot pour les FK
 from .planning_template_router import router as planning_template
 from .pole_router import router as pole
@@ -34,7 +33,6 @@ from .team_router import router as team
 router = APIRouter()
 router.include_router(auth_router)
 router.include_router(organisation)
-router.include_router(pays)
 router.include_router(campus)
 router.include_router(ministre)
 router.include_router(member)

@@ -8,7 +8,7 @@ from core.message import ErrorRegistry
 from models import Campus, CampusCreate, CampusRead, CampusUpdate
 from models.schema_db_model import Ministere  # Import du modèle pour la liaison
 from repositories.campus_repository import CampusRepository
-from repositories.pays_repository import PaysRepository
+from repositories.organisation_repository import OrganisationRepository
 from services.base_service import BaseService
 from services.ministere_service import MinistereService
 
@@ -19,25 +19,25 @@ class CampusService(BaseService[CampusCreate, CampusRead, CampusUpdate, Campus])
     def __init__(self, db: Session):
         super().__init__(repo=CampusRepository(db), resource_name="Campus")
         self.db = db
-        self.pays_repo = PaysRepository(db)
+        self.org_repo = OrganisationRepository(db)
         self.ministere_svc = MinistereService(self.db)
 
     def create(self, data: CampusCreate) -> Campus:
-        """Crée un campus après validation de l'existence du pays."""
-        if not self.pays_repo.get_by_id(data.pays_id):
-            raise AppException(ErrorRegistry.PAYS_NOT_FOUND)
+        """Crée un campus après validation de l'existence de l'organisation."""
+        if not self.org_repo.get_by_id(data.organisation_id):
+            raise AppException(ErrorRegistry.ORG_NOT_FOUND)
 
         db_obj = Campus(**data.model_dump())
         return self._execute_with_flush(lambda: self.repo.create(db_obj))
 
     def update(self, identifiant: str, data: CampusUpdate) -> Campus:
-        """Met à jour un campus avec validation différentielle du pays."""
+        """Met à jour un campus avec validation différentielle de l'organisation."""
         campus_db = self.get_one(identifiant)
         update_data = data.model_dump(exclude_unset=True)
 
-        if "pays_id" in update_data and update_data["pays_id"]:
-            if not self.pays_repo.get_by_id(str(update_data["pays_id"])):
-                raise AppException(ErrorRegistry.PAYS_NOT_FOUND)
+        if "organisation_id" in update_data and update_data["organisation_id"]:
+            if not self.org_repo.get_by_id(str(update_data["organisation_id"])):
+                raise AppException(ErrorRegistry.ORG_NOT_FOUND)
 
         return self._execute_with_flush(
             lambda: self.repo.update(campus_db, update_data)
