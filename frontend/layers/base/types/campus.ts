@@ -5,18 +5,21 @@ import type { MinistereSimple } from './ministere'
 export interface CampusBase {
   nom: string
   ville: string
+  pays?: string | null
   timezone: string
 }
 
 export interface CampusCreate extends CampusBase {
-  pays_id: UUID
+  organisation_id: UUID
 }
 
-export type CampusUpdate = Partial<CampusCreate>
+export type CampusUpdate = Partial<Omit<CampusCreate, 'organisation_id'>> & {
+  organisation_id?: UUID
+}
 
 export interface CampusRead extends CampusBase {
   id: UUID
-  pays_id: UUID
+  organisation_id: UUID
 }
 
 export interface CampusReadWithDetails extends CampusRead {

@@ -27,7 +27,6 @@ from .membre_model import MembreBase
 from .membre_role_model import MembreRoleBase
 from .ministere_model import MinistereBase
 from .organisation_model import OrganisationBase
-from .pays_model import PaysBase
 from .permission_model import PermissionBase
 from .pole_model import PoleBase
 from .role_competence_model import RoleCompetenceBase
@@ -164,19 +163,25 @@ class Organisation(OrganisationBase, table=True):  # type: ignore
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
     date_creation: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    pays: List["Pays"] = Relationship(back_populates="organisation")
-
-
-class Pays(PaysBase, table=True):  # type: ignore
-    __tablename__ = "t_pays"
-    __table_args__ = {"extend_existing": True}
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
-    deleted_at: Optional[datetime] = Field(default=None, index=True)
-    organisation_id: Optional[str] = Field(
-        default=None, foreign_key="t_organisation.id", ondelete="SET NULL"
+    parent_id: Optional[str] = Field(
+        default=None,
+        foreign_key="t_organisation.id",
+        ondelete="SET NULL",
     )
-    organisation: Optional["Organisation"] = Relationship(back_populates="pays")
-    campus: List["Campus"] = Relationship(back_populates="pays")
+    parent: Optional["Organisation"] = Relationship(
+        back_populates="children",
+        sa_relationship_kwargs={
+            "remote_side": "Organisation.id",
+            "foreign_keys": "[Organisation.parent_id]",
+        },
+    )
+    children: List["Organisation"] = Relationship(
+        back_populates="parent",
+        sa_relationship_kwargs={
+            "foreign_keys": "[Organisation.parent_id]",
+        },
+    )
+    campuses: List["Campus"] = Relationship(back_populates="organisation")
 
 
 # 1. Table de liaison
@@ -193,8 +198,8 @@ class Campus(CampusBase, table=True):  # type: ignore
     __table_args__ = {"extend_existing": True}
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     deleted_at: Optional[datetime] = Field(default=None, index=True)
-    pays_id: str = Field(foreign_key="t_pays.id", ondelete="CASCADE")
-    pays: Optional["Pays"] = Relationship(back_populates="campus")
+    organisation_id: str = Field(foreign_key="t_organisation.id", ondelete="CASCADE")
+    organisation: Optional["Organisation"] = Relationship(back_populates="campuses")
     ministeres: List["Ministere"] = Relationship(
         back_populates="campuses", link_model=CampusMinistereLink
     )
@@ -581,7 +586,6 @@ __all__ = [
     "StatutPlanning",
     "TypeResponsabilite",
     "Organisation",
-    "Pays",
     "Campus",
     "Ministere",
     "Pole",

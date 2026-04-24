@@ -10,7 +10,7 @@ from repositories.base_repository import BaseRepository
 class OrganisationRepository(BaseRepository[Organisation]):
     def __init__(self, db: Session):
         super().__init__(db, Organisation)
-        self.relations = [cast(Any, Organisation.pays)]
+        self.relations = [cast(Any, Organisation.children)]
 
     # Correction de la signature : on ajoute load_relations
     def get_by_id(

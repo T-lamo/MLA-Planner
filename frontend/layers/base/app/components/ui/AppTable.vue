@@ -47,6 +47,9 @@
         </template>
       </tbody>
     </table>
+    <div v-if="$slots.pagination" class="border-t border-slate-100 px-4 py-3">
+      <slot name="pagination" />
+    </div>
   </div>
 </template>
 

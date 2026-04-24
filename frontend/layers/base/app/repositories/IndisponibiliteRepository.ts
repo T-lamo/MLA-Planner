@@ -1,5 +1,6 @@
 // repositories/IndisponibiliteRepository.ts
 import { BaseRepository } from './BaseRepository'
+import type { PaginatedResponse } from '../../types/shared'
 import type {
   IndisponibiliteCreate,
   IndisponibiliteFilters,
@@ -8,8 +9,14 @@ import type {
 } from '../../types/indisponibilites'
 
 export class IndisponibiliteRepository extends BaseRepository {
-  async getMyIndisponibilites(): Promise<IndisponibiliteReadFull[]> {
-    const { data } = await this.apiRequest<IndisponibiliteReadFull[]>('/indisponibilites/me')
+  async getMyIndisponibilites(params: {
+    limit: number
+    offset: number
+  }): Promise<PaginatedResponse<IndisponibiliteReadFull>> {
+    const { data } = await this.apiRequest<PaginatedResponse<IndisponibiliteReadFull>>(
+      '/indisponibilites/me',
+      { query: params },
+    )
     return data
   }
 
@@ -28,10 +35,11 @@ export class IndisponibiliteRepository extends BaseRepository {
   async getByCampus(
     campusId: string,
     filters?: IndisponibiliteFilters,
-  ): Promise<IndisponibiliteReadFull[]> {
-    const { data } = await this.apiRequest<IndisponibiliteReadFull[]>(
+    params?: { limit: number; offset: number },
+  ): Promise<PaginatedResponse<IndisponibiliteReadFull>> {
+    const { data } = await this.apiRequest<PaginatedResponse<IndisponibiliteReadFull>>(
       `/indisponibilites/campus/${campusId}`,
-      { query: filters },
+      { query: { ...filters, ...params } },
     )
     return data
   }

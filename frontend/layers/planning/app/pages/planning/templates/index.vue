@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { LayoutTemplate } from 'lucide-vue-next'
 import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
+import AppPagination from '~~/layers/base/app/components/ui/AppPagination.vue'
 import { usePlanningPermissions } from '../../../composables/usePlanningPermissions'
 import { usePlanningTemplateStore } from '../../../stores/usePlanningTemplateStore'
 import type {
@@ -26,7 +27,10 @@ const generateSerieTarget = ref<{ id: string; nom: string } | null>(null)
 
 onMounted(() => templateStore.fetchTemplates())
 
-watch(ministereFilter, (v) => templateStore.fetchTemplates(v || undefined))
+watch(ministereFilter, (v) => {
+  templateStore.resetPagination()
+  templateStore.fetchTemplates(v || undefined)
+})
 
 function relativeDate(iso: string | null): string {
   if (!iso) return '—'
@@ -197,6 +201,21 @@ function visibiliteBadge(v: VisibiliteTemplate) {
             @duplicate="handleDuplicate((row as unknown as PlanningTemplateListItem).id)"
             @generate-serie="openGenerateSerie(row as unknown as PlanningTemplateListItem)"
             @delete="openDeleteDialog((row as unknown as PlanningTemplateListItem).id)"
+          />
+        </template>
+
+        <template #pagination>
+          <AppPagination
+            :currentPage="templateStore.currentPage"
+            :totalPages="templateStore.totalPages"
+            :total="templateStore.total"
+            :loading="isLoading"
+            @change="
+              (page) => {
+                templateStore.goToPage(page)
+                templateStore.fetchTemplates(ministereFilter || undefined)
+              }
+            "
           />
         </template>
       </AppTable>

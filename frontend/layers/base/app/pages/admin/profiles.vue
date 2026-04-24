@@ -6,7 +6,9 @@ import ProfileHeader from '../../components/profile/ProfileHeader.vue'
 import ProfileCard from '../../components/profile/ProfileCard.vue'
 import ProfileFormDrawer from '../../components/profile/ProfileFormDrawer.vue'
 import AppSelect from '../../components/ui/AppSelect.vue'
+import AppPagination from '../../components/ui/AppPagination.vue'
 import CanGuard from '../../components/ui/CanGuard.vue'
+import { usePagination } from '../../stores/utils/usePagination'
 
 import type {
   ProfilReadFull,
@@ -40,6 +42,17 @@ const { ministeresByCampus, fetchDetailedMinisteres } = useCampuses()
 // '' = vue campus (tous), sinon ID du ministère sélectionné
 const selectedMinistereId = ref('')
 
+// Pagination locale pour la vue ministère (mémoire, 50 items/page)
+const {
+  pagination: ministrePag,
+  total: ministreTotal,
+  currentPage: ministreCurrentPage,
+  totalPages: ministreTotalPages,
+  setTotal: ministreSetTotal,
+  goToPage: ministreGoToPage,
+  resetPagination: ministreResetPagination,
+} = usePagination(20)
+
 // Toujours basé sur les ministères de l'utilisateur — admin ou pas
 const ministeresOptions = computed(() => [
   { label: 'Tous les membres', value: '' },
@@ -71,6 +84,7 @@ watch(
 
 // Charger les profils du ministère sélectionné (cache par campus+ministère)
 watch(selectedMinistereId, async (id) => {
+  ministreResetPagination()
   if (!id || !activeCampusId.value) return
   const cacheKey = `${activeCampusId.value}:${id}`
   if (!(cacheKey in profileStore.profilesByMinistere)) {
@@ -92,10 +106,19 @@ function filterBySearch(list: ProfilReadFull[]): ProfilReadFull[] {
 
 const campusProfiles = computed(() => filterBySearch(profiles.value))
 
-const ministereProfiles = computed<ProfilReadFull[]>(() => {
+const allMinistereProfiles = computed<ProfilReadFull[]>(() => {
   if (!selectedMinistereId.value || !activeCampusId.value) return []
   const cacheKey = `${activeCampusId.value}:${selectedMinistereId.value}`
   return filterBySearch(profileStore.profilesByMinistere[cacheKey] ?? [])
+})
+
+// Slice paginé pour la vue ministère
+const ministereProfiles = computed<ProfilReadFull[]>(() => {
+  ministreSetTotal(allMinistereProfiles.value.length)
+  return allMinistereProfiles.value.slice(
+    ministrePag.offset,
+    ministrePag.offset + ministrePag.limit,
+  )
 })
 
 const displayedProfiles = computed(() =>
@@ -103,7 +126,7 @@ const displayedProfiles = computed(() =>
 )
 
 const displayedTotal = computed(() =>
-  selectedMinistereId.value ? displayedProfiles.value.length : totalProfiles.value,
+  selectedMinistereId.value ? allMinistereProfiles.value.length : totalProfiles.value,
 )
 
 const isListLoading = computed(() =>
@@ -305,6 +328,31 @@ const handleDelete = async (id: string) => {
             @delete="handleDelete"
           />
         </TransitionGroup>
+
+        <!-- Pagination vue campus (serveur) -->
+        <AppPagination
+          v-if="!selectedMinistereId"
+          :currentPage="profileStore.currentPage"
+          :totalPages="profileStore.totalPages"
+          :total="profileStore.total"
+          :loading="isFetching"
+          @change="
+            (page) => {
+              profileStore.goToPage(page)
+              profileStore.fetchProfiles()
+            }
+          "
+        />
+
+        <!-- Pagination vue ministère (client) -->
+        <AppPagination
+          v-else
+          :currentPage="ministreCurrentPage"
+          :totalPages="ministreTotalPages"
+          :total="ministreTotal"
+          :loading="profileStore.loadingMinistere"
+          @change="(page) => ministreGoToPage(page)"
+        />
       </template>
 
       <ProfileFormDrawer

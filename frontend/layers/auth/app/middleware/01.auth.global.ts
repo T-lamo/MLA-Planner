@@ -1,8 +1,10 @@
 import { useAuthStore } from '../stores/useAuthStore'
+import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 
 // middleware/auth.ts
 export default defineNuxtRouteMiddleware(async (to) => {
   const authStore = useAuthStore()
+  const uiStore = useUIStore()
   const publicRoutes = ['/login', '/register']
   const isPublicRoute = publicRoutes.includes(to.path)
 
@@ -12,16 +14,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     authStore.clearLocalAuth()
 
     if (!isPublicRoute) {
-      // ✅ CORRECT : La query est dans l'objet de destination (1er argument)
-      return navigateTo(
-        {
-          path: '/login',
-          query: { expired: '1' }, // Note: les valeurs de query doivent être des strings idéalement
-        },
-        {
-          replace: true, // Optionnel : remplace l'entrée dans l'historique
-        },
-      )
+      return navigateTo({ path: '/login', query: { expired: '1' } }, { replace: true })
     }
   }
 
@@ -35,7 +28,14 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
   }
 
-  // 3. Guards de navigation
+  // 3. Initialisation du campus actif si l'utilisateur est authentifié et qu'aucun
+  //    campus n'est sélectionné (premier chargement ou refresh F5).
+  //    Obligatoire avant toute requête nécessitant X-Campus-Id.
+  if (authStore.isAuthenticated && !uiStore.selectedCampusId) {
+    await uiStore.initializeUI()
+  }
+
+  // 4. Guards de navigation
   if (isPublicRoute && authStore.isAuthenticated) {
     return navigateTo(authStore.isSuperAdmin ? '/admin/campuses' : '/planning/calendar')
   }

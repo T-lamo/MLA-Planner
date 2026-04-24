@@ -143,8 +143,10 @@ def test_membre_can_list_own(client, user_headers, linked_membre):
     client.post("/indisponibilites/", json=payload, headers=user_headers)
     r = client.get("/indisponibilites/me", headers=user_headers)
     assert r.status_code == status.HTTP_200_OK
-    assert isinstance(r.json(), list)
-    assert len(r.json()) >= 1
+    body = r.json()
+    assert "data" in body
+    assert body["total"] >= 1
+    assert len(body["data"]) >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -249,8 +251,10 @@ def test_admin_can_list_by_campus(
         headers=admin_headers,
     )
     assert r.status_code == status.HTTP_200_OK
-    assert isinstance(r.json(), list)
-    assert len(r.json()) >= 1
+    body = r.json()
+    assert "data" in body
+    assert body["total"] >= 1
+    assert len(body["data"]) >= 1
 
 
 def test_filter_by_ministere(  # pylint: disable=too-many-positional-arguments
@@ -270,7 +274,7 @@ def test_filter_by_ministere(  # pylint: disable=too-many-positional-arguments
         headers=admin_headers,
     )
     assert r.status_code == status.HTTP_200_OK
-    data = r.json()
+    data = r.json()["data"]
     assert all(d["ministere_id"] == test_ministere.id for d in data)
 
 
@@ -290,7 +294,7 @@ def test_filter_by_date_range(
         headers=admin_headers,
     )
     assert r.status_code == status.HTTP_200_OK
-    assert len(r.json()) >= 1
+    assert len(r.json()["data"]) >= 1
 
 
 def test_admin_delete(client, admin_headers, user_headers, linked_membre):

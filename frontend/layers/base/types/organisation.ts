@@ -2,15 +2,18 @@ export interface OrganisationRead {
   id: string
   nom: string
   date_creation: string
-  pays: { id: string; nom: string; code: string; organisation_id: string; campus: unknown[] }[]
+  parent_id: string | null
+  children: OrganisationRead[]
 }
 
 export interface OrganisationCreate {
   nom: string
   date_creation: string
+  parent_id?: string | null
 }
 
 export interface OrganisationUpdate {
   nom?: string
-  dateCreation?: string
+  date_creation?: string
+  parent_id?: string | null
 }
