@@ -103,3 +103,13 @@ debug_change.patch
 
 # --- AUTRES ---
 presentation/
+
+# --- MOBILE Flutter ---
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/**/*.g.dart
+mobile/**/*.freezed.dart
+mobile/.env
