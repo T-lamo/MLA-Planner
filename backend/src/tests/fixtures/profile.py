@@ -8,7 +8,6 @@ from models.schema_db_model import (
     Campus,
     Ministere,
     Organisation,
-    Pays,
     Pole,
 )
 
@@ -29,45 +28,42 @@ def seed_data(session: Session):
     session.add(org)
     session.flush()
 
-    # 2. Pays (Lié à l'organisation)
-    pays = Pays(id=str(uuid4()), nom="France", code="FR", organisation_id=org.id)
-    session.add(pays)
-    session.flush()
-
-    # 3. Campus (Lié au pays)
+    # 2. Campus (Lié à l'organisation)
     campus = Campus(
         id=str(uuid4()),
         nom="Campus Paris",
         ville="Paris",
-        pays_id=pays.id,
+        pays="France",
+        organisation_id=org.id,
         timezone="Europe/Paris",
     )
     session.add(campus)
     session.flush()
 
-    # 3b. Second campus (pour les tests multi-campus)
+    # 2b. Second campus (pour les tests multi-campus)
     campus2 = Campus(
         id=str(uuid4()),
         nom="Campus Lyon",
         ville="Lyon",
-        pays_id=pays.id,
+        pays="France",
+        organisation_id=org.id,
         timezone="Europe/Paris",
     )
     session.add(campus2)
     session.flush()
 
-    # 4. Ministère (Lié au campus)
+    # 3. Ministère (Lié au campus)
     ministere = Ministere(
         id=str(uuid4()),
         nom="Ministère Test",
-        campus_id=campus.id,
         date_creation=date(2024, 1, 1),
         actif=True,
     )
+    ministere.campuses = [campus]
     session.add(ministere)
     session.flush()
 
-    # 5. Pôle (Lié au ministère)
+    # 4. Pôle (Lié au ministère)
     pole = Pole(
         id=str(uuid4()), nom="Pôle Test", ministere_id=ministere.id, active=True
     )
@@ -77,7 +73,6 @@ def seed_data(session: Session):
 
     return {
         "org_id": org.id,
-        "pays_id": pays.id,
         "campus_id": campus.id,
         "campus2_id": campus2.id,
         "min_id": ministere.id,

@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue'
+import { usePagination } from '~~/layers/base/app/stores/utils/usePagination'
 import type {
   ChantCategorieCreate,
   ChantCategorieRead,
@@ -25,6 +26,8 @@ const selectedChant = ref<ChantReadFull | null>(null)
 const isLoading = ref(false)
 
 const repo = new ChantRepository()
+
+const songbookPagination = usePagination(20)
 
 // -----------------------------------------------------------------------
 // Composable exporté
@@ -65,11 +68,12 @@ export const useSongbook = () => {
         campus_id: campusId || undefined,
         q: opts.q,
         categorie_code: opts.categorie,
-        limit: 100,
-        offset: 0,
+        limit: songbookPagination.pagination.limit,
+        offset: songbookPagination.pagination.offset,
       })
       chants.value = result.data
       total.value = result.total
+      songbookPagination.setTotal(result.total)
     } catch {
       // Erreur déjà notifiée par l'intercepteur
     } finally {
@@ -174,6 +178,8 @@ export const useSongbook = () => {
     total,
     selectedChant,
     isLoading,
+    // pagination
+    songbookPagination,
     // chargement
     loadCategories,
     loadChants,

@@ -1,0 +1,56 @@
+name: mla_planning
+description: "MLA Planning — Application mobile de gestion de planning"
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP
+  dio: ^5.8.0+1
+
+  # State management
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Stockage sécurisé JWT (jamais SharedPreferences pour les tokens)
+  flutter_secure_storage: ^9.2.4
+
+  # Variables d'environnement
+  flutter_dotenv: ^5.2.1
+
+  # Internationalisation / dates
+  intl: ^0.20.2
+
+  # Calendrier (équivalent FullCalendar)
+  table_calendar: ^3.2.0
+
+  # Sérialisation models typés
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+  # Génération de code
+  build_runner: ^2.4.14
+  freezed: ^2.5.8
+  json_serializable: ^6.9.4
+  riverpod_generator: ^2.6.3
+  custom_lint: ^0.7.3
+  riverpod_lint: ^2.6.3
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env

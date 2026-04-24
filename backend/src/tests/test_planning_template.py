@@ -78,13 +78,13 @@ def template_fixture(session: Session, test_campus, test_ministere, test_membre)
 
 
 @pytest.fixture
-def template_other_campus(session: Session, test_pays, test_ministere):
+def template_other_campus(session: Session, test_org, test_ministere):
     """Crée un template sur un campus différent, avec un créateur dédié."""
     other_campus = Campus(
         nom=f"Campus Autre {uuid4()}",
         ville="Autre",
-        pays_id=test_pays.id,
-        date_creation="2024-01-01",
+        pays="France",
+        organisation_id=test_org.id,
     )
     session.add(other_campus)
     session.flush()

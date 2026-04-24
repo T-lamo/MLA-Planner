@@ -1,9 +1,30 @@
 # Makefile à la racine du monorepo
+FLUTTER := $(HOME)/development/flutter/bin/flutter
+
+# --- MOBILE (Flutter / Android) ---
+install-mobile:
+	@$(FLUTTER) pub get --directory=mobile
+
+dev-mobile:
+	@cd mobile && $(FLUTTER) run
+
+build-mobile:
+	@cd mobile && $(FLUTTER) build apk --release
+
+lint-mobile:
+	@cd mobile && $(FLUTTER) analyze
+
+test-mobile:
+	@cd mobile && $(FLUTTER) test
+
+format-mobile:
+	@cd mobile && dart format lib/ test/
 
 .PHONY: ci-parallel dev-all dev-all-ui install-all format-front clean-all \
         dev-front lint-front typecheck-front test-front \
         dev-back install-back format-back lint-back flake-back autoflake-back radon-back precommit-back \
-        test-back test-debug-back db-setup-back db-reset-back db-seed-back db-test-setup-back clean-back activate-back
+        test-back test-debug-back db-setup-back db-reset-back db-seed-back db-test-setup-back clean-back activate-back \
+        dev-mobile build-mobile lint-mobile test-mobile format-mobile install-mobile
 
 
 # Lance le Backend et le Frontend en parallèle avec pnpm dlx
