@@ -12,6 +12,7 @@ import {
 import AppDrawer from '~~/layers/base/app/components/AppDrawer.vue'
 import AppSelect from '~~/layers/base/app/components/ui/AppSelect.vue'
 import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
+import AppPagination from '~~/layers/base/app/components/ui/AppPagination.vue'
 import { useIndisponibiliteStore } from '~~/layers/base/app/stores/useIndisponibiliteStore'
 import { useUIStore } from '~~/layers/base/app/stores/useUiStore'
 import { useAuthStore } from '~~/layers/auth/app/stores/useAuthStore'
@@ -64,6 +65,7 @@ watch(
 
 async function applyFilters() {
   if (uiStore.selectedCampusId && authStore.hasAdminAccess) {
+    store.paginationAdmin.resetPagination()
     await store.fetchByCampus(uiStore.selectedCampusId)
   }
 }
@@ -124,7 +126,7 @@ const adminColumns = [
   { key: 'date_fin', label: 'Au' },
   { key: 'motif', label: 'Motif' },
   { key: 'validee', label: 'Statut' },
-  { key: 'actions', label: 'Actions' },
+  { key: 'actions', label: 'Actions', align: 'right' as const, width: 'w-24' },
 ]
 const isFormValid = computed(
   () => newForm.date_debut && newForm.date_fin && newForm.date_fin >= newForm.date_debut,
@@ -292,7 +294,7 @@ const isFormValid = computed(
           </template>
 
           <template #cell-actions="{ row }">
-            <div class="flex items-center gap-1">
+            <div class="flex items-center justify-end gap-1">
               <button
                 v-if="!(row as unknown as IndisponibiliteReadFull).validee"
                 class="btn btn-ghost btn-icon text-emerald-600 hover:bg-emerald-50"
@@ -309,6 +311,21 @@ const isFormValid = computed(
                 <Trash2 class="size-4" />
               </button>
             </div>
+          </template>
+
+          <template #pagination>
+            <AppPagination
+              :currentPage="store.paginationAdmin.currentPage"
+              :totalPages="store.paginationAdmin.totalPages"
+              :total="store.paginationAdmin.total"
+              :loading="store.loading"
+              @change="
+                (page) => {
+                  store.paginationAdmin.goToPage(page)
+                  store.fetchByCampus(uiStore.selectedCampusId)
+                }
+              "
+            />
           </template>
         </AppTable>
       </div>
@@ -362,6 +379,18 @@ const isFormValid = computed(
             <Trash2 class="size-4" />
           </button>
         </div>
+        <AppPagination
+          :currentPage="store.paginationMine.currentPage"
+          :totalPages="store.paginationMine.totalPages"
+          :total="store.paginationMine.total"
+          :loading="store.loading"
+          @change="
+            (page) => {
+              store.paginationMine.goToPage(page)
+              store.fetchMine()
+            }
+          "
+        />
       </div>
     </template>
 

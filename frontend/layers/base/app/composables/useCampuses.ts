@@ -23,8 +23,9 @@ export const useCampuses = () => {
     return {
       nom: baseData.nom,
       ville: baseData.ville,
+      pays: baseData.pays ?? undefined,
       timezone: baseData.timezone,
-      pays_id: baseData.pays_id,
+      organisation_id: baseData.organisation_id,
     }
   }
 

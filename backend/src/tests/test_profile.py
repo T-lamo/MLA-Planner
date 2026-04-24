@@ -363,7 +363,8 @@ class TestProfileService:
             id=str(uuid4()),
             nom="Campus Lyon",
             ville="Lyon",
-            pays_id=seed_data["pays_id"],
+            pays="France",
+            organisation_id=seed_data["org_id"],
             timezone="Europe/Paris",
         )
         session.add(campus2)
@@ -441,7 +442,8 @@ class TestProfileService:
             id=str(uuid4()),
             nom="Campus Bordeaux",
             ville="Bordeaux",
-            pays_id=seed_data["pays_id"],
+            pays="France",
+            organisation_id=seed_data["org_id"],
             timezone="Europe/Paris",
         )
         session.add(campus2)
@@ -480,7 +482,8 @@ class TestProfileService:
             id=str(uuid4()),
             nom="Campus Nantes",
             ville="Nantes",
-            pays_id=seed_data["pays_id"],
+            pays="France",
+            organisation_id=seed_data["org_id"],
             timezone="Europe/Paris",
         )
         session.add(campus2)

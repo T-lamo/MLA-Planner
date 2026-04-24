@@ -11,7 +11,7 @@ class CampusRepository(BaseRepository[Campus]):
     def __init__(self, db: Session):
         super().__init__(db, Campus)
         # On définit les relations à charger par défaut pour le campus
-        self.relations = [cast(Any, Campus.pays)]
+        self.relations = [cast(Any, Campus.organisation)]
 
     def get_by_id(
         self, identifiant: str, load_relations: Optional[List[Any]] = None

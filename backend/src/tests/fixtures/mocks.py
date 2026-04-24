@@ -42,7 +42,7 @@ def mock_membre():
     mock_campus.id = "campus-1"
     mock_campus.nom = "Campus Lille"
     mock_campus.ville = "Lille"
-    mock_campus.pays_id = "pays-uuid-1"  # Requis si CampusRead le demande
+    mock_campus.organisation_id = "org-uuid-1"  # Requis si CampusRead le demande
 
     # On initialise les listes de relations (N:N)
     m.campuses = [mock_campus]

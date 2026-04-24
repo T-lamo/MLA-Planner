@@ -2,14 +2,15 @@
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session
 
 from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
-from models import DataListResponse, DataResponse, Utilisateur
+from models import DataResponse, Utilisateur
+from models.base_pagination import PaginatedResponse
 from models.planning_template_model import (
     ApplyTemplateResultSchema,
     PlanningTemplateFullUpdate,
@@ -129,47 +130,71 @@ def save_planning_as_template(
 
 @router.get(
     "/by-campus/{campus_id}",
-    response_model=DataListResponse[PlanningTemplateRead],
+    response_model=PaginatedResponse[PlanningTemplateRead],
     dependencies=[Depends(_WRITE_ROLES)],
 )
 def list_templates_by_campus(
     campus_id: str,
+    limit: int = Query(20, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(Database.get_db_for_route),
-) -> DataListResponse[PlanningTemplateRead]:
-    """Liste les templates d'un campus, triés par fréquence d'usage."""
+) -> PaginatedResponse[PlanningTemplateRead]:
+    """Liste paginée des templates d'un campus."""
     svc = PlanningTemplateSvc(db)
     items = svc.list_by_campus(campus_id)
-    return DataListResponse(data=items)
+    total = len(items)
+    return PaginatedResponse(
+        total=total,
+        limit=limit,
+        offset=offset,
+        data=items[offset : offset + limit],
+    )
 
 
 @router.get(
     "/by-ministere/{ministere_id}",
-    response_model=DataListResponse[PlanningTemplateRead],
+    response_model=PaginatedResponse[PlanningTemplateRead],
     dependencies=[Depends(_WRITE_ROLES)],
 )
 def list_templates_by_ministere(
     ministere_id: str,
+    limit: int = Query(20, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(Database.get_db_for_route),
-) -> DataListResponse[PlanningTemplateRead]:
-    """Liste les templates d'un ministère, triés par fréquence d'usage."""
+) -> PaginatedResponse[PlanningTemplateRead]:
+    """Liste paginée des templates d'un ministère."""
     svc = PlanningTemplateSvc(db)
     items = svc.list_by_ministere(ministere_id)
-    return DataListResponse(data=items)
+    total = len(items)
+    return PaginatedResponse(
+        total=total,
+        limit=limit,
+        offset=offset,
+        data=items[offset : offset + limit],
+    )
 
 
 @router.get(
     "",
-    response_model=DataListResponse[PlanningTemplateListItem],
+    response_model=PaginatedResponse[PlanningTemplateListItem],
     dependencies=[Depends(_WRITE_ROLES)],
 )
 def list_templates(
     ministere_id: Optional[str] = None,
+    limit: int = Query(20, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     current_user: Utilisateur = Depends(get_current_active_user),
     svc: PlanningTemplateSvc = Depends(_get_svc),
-) -> DataListResponse[PlanningTemplateListItem]:
-    """Liste des templates — bibliothèque US-95."""
+) -> PaginatedResponse[PlanningTemplateListItem]:
+    """Liste paginée des templates — bibliothèque US-95."""
     items = svc.list_templates(current_user, ministere_id)
-    return DataListResponse(data=items)
+    total = len(items)
+    return PaginatedResponse(
+        total=total,
+        limit=limit,
+        offset=offset,
+        data=items[offset : offset + limit],
+    )
 
 
 @router.get(

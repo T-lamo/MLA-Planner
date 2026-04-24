@@ -1,12 +1,13 @@
 # src/routes/indisponibilite_router.py
-from typing import List, Optional
+from typing import Optional
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
 from conf.db.database import Database
 from core.auth.auth_dependencies import RoleChecker, get_current_active_user
 from models import Utilisateur
+from models.base_pagination import PaginatedResponse
 from models.indisponibilite_model import (
     IndisponibiliteCreate,
     IndisponibiliteRead,
@@ -42,14 +43,18 @@ def declare_indisponibilite(
     return svc.create_by_membre(payload, membre.id)
 
 
-@router.get("/me", response_model=List[IndisponibiliteReadFull])
+@router.get("/me", response_model=PaginatedResponse[IndisponibiliteReadFull])
 def get_my_indisponibilites(
+    limit: int = Query(20, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(Database.get_session),
     current_user: Utilisateur = Depends(get_current_active_user),
-) -> List[IndisponibiliteReadFull]:
-    """Membre consulte ses propres indisponibilités."""
+) -> PaginatedResponse[IndisponibiliteReadFull]:
+    """Membre consulte ses propres indisponibilités (paginées)."""
     membre = get_current_membre(current_user)
-    return IndisponibiliteService(db).get_for_membre(membre.id)
+    return IndisponibiliteService(db).get_for_membre(
+        membre.id, limit=limit, offset=offset
+    )
 
 
 @router.delete("/{indisp_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -70,7 +75,7 @@ def delete_my_indisponibilite(
 
 @router.get(
     "/campus/{campus_id}",
-    response_model=List[IndisponibiliteReadFull],
+    response_model=PaginatedResponse[IndisponibiliteReadFull],
     dependencies=[admin_or_resp],
 )
 def list_by_campus(
@@ -80,15 +85,19 @@ def list_by_campus(
     date_fin: Optional[str] = None,
     validee_only: bool = False,
     *,
+    limit: int = Query(20, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(Database.get_session),
-) -> List[IndisponibiliteReadFull]:
-    """Admin/Responsable liste les indisponibilités d'un campus."""
+) -> PaginatedResponse[IndisponibiliteReadFull]:
+    """Admin/Responsable liste les indisponibilités paginées d'un campus."""
     return IndisponibiliteService(db).get_for_campus(
         campus_id,
         validee_only=validee_only,
         ministere_id=ministere_id,
         date_debut=date_debut,
         date_fin=date_fin,
+        limit=limit,
+        offset=offset,
     )
 
 
@@ -120,7 +129,7 @@ def admin_delete_indisponibilite(
 
 @router.get(
     "/campus/{campus_id}/period",
-    response_model=List[IndisponibiliteReadFull],
+    response_model=list[IndisponibiliteReadFull],
     dependencies=[admin_or_resp],
 )
 def get_validated_for_period(
@@ -128,7 +137,7 @@ def get_validated_for_period(
     date_debut: str,
     date_fin: str,
     db: Session = Depends(Database.get_session),
-) -> List[IndisponibiliteReadFull]:
+) -> list[IndisponibiliteReadFull]:
     """Indisponibilités validées chevauchant une période (pour le planning)."""
     return IndisponibiliteService(db).get_validated_for_campus_period(
         campus_id, date_debut, date_fin

@@ -12,7 +12,6 @@ from models import (
     Membre,
     Ministere,
     Organisation,
-    Pays,
     Permission,
     StatutAffectation,
     StatutPlanning,
@@ -81,15 +80,11 @@ class SeedReferentials:
             # --- GROUPE B : Sécurité (Correction F841: suppression p_admin) ---
             self.get_or_create_upsert(Permission, {"code": "ALL_ACCESS"}, {})
 
-            # --- GROUPE C : Hiérarchie (Correction E501: split des lignes) ---
+            # --- GROUPE C : Hiérarchie ---
             org = self.get_or_create_upsert(
                 Organisation,
                 {"id": "ICC_WORLD"},
                 {"nom": "ICC World", "date_creation": date(2020, 1, 1)},
-            )
-
-            pays_fr = self.get_or_create_upsert(
-                Pays, {"nom": "FRANCE"}, {"code": "FR", "organisation_id": org.id}
             )
 
             campus_tls = self.get_or_create_upsert(
@@ -97,7 +92,8 @@ class SeedReferentials:
                 {"nom": "Toulouse"},
                 {
                     "ville": "Toulouse",
-                    "pays_id": pays_fr.id,
+                    "pays": "France",
+                    "organisation_id": org.id,
                     "timezone": "Europe/Paris",
                 },
             )
@@ -120,7 +116,8 @@ class SeedReferentials:
                 {"nom": "Marseille"},
                 {
                     "ville": "Marseille",
-                    "pays_id": pays_fr.id,
+                    "pays": "France",
+                    "organisation_id": org.id,
                     "timezone": "Europe/Paris",
                 },
             )
