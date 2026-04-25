@@ -16,8 +16,6 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
-    # Pas de ports exposés — réseau Docker interne uniquement
-    ports: !reset []
     logging:
       driver: json-file
       options:
@@ -46,7 +44,6 @@ services:
       SMTP_PASS: ${SMTP_PASS:-}
       EMAIL_FROM: ${EMAIL_FROM:-noreply@mla-planning.com}
       EMAIL_FROM_NAME: ${EMAIL_FROM_NAME:-MLA Planner}
-    ports: !reset []
     depends_on:
       db:
         condition: service_healthy
@@ -67,7 +64,6 @@ services:
       PORT: "3000"
       NUXT_PUBLIC_API_BASE: https://${VPS_IP}/api
       NUXT_API_BASE: http://backend:8000
-    ports: !reset []
     depends_on:
       backend:
         condition: service_healthy
