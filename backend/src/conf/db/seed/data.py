@@ -240,6 +240,19 @@ SUPERADMIN_PASSWORD = "plan123!"
 # Username = prenom.lower() du membre associé (ex: "amos", "jean", "awa")
 USER_PASSWORD = "plan123!"
 
+# Compte démo (lecture seule, rôle Membre MLA)
+DEMO_USERNAME = "demo"
+DEMO_PASSWORD = "demo123!"
+DEMO_MEMBRE_INFO: MembreInfo = {
+    "nom": "Visiteur",
+    "prenom": "Demo",
+    "email": "demo@plannerchurch.com",
+    "roles": ["HOTE_ACCUEIL", "ANIMATEUR_JEUNESSE", "TENOR"],
+    "campus_names": ["Campus Toulouse"],
+    "ministere_names": ["Accueil", "Louange et Adoration", "Jeunesse"],
+    "pole_names": ["Ushers", "Chorale", "Ados"],
+}
+
 # --- GEOGRAPHIE ---
 SEED_ORGANISATIONS: List[OrganisationData] = [
     OrganisationData(
