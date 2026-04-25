@@ -44,7 +44,7 @@ Un compte démo est créé automatiquement au premier démarrage. Il donne accè
 
 | Identifiant | Mot de passe | Rôle | Ministères |
 |---|---|---|---|
-| `demo` | `demo123!` | Membre MLA | Accueil · Louange · Jeunesse |
+| `demo` | `Demo@2025!mla` | Membre MLA | Accueil · Louange · Jeunesse |
 
 > Des comptes avec des droits étendus (Admin, Responsable, Super Admin) sont disponibles pour les évaluateurs — contactez l'équipe MLA pour obtenir les accès.
 
@@ -175,7 +175,7 @@ Backend disponible sur `http://localhost:8000` · Frontend sur `http://localhost
 
 | Username | Mot de passe | Rôle | Ministère |
 |---|---|---|---|
-| `demo` | `demo123!` | Membre MLA | Accueil · Louange · Jeunesse |
+| `demo` | `Demo@2025!mla` | Membre MLA | Accueil · Louange · Jeunesse |
 | `awa` | *(voir équipe)* | Membre MLA | Accueil · Jeunesse |
 | `jean` | *(voir équipe)* | Responsable MLA | Technique |
 | `amos` | *(voir équipe)* | Admin | Louange et Adoration |
