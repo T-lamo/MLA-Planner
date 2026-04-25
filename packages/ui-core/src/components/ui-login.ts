@@ -14,6 +14,10 @@ export class UiLogin extends CoreElement {
   @property({ type: String }) passwordLabel = "Mot de passe";
   @property({ type: String }) passwordPlaceholder = "••••••••";
 
+  // --- Compte démo pré-rempli ---
+  @property({ type: String }) defaultIdentifier = "";
+  @property({ type: String }) defaultPassword = "";
+
   // --- Gestion des erreurs et états ---
   @property({ type: String }) errorMessage = "";
   @state() private isLoading = false;
@@ -156,6 +160,37 @@ export class UiLogin extends CoreElement {
         cursor: not-allowed; 
       }
 
+      .demo-banner {
+        background-color: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 6px;
+        padding: 0.625rem 0.875rem;
+        margin-bottom: 1.25rem;
+        font-size: 0.8125rem;
+        color: #15803d;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+      }
+
+      .demo-banner span { font-weight: 600; }
+
+      .demo-fill-btn {
+        width: auto;
+        padding: 0.25rem 0.625rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: #16a34a;
+        border-radius: 4px;
+        color: white;
+        border: none;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
+      .demo-fill-btn:hover:not(:disabled) { background: #15803d; }
+
       @media (max-width: 640px) {
         .login-card {
           padding: 1.5rem;
@@ -164,6 +199,15 @@ export class UiLogin extends CoreElement {
       }
     `
   ];
+
+  private _fillDemo = () => {
+    const form = this.shadowRoot?.querySelector('form');
+    if (!form) return;
+    const idInput = form.querySelector<HTMLInputElement>('input[name="identifier"]');
+    const pwInput = form.querySelector<HTMLInputElement>('input[name="password"]');
+    if (idInput) idInput.value = this.defaultIdentifier;
+    if (pwInput) pwInput.value = this.defaultPassword;
+  };
 
   private _handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -191,6 +235,14 @@ export class UiLogin extends CoreElement {
         <div class="logo-slot">
           <slot name="logo"></slot>
         </div>
+
+        ${this.defaultIdentifier
+          ? html`<div class="demo-banner">
+              <span>🎭 Compte démo : ${this.defaultIdentifier} / ${this.defaultPassword}</span>
+              <button type="button" class="demo-fill-btn" @click=${this._fillDemo}>Utiliser</button>
+            </div>`
+          : ''
+        }
 
         <form @submit=${this._handleSubmit}>
           <div class="form-group">

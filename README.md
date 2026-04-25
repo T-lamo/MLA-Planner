@@ -38,16 +38,15 @@ docker compose up --build
 | **Health check** | http://localhost:8000/health | Statut de l'API (`{"status": "ok"}`) |
 | **Base de données** | `localhost:5432` | PostgreSQL — user: `mla` · pass: `mla` · db: `mla_db` |
 
-### Comptes de démonstration
+### Compte de démonstration
 
-Les comptes sont créés automatiquement au premier démarrage (seed idempotent).
+Un compte démo est créé automatiquement au premier démarrage. Il donne accès à l'interface avec des données réalistes (plannings, affectations, indisponibilités) sans aucun droit d'administration.
 
-| Identifiant | Mot de passe | Rôle | Ministère |
+| Identifiant | Mot de passe | Rôle | Ministères |
 |---|---|---|---|
-| `superadmin` | `plan123!` | Super Admin | — |
-| `amos` | `plan123!` | Admin | Louange |
-| `jean` | `plan123!` | Responsable | Technique |
-| `awa` | `plan123!` | Membre | Accueil |
+| `demo` | `demo123!` | Membre MLA | Accueil · Louange · Jeunesse |
+
+> Des comptes avec des droits étendus (Admin, Responsable, Super Admin) sont disponibles pour les évaluateurs — contactez l'équipe MLA pour obtenir les accès.
 
 ### Commandes utiles
 
@@ -172,14 +171,15 @@ make dev-all
 
 Backend disponible sur `http://localhost:8000` · Frontend sur `http://localhost:3000`
 
-**Comptes de test** (mot de passe universel : `plan123!`) :
+**Comptes de test** :
 
-| Username | Rôle | Ministère |
-|---|---|---|
-| `superadmin` | Super Admin | — |
-| `amos` | Admin | Louange et Adoration |
-| `jean` | Responsable MLA | Technique |
-| `awa` | Membre MLA | Accueil · Jeunesse |
+| Username | Mot de passe | Rôle | Ministère |
+|---|---|---|---|
+| `demo` | `demo123!` | Membre MLA | Accueil · Louange · Jeunesse |
+| `awa` | *(voir équipe)* | Membre MLA | Accueil · Jeunesse |
+| `jean` | *(voir équipe)* | Responsable MLA | Technique |
+| `amos` | *(voir équipe)* | Admin | Louange et Adoration |
+| `superadmin` | *(voir équipe)* | Super Admin | — |
 
 ---
 
