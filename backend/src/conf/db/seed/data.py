@@ -242,7 +242,7 @@ USER_PASSWORD = "plan123!"
 
 # Compte démo (lecture seule, rôle Membre MLA)
 DEMO_USERNAME = "demo"
-DEMO_PASSWORD = "demo123!"
+DEMO_PASSWORD = "Demo@2025!mla"
 DEMO_MEMBRE_INFO: MembreInfo = {
     "nom": "Visiteur",
     "prenom": "Demo",
