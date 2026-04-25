@@ -7,12 +7,13 @@
       identifierPlaceholder="Ex: MLA-2024"
       passwordLabel="Mot de passe"
       defaultIdentifier="demo"
-      defaultPassword="demo123!"
+      defaultPassword="Demo@2025!mla"
       :errorMessage="authError"
       @auth-submit="onLogin"
     >
       <div slot="logo" class="flex flex-col items-center gap-4">
         <img src="/Logo.png" alt="Logo" class="h-16 w-auto object-contain" />
+        <h2 class="text-xl font-bold text-slate-800">Espace Membre</h2>
       </div>
     </ui-login>
   </div>
