@@ -796,7 +796,7 @@ class SeedService:
         membre_mla_role = role_map.get("Membre MLA")
         if not membre_mla_role:
             return None
-        user, _ = self._get_or_create(
+        user, created = self._get_or_create(
             Utilisateur,
             username=DEMO_USERNAME,
             defaults={
@@ -804,6 +804,10 @@ class SeedService:
                 "actif": True,
             },
         )
+        if not created:
+            user.password = get_password_hash(DEMO_PASSWORD)
+            self.db.add(user)
+            self.db.flush()
         self._get_or_create(
             AffectationRole, utilisateur_id=user.id, role_id=membre_mla_role.id
         )
