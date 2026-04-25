@@ -13,6 +13,7 @@ from models import DataResponse, Utilisateur
 from models.base_pagination import PaginatedResponse
 from models.planning_template_model import (
     ApplyTemplateResultSchema,
+    PlanningTemplateCreate,
     PlanningTemplateFullUpdate,
     PlanningTemplateListItem,
     PlanningTemplateRead,
@@ -172,6 +173,21 @@ def list_templates_by_ministere(
         offset=offset,
         data=items[offset : offset + limit],
     )
+
+
+@router.post(
+    "",
+    response_model=DataResponse[PlanningTemplateRead],
+    dependencies=[Depends(_WRITE_ROLES)],
+    status_code=201,
+)
+def create_template(
+    body: PlanningTemplateCreate,
+    current_user: Utilisateur = Depends(get_current_active_user),
+    svc: PlanningTemplateSvc = Depends(_get_svc),
+) -> DataResponse[PlanningTemplateRead]:
+    """Crée un template vierge depuis la bibliothèque."""
+    return DataResponse(data=svc.create_template(body, current_user))
 
 
 @router.get(

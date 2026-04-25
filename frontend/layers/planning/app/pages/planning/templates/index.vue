@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { LayoutTemplate } from 'lucide-vue-next'
+import { LayoutTemplate, Plus } from 'lucide-vue-next'
+import TemplateCreateDrawer from '../../../components/TemplateCreateDrawer.vue'
 import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
 import AppPagination from '~~/layers/base/app/components/ui/AppPagination.vue'
 import { usePlanningPermissions } from '../../../composables/usePlanningPermissions'
@@ -13,6 +14,7 @@ import type {
 } from '../../../types/planning.types'
 
 const editingTemplateId = ref<string | null>(null)
+const isCreating = ref(false)
 
 definePageMeta({ middleware: [] })
 
@@ -117,6 +119,10 @@ function visibiliteBadge(v: VisibiliteTemplate) {
         <LayoutTemplate class="size-6 text-(--color-primary-700)" />
         <h1 class="text-xl font-bold text-slate-900">Bibliothèque de templates</h1>
       </div>
+      <button v-if="canWrite" class="btn btn-primary" @click="isCreating = true">
+        <Plus class="size-4" />
+        Nouveau template
+      </button>
     </div>
 
     <!-- Loading skeleton -->
@@ -220,6 +226,13 @@ function visibiliteBadge(v: VisibiliteTemplate) {
         </template>
       </AppTable>
     </div>
+
+    <!-- Drawer création -->
+    <TemplateCreateDrawer
+      :isOpen="isCreating"
+      @close="isCreating = false"
+      @created="templateStore.fetchTemplates(ministereFilter || undefined)"
+    />
 
     <!-- Drawer édition -->
     <TemplateEditDrawer
