@@ -35,7 +35,7 @@ services:
       ENV: production
       PORT: "8000"
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      ALLOWED_ORIGINS: https://${VPS_IP}
+      ALLOWED_ORIGINS: https://${DOMAIN},https://www.${DOMAIN}
       SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME}
       SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
       SMTP_HOST: ${SMTP_HOST:-}
@@ -59,10 +59,10 @@ services:
       context: .
       dockerfile: frontend/Dockerfile
       args:
-        NUXT_PUBLIC_API_BASE: https://${VPS_IP}/api
+        NUXT_PUBLIC_API_BASE: https://${DOMAIN}/api
     environment:
       PORT: "3000"
-      NUXT_PUBLIC_API_BASE: https://${VPS_IP}/api
+      NUXT_PUBLIC_API_BASE: https://${DOMAIN}/api
       NUXT_API_BASE: http://backend:8000
     depends_on:
       backend:
@@ -81,8 +81,8 @@ services:
       - "443:443"
     volumes:
       - /opt/mla/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - /opt/mla/ssl/mla.crt:/etc/ssl/certs/mla.crt:ro
-      - /opt/mla/ssl/mla.key:/etc/ssl/private/mla.key:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
     depends_on:
       - frontend
       - backend

@@ -30,7 +30,7 @@ sudo ufw --force enable
 sudo ufw status
 
 # Structure répertoires
-sudo mkdir -p /opt/mla/ssl /opt/mla/nginx
+sudo mkdir -p /opt/mla/nginx /var/www/certbot
 sudo chown -R ubuntu:ubuntu /opt/mla
 ```
 
@@ -60,19 +60,38 @@ cat ~/.ssh/github_actions
 
 ---
 
-## ÉTAPE 3 — Certificat SSL auto-signé
+## ÉTAPE 3 — Certificat SSL Let's Encrypt (Certbot)
 
 ```bash
-sudo openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-  -keyout /opt/mla/ssl/mla.key \
-  -out    /opt/mla/ssl/mla.crt \
-  -subj   "/CN=57.129.113.31" \
-  -addext "subjectAltName=IP:57.129.113.31"
+# Installer certbot
+sudo apt install -y certbot
 
-sudo chmod 600 /opt/mla/ssl/mla.key
-sudo chmod 644 /opt/mla/ssl/mla.crt
-sudo chown ubuntu:ubuntu /opt/mla/ssl/mla.key /opt/mla/ssl/mla.crt
+# Créer le répertoire webroot pour le challenge ACME
+sudo mkdir -p /var/www/certbot
+
+# Démarrer nginx en HTTP seulement (commentez le bloc 443 ou utilisez une conf temporaire)
+# OU démarrez directement les containers HTTP — nginx gérera /.well-known/acme-challenge/
+
+# Obtenir le certificat (DNS doit déjà pointer vers ce VPS)
+sudo certbot certonly --webroot \
+  -w /var/www/certbot \
+  -d plannerchurch.com \
+  -d www.plannerchurch.com \
+  --email amosdorceus2023@gmail.com \
+  --agree-tos \
+  --no-eff-email
+
+# Vérification
+sudo ls /etc/letsencrypt/live/plannerchurch.com/
+# → fullchain.pem  privkey.pem  chain.pem  cert.pem
+
+# Renouvellement automatique (cron)
+echo "0 3 * * * root certbot renew --quiet --deploy-hook 'docker exec repo-nginx-1 nginx -s reload'" \
+  | sudo tee /etc/cron.d/certbot-renew
 ```
+
+> **Note** : Si nginx n'est pas encore démarré, utilisez le mode standalone :
+> `sudo certbot certonly --standalone -d plannerchurch.com -d www.plannerchurch.com --email amosdorceus2023@gmail.com --agree-tos --no-eff-email`
 
 ---
 
@@ -97,7 +116,7 @@ nano /opt/mla/.env
 Contenu du `.env` (remplacer les CHANGE_ME) :
 
 ```
-VPS_IP=57.129.113.31
+DOMAIN=plannerchurch.com
 
 POSTGRES_USER=mla_user
 POSTGRES_PASSWORD=CHANGE_ME_strong_password
@@ -111,14 +130,14 @@ PORT=8000
 SUPERADMIN_USERNAME=superadmin
 SUPERADMIN_PASSWORD=CHANGE_ME_superadmin_password
 
-ALLOWED_ORIGINS=https://57.129.113.31
-NUXT_PUBLIC_API_BASE=https://57.129.113.31/api
+ALLOWED_ORIGINS=https://plannerchurch.com,https://www.plannerchurch.com
+NUXT_PUBLIC_API_BASE=https://plannerchurch.com/api
 
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
-EMAIL_FROM=noreply@mla-planning.com
+EMAIL_FROM=noreply@plannerchurch.com
 EMAIL_FROM_NAME=MLA Planner
 ```
 
@@ -205,11 +224,11 @@ docker compose \
 
 ```bash
 # Health API
-curl -k https://57.129.113.31/api/health
+curl https://plannerchurch.com/api/health
 # → {"status":"ok"}
 
-# Swagger : https://57.129.113.31/api/docs
-# Frontend : https://57.129.113.31
+# Swagger : https://plannerchurch.com/api/docs
+# Frontend : https://plannerchurch.com
 
 # Firewall
 sudo ufw status
