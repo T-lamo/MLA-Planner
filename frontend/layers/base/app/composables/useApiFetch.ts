@@ -23,7 +23,6 @@ function getApiConfig() {
   const config = useRuntimeConfig()
   const authStore = useAuthStore()
   const uiStore = useUIStore()
-  const route = useRoute()
   const { notifyError } = useErrorHandler()
 
   // Côté serveur (Nitro), on utilise la variable privée pour atteindre le backend
@@ -61,8 +60,9 @@ function getApiConfig() {
             const ok = await authStore.silentRefresh()
             if (!ok) {
               authStore.logout()
-              if (route.path !== '/login') {
-                navigateTo({ path: '/login', query: { redirect: route.fullPath } })
+              const currentRoute = useNuxtApp().$router.currentRoute.value
+              if (currentRoute.path !== '/login') {
+                navigateTo({ path: '/login', query: { redirect: currentRoute.fullPath } })
               }
             }
           } finally {

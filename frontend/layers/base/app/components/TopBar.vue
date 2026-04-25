@@ -11,7 +11,12 @@
         <Menu class="size-6" />
       </button>
 
-      <CampusSelector />
+      <ClientOnly>
+        <CampusSelector />
+        <template #fallback>
+          <div class="h-9 min-w-40 rounded-lg border border-slate-200 bg-slate-50 md:min-w-55" />
+        </template>
+      </ClientOnly>
 
       <nav
         v-if="breadcrumb.section"
