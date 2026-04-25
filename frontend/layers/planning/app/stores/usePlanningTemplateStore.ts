@@ -5,6 +5,7 @@ import { PlanningRepository } from '../repositories/PlanningRepository'
 import type {
   GenerateSeriesForm,
   GenerateSeriesResponse,
+  PlanningTemplateCreate,
   PlanningTemplateFullUpdate,
   PlanningTemplateListItem,
   PlanningTemplateReadFull,
@@ -29,6 +30,14 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
     goToPage,
     resetPagination,
   } = usePagination(20)
+
+  async function createTemplate(
+    payload: PlanningTemplateCreate,
+  ): Promise<PlanningTemplateReadFull> {
+    const tpl = await repo.createTemplate(payload)
+    notify.success(`"${tpl.nom}" créé`)
+    return tpl
+  }
 
   async function fetchTemplates(ministereId?: string): Promise<void> {
     isLoading.value = true
@@ -109,6 +118,7 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
     hasPrev,
     goToPage,
     resetPagination,
+    createTemplate,
     fetchTemplates,
     fetchTemplate,
     updateTemplate,
