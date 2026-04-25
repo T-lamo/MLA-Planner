@@ -6,6 +6,8 @@
       identifierLabel="Identifiant"
       identifierPlaceholder="Ex: MLA-2024"
       passwordLabel="Mot de passe"
+      defaultIdentifier="demo"
+      defaultPassword="demo123!"
       :errorMessage="authError"
       @auth-submit="onLogin"
     >
