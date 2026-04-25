@@ -145,7 +145,9 @@ class SeedService:
                 self._seed_responsabilites(user_list, min_map, pole_map)
                 self._seed_planning_complet(act_map, user_list, today)
                 if demo_user:
-                    self._seed_demo_planning(act_map, demo_user, today)
+                    self._seed_demo_planning(
+                        str(campus_paris.id), min_map, demo_user, today
+                    )
 
                 # 6. SONGBOOK
                 self._seed_songbook(campus_paris.id)
@@ -868,93 +870,163 @@ class SeedService:
             self.db.flush()
         return slot
 
+    def _upsert_demo_activite(
+        self,
+        *,
+        campus_id: str,
+        activite_type: str,
+        ministere: Optional[Ministere],
+        date_debut: datetime,
+        date_fin: datetime,
+    ) -> Activite:
+        """Crée ou met à jour une activité démo dédiée (dates relatives à today)."""
+        min_id = str(ministere.id) if ministere else ""
+        act, created = self._get_or_create(
+            Activite,
+            type=activite_type,
+            defaults={
+                "campus_id": campus_id,
+                "lieu": "Salle principale",
+                "date_creation": date_debut,
+                "date_debut": date_debut,
+                "date_fin": date_fin,
+                "ministere_organisateur_id": min_id,
+            },
+        )
+        if not created:
+            act.date_debut = date_debut
+            act.date_fin = date_fin
+            self.db.add(act)
+            self.db.flush()
+        return act
+
+    def _upsert_demo_plan(self, activite_id: str) -> PlanningService:
+        """Crée ou force le statut PUBLIE d'un planning démo."""
+        plan, created = self._get_or_create(
+            PlanningService,
+            activite_id=activite_id,
+            defaults={"statut_code": "PUBLIE"},
+        )
+        if not created and plan.statut_code != "PUBLIE":
+            plan.statut_code = "PUBLIE"
+            self.db.add(plan)
+            self.db.flush()
+        return plan
+
+    def _seed_demo_activites(
+        self,
+        campus_id: str,
+        min_map: dict,
+        today: datetime,
+        d_end: datetime,
+    ) -> tuple[str, str, str]:
+        """Crée/met à jour les 3 activités démo dédiées, retourne leurs planning_ids."""
+        act_acc = self._upsert_demo_activite(
+            campus_id=campus_id,
+            activite_type="Demo Accueil Hebdo",
+            ministere=min_map.get("Accueil"),
+            date_debut=today,
+            date_fin=d_end,
+        )
+        act_lou = self._upsert_demo_activite(
+            campus_id=campus_id,
+            activite_type="Demo Louange Hebdo",
+            ministere=min_map.get("Louange et Adoration"),
+            date_debut=today,
+            date_fin=d_end,
+        )
+        act_jeu = self._upsert_demo_activite(
+            campus_id=campus_id,
+            activite_type="Demo Jeunesse Hebdo",
+            ministere=min_map.get("Jeunesse"),
+            date_debut=today,
+            date_fin=d_end,
+        )
+        return (
+            str(self._upsert_demo_plan(str(act_acc.id)).id),
+            str(self._upsert_demo_plan(str(act_lou.id)).id),
+            str(self._upsert_demo_plan(str(act_jeu.id)).id),
+        )
+
     def _seed_demo_planning(
-        self, act_map: dict, demo_user: Utilisateur, today: datetime
+        self,
+        campus_id: str,
+        min_map: dict,
+        demo_user: Utilisateur,
+        today: datetime,
     ) -> None:
-        """Affecte le compte démo à 3 ministères avec des dates toujours à jour."""
+        """Plannings dédiés au compte démo — dates toujours relatives à today."""
         if not demo_user.membre_id:
             return
         demo_id = str(demo_user.membre_id)
-        d_j0 = today
+        d_end = today + timedelta(days=25)
+        plan_acc_id, plan_lou_id, plan_jeu_id = self._seed_demo_activites(
+            campus_id, min_map, today, d_end
+        )
         d_j2 = today + timedelta(days=2)
         d_j3 = today + timedelta(days=3)
-        d_dim = today + timedelta(days=7)
-        d_mer = today + timedelta(days=10)
-        d_sam = today + timedelta(days=19)
-
-        self._seed_demo_j0(act_map, demo_id, d_j0)
-        self._seed_demo_j2(act_map, demo_id, d_j2)
-        self._seed_demo_j3(act_map, demo_id, d_j3)
-        self._seed_demo_accueil(act_map, demo_id, d_dim)
-        self._seed_demo_louange(act_map, demo_id, d_mer)
-        self._seed_demo_jeunesse(act_map, demo_id, d_sam)
-        self._seed_demo_affectations_extra(act_map, demo_id, d_dim)
+        d_j7 = today + timedelta(days=7)
+        d_j10 = today + timedelta(days=10)
+        self._seed_demo_j0(
+            demo_id,
+            today,
+            plan_acc_id=plan_acc_id,
+            plan_lou_id=plan_lou_id,
+            plan_jeu_id=plan_jeu_id,
+        )
+        self._seed_demo_j2(demo_id, d_j2, plan_acc_id=plan_acc_id)
+        self._seed_demo_j3(demo_id, d_j3, plan_lou_id=plan_lou_id)
+        self._seed_demo_accueil(demo_id, d_j7, plan_acc_id=plan_acc_id)
+        self._seed_demo_louange_culte(demo_id, d_j7, plan_lou_id=plan_lou_id)
+        self._seed_demo_louange(demo_id, d_j10, plan_lou_id=plan_lou_id)
+        self._seed_demo_louange_soir(
+            demo_id, today + timedelta(days=14), plan_lou_id=plan_lou_id
+        )
+        self._seed_demo_jeunesse(
+            demo_id, today + timedelta(days=19), plan_jeu_id=plan_jeu_id
+        )
         self._seed_demo_indisponibilites(demo_id, today)
 
-    def _seed_demo_j0(self, act_map: dict, demo_id: str, d_j0: datetime) -> None:
-        """3 activités aujourd'hui (J+0) — une par ministère, heures distinctes."""
-        # Accueil — 9h-11h
-        act_acc = act_map.get("Permanence Accueil Culte")
-        if act_acc:
-            plan_acc, _ = self._get_or_create(
-                PlanningService,
-                activite_id=act_acc.id,
-                defaults={"statut_code": "PUBLIE"},
-            )
-            slot_acc = self._upsert_slot(
-                planning_id=str(plan_acc.id),
-                nom_creneau="Accueil Démo — Matin J0",
-                date_debut=d_j0.replace(hour=9),
-                date_fin=d_j0.replace(hour=11),
-                nb_personnes_requis=2,
-            )
-            self._seed_affectation(str(slot_acc.id), demo_id, "HOTE_ACCUEIL")
-        # Louange — 14h-16h30
-        act_lou = act_map.get("Culte Dominical")
-        if act_lou:
-            plan_lou, _ = self._get_or_create(
-                PlanningService,
-                activite_id=act_lou.id,
-                defaults={"statut_code": "PUBLIE"},
-            )
-            slot_lou = self._upsert_slot(
-                planning_id=str(plan_lou.id),
-                nom_creneau="Louange Démo — Après-midi J0",
-                date_debut=d_j0.replace(hour=14),
-                date_fin=d_j0.replace(hour=16, minute=30),
-                nb_personnes_requis=3,
-            )
-            self._seed_affectation(
-                str(slot_lou.id), demo_id, "TENOR", statut="CONFIRME"
-            )
-        # Jeunesse — 18h-20h
-        act_jeu = act_map.get("Reunion Jeunesse")
-        if act_jeu:
-            plan_jeu, _ = self._get_or_create(
-                PlanningService,
-                activite_id=act_jeu.id,
-                defaults={"statut_code": "PUBLIE"},
-            )
-            slot_jeu = self._upsert_slot(
-                planning_id=str(plan_jeu.id),
-                nom_creneau="Jeunesse Démo — Soir J0",
-                date_debut=d_j0.replace(hour=18),
-                date_fin=d_j0.replace(hour=20),
-                nb_personnes_requis=2,
-            )
-            self._seed_affectation(
-                str(slot_jeu.id), demo_id, "ANIMATEUR_JEUNESSE", statut="PROPOSE"
-            )
-
-    def _seed_demo_j2(self, act_map: dict, demo_id: str, d_j2: datetime) -> None:
-        act = act_map.get("Permanence Accueil Culte")
-        if not act:
-            return
-        plan, _ = self._get_or_create(
-            PlanningService, activite_id=act.id, defaults={"statut_code": "PUBLIE"}
+    def _seed_demo_j0(
+        self,
+        demo_id: str,
+        today: datetime,
+        *,
+        plan_acc_id: str,
+        plan_lou_id: str,
+        plan_jeu_id: str,
+    ) -> None:
+        """3 slots aujourd'hui — Accueil 9h, Louange 14h, Jeunesse 18h."""
+        s_acc = self._upsert_slot(
+            planning_id=plan_acc_id,
+            nom_creneau="Accueil Démo — Matin J0",
+            date_debut=today.replace(hour=9),
+            date_fin=today.replace(hour=11),
+            nb_personnes_requis=2,
         )
+        self._seed_affectation(str(s_acc.id), demo_id, "HOTE_ACCUEIL")
+        s_lou = self._upsert_slot(
+            planning_id=plan_lou_id,
+            nom_creneau="Louange Démo — Après-midi J0",
+            date_debut=today.replace(hour=14),
+            date_fin=today.replace(hour=16, minute=30),
+            nb_personnes_requis=3,
+        )
+        self._seed_affectation(str(s_lou.id), demo_id, "TENOR", statut="CONFIRME")
+        s_jeu = self._upsert_slot(
+            planning_id=plan_jeu_id,
+            nom_creneau="Jeunesse Démo — Soir J0",
+            date_debut=today.replace(hour=18),
+            date_fin=today.replace(hour=20),
+            nb_personnes_requis=2,
+        )
+        self._seed_affectation(
+            str(s_jeu.id), demo_id, "ANIMATEUR_JEUNESSE", statut="PROPOSE"
+        )
+
+    def _seed_demo_j2(self, demo_id: str, d_j2: datetime, *, plan_acc_id: str) -> None:
         slot = self._upsert_slot(
-            planning_id=str(plan.id),
+            planning_id=plan_acc_id,
             nom_creneau="Accueil Démo — Préparation J+2",
             date_debut=d_j2.replace(hour=8),
             date_fin=d_j2.replace(hour=10),
@@ -962,15 +1034,9 @@ class SeedService:
         )
         self._seed_affectation(str(slot.id), demo_id, "HOTE_ACCUEIL", statut="CONFIRME")
 
-    def _seed_demo_j3(self, act_map: dict, demo_id: str, d_j3: datetime) -> None:
-        act = act_map.get("Culte Dominical")
-        if not act:
-            return
-        plan, _ = self._get_or_create(
-            PlanningService, activite_id=act.id, defaults={"statut_code": "PUBLIE"}
-        )
+    def _seed_demo_j3(self, demo_id: str, d_j3: datetime, *, plan_lou_id: str) -> None:
         slot = self._upsert_slot(
-            planning_id=str(plan.id),
+            planning_id=plan_lou_id,
             nom_creneau="Louange Démo — Répétition J+3",
             date_debut=d_j3.replace(hour=19),
             date_fin=d_j3.replace(hour=21),
@@ -978,90 +1044,67 @@ class SeedService:
         )
         self._seed_affectation(str(slot.id), demo_id, "TENOR", statut="PROPOSE")
 
-    def _seed_demo_accueil(self, act_map: dict, demo_id: str, d_dim: datetime) -> None:
-        act = act_map.get("Permanence Accueil Culte")
-        if not act:
-            return
-        plan, _ = self._get_or_create(
-            PlanningService, activite_id=act.id, defaults={"statut_code": "PUBLIE"}
-        )
+    def _seed_demo_accueil(
+        self, demo_id: str, d_j7: datetime, *, plan_acc_id: str
+    ) -> None:
         slot = self._upsert_slot(
-            planning_id=str(plan.id),
-            nom_creneau="Accueil Démo — Culte Matin",
-            date_debut=d_dim.replace(hour=8, minute=30),
-            date_fin=d_dim.replace(hour=11),
+            planning_id=plan_acc_id,
+            nom_creneau="Accueil Démo — Culte Matin J+7",
+            date_debut=d_j7.replace(hour=8, minute=30),
+            date_fin=d_j7.replace(hour=11),
             nb_personnes_requis=2,
         )
         self._seed_affectation(str(slot.id), demo_id, "HOTE_ACCUEIL")
 
-    def _seed_demo_louange(self, act_map: dict, demo_id: str, d_mer: datetime) -> None:
-        act = act_map.get("Repetition Chorale")
-        if not act:
-            return
-        plan, _ = self._get_or_create(
-            PlanningService, activite_id=act.id, defaults={"statut_code": "PUBLIE"}
-        )
+    def _seed_demo_louange_culte(
+        self, demo_id: str, d_j7: datetime, *, plan_lou_id: str
+    ) -> None:
         slot = self._upsert_slot(
-            planning_id=str(plan.id),
-            nom_creneau="Louange Démo — Répétition Chorale",
-            date_debut=d_mer.replace(hour=19),
-            date_fin=d_mer.replace(hour=21, minute=30),
+            planning_id=plan_lou_id,
+            nom_creneau="Louange Démo — Culte Soir J+7",
+            date_debut=d_j7.replace(hour=18),
+            date_fin=d_j7.replace(hour=21),
+            nb_personnes_requis=2,
+        )
+        self._seed_affectation(str(slot.id), demo_id, "TENOR", statut="CONFIRME")
+
+    def _seed_demo_louange(
+        self, demo_id: str, d_j10: datetime, *, plan_lou_id: str
+    ) -> None:
+        slot = self._upsert_slot(
+            planning_id=plan_lou_id,
+            nom_creneau="Louange Démo — Répétition Chorale J+10",
+            date_debut=d_j10.replace(hour=19),
+            date_fin=d_j10.replace(hour=21, minute=30),
             nb_personnes_requis=3,
         )
         self._seed_affectation(str(slot.id), demo_id, "TENOR", statut="PROPOSE")
 
-    def _seed_demo_jeunesse(self, act_map: dict, demo_id: str, d_sam: datetime) -> None:
-        act = act_map.get("Reunion Jeunesse")
-        if not act:
-            return
-        plan, _ = self._get_or_create(
-            PlanningService, activite_id=act.id, defaults={"statut_code": "PUBLIE"}
-        )
+    def _seed_demo_louange_soir(
+        self, demo_id: str, d_j14: datetime, *, plan_lou_id: str
+    ) -> None:
         slot = self._upsert_slot(
-            planning_id=str(plan.id),
-            nom_creneau="Jeunesse Démo — Session Ados",
-            date_debut=d_sam.replace(hour=14),
-            date_fin=d_sam.replace(hour=18),
+            planning_id=plan_lou_id,
+            nom_creneau="Louange Démo — Soirée Mensuelle J+14",
+            date_debut=d_j14.replace(hour=18),
+            date_fin=d_j14.replace(hour=22),
+            nb_personnes_requis=3,
+        )
+        self._seed_affectation(str(slot.id), demo_id, "ALTO", statut="CONFIRME")
+
+    def _seed_demo_jeunesse(
+        self, demo_id: str, d_j19: datetime, *, plan_jeu_id: str
+    ) -> None:
+        slot = self._upsert_slot(
+            planning_id=plan_jeu_id,
+            nom_creneau="Jeunesse Démo — Session Ados J+19",
+            date_debut=d_j19.replace(hour=14),
+            date_fin=d_j19.replace(hour=18),
             nb_personnes_requis=2,
         )
         self._seed_affectation(
             str(slot.id), demo_id, "ANIMATEUR_JEUNESSE", statut="CONFIRME"
         )
-
-    def _seed_demo_affectations_extra(
-        self, act_map: dict, demo_id: str, d_dim: datetime
-    ) -> None:
-        """Ajoute demo dans des slots existants : Louange Soir + Soirée Louange."""
-        act_cd = act_map.get("Culte Dominical")
-        if act_cd:
-            plan_cd = self.db.exec(
-                select(PlanningService).where(PlanningService.activite_id == act_cd.id)
-            ).first()
-            if plan_cd:
-                slot_soir = self.db.exec(
-                    select(Slot).where(
-                        Slot.planning_id == plan_cd.id,
-                        Slot.nom_creneau == "Équipe Louange Soir",
-                    )
-                ).first()
-                if slot_soir:
-                    self._seed_affectation(
-                        str(slot_soir.id), demo_id, "TENOR", statut="PROPOSE"
-                    )
-        act_sl = act_map.get("Soiree Louange Mensuelle")
-        if act_sl:
-            plan_sl = self.db.exec(
-                select(PlanningService).where(PlanningService.activite_id == act_sl.id)
-            ).first()
-            if plan_sl:
-                slot_louange = self.db.exec(
-                    select(Slot).where(
-                        Slot.planning_id == plan_sl.id,
-                        Slot.nom_creneau == "Louange du Soir",
-                    )
-                ).first()
-                if slot_louange:
-                    self._seed_affectation(str(slot_louange.id), demo_id, "ALTO")
 
     def _seed_demo_indisponibilites(self, demo_id: str, today: datetime) -> None:
         """Crée des indisponibilités démo avec dates relatives à today (upsert)."""
