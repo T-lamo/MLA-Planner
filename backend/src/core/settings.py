@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     SUPERADMIN_USERNAME: str = "superadmin"
     SUPERADMIN_PASSWORD: Optional[str] = None  # Obligatoire en production
 
+    # --- COMPTE DÉMO (lecture seule) ---
+    DEMO_USERNAME: str = "demo"
+
     # --- MAIL CONFIG (Nouveautés) ---
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587

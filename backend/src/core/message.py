@@ -326,6 +326,11 @@ class ErrorRegistry:
         ),
         http_status=status.HTTP_422_UNPROCESSABLE_CONTENT,
     )
+    AUTH_DEMO_READONLY = ErrorDetail(
+        code="AUTH_010",
+        message="Le compte démo ne peut pas modifier son mot de passe.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
 
     # --- DOMAINE RÔLES ET CATÉGORIES (ROLE) ---
     ROLE_CAT_INVALID_CODE = ErrorDetail(

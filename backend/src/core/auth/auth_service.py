@@ -171,6 +171,9 @@ class AuthService:
         if not user:
             raise AppException(ErrorRegistry.AUTH_USER_NOT_FOUND)
 
+        if user.username == stng.DEMO_USERNAME:
+            raise AppException(ErrorRegistry.AUTH_DEMO_READONLY)
+
         if not verify_password(current_password, user.password):
             raise AppException(ErrorRegistry.AUTH_CURRENT_PASSWORD_INCORRECT)
 

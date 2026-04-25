@@ -875,12 +875,14 @@ class SeedService:
         if not demo_user.membre_id:
             return
         demo_id = str(demo_user.membre_id)
+        d_j0 = today
         d_j2 = today + timedelta(days=2)
         d_j3 = today + timedelta(days=3)
         d_dim = today + timedelta(days=7)
         d_mer = today + timedelta(days=10)
         d_sam = today + timedelta(days=19)
 
+        self._seed_demo_j0(act_map, demo_id, d_j0)
         self._seed_demo_j2(act_map, demo_id, d_j2)
         self._seed_demo_j3(act_map, demo_id, d_j3)
         self._seed_demo_accueil(act_map, demo_id, d_dim)
@@ -888,6 +890,61 @@ class SeedService:
         self._seed_demo_jeunesse(act_map, demo_id, d_sam)
         self._seed_demo_affectations_extra(act_map, demo_id, d_dim)
         self._seed_demo_indisponibilites(demo_id, today)
+
+    def _seed_demo_j0(self, act_map: dict, demo_id: str, d_j0: datetime) -> None:
+        """3 activités aujourd'hui (J+0) — une par ministère, heures distinctes."""
+        # Accueil — 9h-11h
+        act_acc = act_map.get("Permanence Accueil Culte")
+        if act_acc:
+            plan_acc, _ = self._get_or_create(
+                PlanningService,
+                activite_id=act_acc.id,
+                defaults={"statut_code": "PUBLIE"},
+            )
+            slot_acc = self._upsert_slot(
+                planning_id=str(plan_acc.id),
+                nom_creneau="Accueil Démo — Matin J0",
+                date_debut=d_j0.replace(hour=9),
+                date_fin=d_j0.replace(hour=11),
+                nb_personnes_requis=2,
+            )
+            self._seed_affectation(str(slot_acc.id), demo_id, "HOTE_ACCUEIL")
+        # Louange — 14h-16h30
+        act_lou = act_map.get("Culte Dominical")
+        if act_lou:
+            plan_lou, _ = self._get_or_create(
+                PlanningService,
+                activite_id=act_lou.id,
+                defaults={"statut_code": "PUBLIE"},
+            )
+            slot_lou = self._upsert_slot(
+                planning_id=str(plan_lou.id),
+                nom_creneau="Louange Démo — Après-midi J0",
+                date_debut=d_j0.replace(hour=14),
+                date_fin=d_j0.replace(hour=16, minute=30),
+                nb_personnes_requis=3,
+            )
+            self._seed_affectation(
+                str(slot_lou.id), demo_id, "TENOR", statut="CONFIRME"
+            )
+        # Jeunesse — 18h-20h
+        act_jeu = act_map.get("Reunion Jeunesse")
+        if act_jeu:
+            plan_jeu, _ = self._get_or_create(
+                PlanningService,
+                activite_id=act_jeu.id,
+                defaults={"statut_code": "PUBLIE"},
+            )
+            slot_jeu = self._upsert_slot(
+                planning_id=str(plan_jeu.id),
+                nom_creneau="Jeunesse Démo — Soir J0",
+                date_debut=d_j0.replace(hour=18),
+                date_fin=d_j0.replace(hour=20),
+                nb_personnes_requis=2,
+            )
+            self._seed_affectation(
+                str(slot_jeu.id), demo_id, "ANIMATEUR_JEUNESSE", statut="PROPOSE"
+            )
 
     def _seed_demo_j2(self, act_map: dict, demo_id: str, d_j2: datetime) -> None:
         act = act_map.get("Permanence Accueil Culte")
