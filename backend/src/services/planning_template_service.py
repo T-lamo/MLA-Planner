@@ -115,12 +115,13 @@ class PlanningTemplateSvc:
         )
 
     def _resolve_campus_filter(self, user: Utilisateur) -> Optional[str]:
-        """Retourne le campus_id à filtrer (None pour super admin sans campus)."""
+        """Retourne le campus_id à filtrer (None pour admin sans campus).
+
+        Pour les utilisateurs en lecture seule sans campus_principal_id,
+        on retourne None et la visibilité naturelle filtrera à zéro résultat.
+        """
         membre = user.membre
-        campus_id = membre.campus_principal_id if membre else None
-        if not campus_id and not _is_admin_or_super(user):
-            raise AppException(ErrorRegistry.TMPL_005)
-        return campus_id
+        return membre.campus_principal_id if membre else None
 
     def _is_visible(
         self,

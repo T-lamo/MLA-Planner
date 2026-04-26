@@ -48,6 +48,9 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
       })
       templates.value = res.data
       setTotal(res.total)
+    } catch (err) {
+      notify.error('Impossible de charger les templates')
+      throw err
     } finally {
       isLoading.value = false
     }

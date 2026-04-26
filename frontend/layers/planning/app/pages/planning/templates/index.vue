@@ -26,11 +26,11 @@ const deleteTarget = ref<string | null>(null)
 const isDeleting = ref(false)
 const generateSerieTarget = ref<{ id: string; nom: string } | null>(null)
 
-onMounted(() => templateStore.fetchTemplates())
+onMounted(() => templateStore.fetchTemplates().catch(() => {}))
 
 watch(ministereFilter, (v) => {
   templateStore.resetPagination()
-  templateStore.fetchTemplates(v || undefined)
+  templateStore.fetchTemplates(v || undefined).catch(() => {})
 })
 
 function relativeDate(iso: string | null): string {
