@@ -32,7 +32,7 @@ from services.chant_service import ChantCategorieService, ChantService
 router = APIRouter(prefix="/chants", tags=["Songbook"])
 
 _DB = Depends(Database.get_db_for_route)
-_ALL_ROLES = ["SUPER_ADMIN", "ADMIN", "RESPONSABLE_MLA", "MEMBRE_MLA"]
+_ALL_ROLES = ["SUPER_ADMIN", "ADMIN", "RESPONSABLE_MLA", "MEMBRE_MLA", "DEMO"]
 _WRITE_ROLES = ["SUPER_ADMIN", "ADMIN", "RESPONSABLE_MLA"]
 _CASBIN_READ = Depends(CasbinGuard("chants", "read", fallback_roles=_ALL_ROLES))
 _CASBIN_WRITE = Depends(CasbinGuard("chants", "write", fallback_roles=_WRITE_ROLES))

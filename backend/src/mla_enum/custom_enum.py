@@ -6,6 +6,7 @@ class RoleName(str, Enum):
     ADMIN = "Admin"
     RESPONSABLE_MLA = "Responsable MLA"
     MEMBRE_MLA = "Membre MLA"
+    DEMO = "Demo"
 
 
 class VoixEnum(str, Enum):

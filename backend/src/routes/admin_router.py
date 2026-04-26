@@ -34,7 +34,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 _DB = Depends(Database.get_db_for_route)
 _READ_GUARD = Depends(
-    CasbinGuard("admin", "read", fallback_roles=["ADMIN", "SUPER_ADMIN"])
+    CasbinGuard("admin", "read", fallback_roles=["ADMIN", "SUPER_ADMIN", "DEMO"])
 )
 _WRITE_GUARD = Depends(
     CasbinGuard("admin", "write", fallback_roles=["ADMIN", "SUPER_ADMIN"])

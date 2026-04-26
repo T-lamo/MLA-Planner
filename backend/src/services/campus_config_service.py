@@ -617,7 +617,7 @@ class CampusConfigService:  # pylint: disable=too-many-public-methods
             raise AppException(ErrorRegistry.CONF_MINISTERE_LINK_NOT_FOUND)
         roles: List[Role] = []
         created_count = 0
-        for role_name in [rn.value for rn in RoleName]:
+        for role_name in [rn.value for rn in RoleName if rn != RoleName.DEMO]:
             role, created = self._find_or_create_rbac_role(role_name)
             roles.append(role)
             if created:

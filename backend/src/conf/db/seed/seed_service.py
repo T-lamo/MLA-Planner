@@ -793,10 +793,10 @@ class SeedService:
         min_map: dict,
         pole_map: dict,
     ) -> Utilisateur | None:
-        """Crée le compte démo (Membre MLA, lecture seule, idempotent)."""
+        """Crée le compte démo (rôle Demo, lecture seule, idempotent)."""
         self.logger.info("🎭 Compte démo...")
-        membre_mla_role = role_map.get("Membre MLA")
-        if not membre_mla_role:
+        demo_role = role_map.get("Demo")
+        if not demo_role:
             return None
         user, _ = self._get_or_create(
             Utilisateur,
@@ -807,7 +807,7 @@ class SeedService:
             },
         )
         self._get_or_create(
-            AffectationRole, utilisateur_id=user.id, role_id=membre_mla_role.id
+            AffectationRole, utilisateur_id=user.id, role_id=demo_role.id
         )
         membre, _ = self._get_or_create(
             Membre,
