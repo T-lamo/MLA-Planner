@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import Session
 
 from conf.db.database import Database
-from core.auth.auth_dependencies import RoleChecker, get_current_active_user
+from core.auth.auth_dependencies import CapabilityChecker, get_current_active_user
 from models import Utilisateur
 from models.base_pagination import PaginatedResponse
 from models.indisponibilite_model import (
@@ -19,7 +19,7 @@ from services.indisponibilite_service import IndisponibiliteService
 
 router = APIRouter(prefix="/indisponibilites", tags=["Indisponibilités"])
 
-admin_or_resp = Depends(RoleChecker(["ADMIN", "RESPONSABLE_MLA"]))
+admin_or_resp = Depends(CapabilityChecker(["PLANNING_WRITE"]))
 
 
 # ------------------------------------------------------------------

@@ -49,7 +49,11 @@ export const useAuthStore = defineStore('auth', () => {
   const canDeleteMembres = computed(() => can('MEMBRE_DELETE'))
 
   /** Droits module Carnet de chants. */
+  const canReadChants = computed(() => can('CHANT_READ'))
   const canManageChants = computed(() => can('CHANT_WRITE'))
+
+  /** Droits module Templates. */
+  const canReadTemplates = computed(() => can('TEMPLATE_READ'))
 
   /** Droits module Planning — indépendant de canManageChants. */
   const canManagePlanning = computed(() => can('PLANNING_WRITE'))
@@ -164,7 +168,9 @@ export const useAuthStore = defineStore('auth', () => {
     canCreateMembres,
     canUpdateMembres,
     canDeleteMembres,
+    canReadChants,
     canManageChants,
+    canReadTemplates,
     canManagePlanning,
     can,
     currentUser,

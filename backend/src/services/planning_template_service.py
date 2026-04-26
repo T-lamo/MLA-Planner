@@ -14,6 +14,7 @@ from core.message import ErrorRegistry
 from mla_enum import RoleName
 from models.planning_template_model import (
     ApplyTemplateResult,
+    PlanningTemplateCreate,
     PlanningTemplateFullUpdate,
     PlanningTemplateListItem,
     PlanningTemplateRead,
@@ -114,12 +115,13 @@ class PlanningTemplateSvc:
         )
 
     def _resolve_campus_filter(self, user: Utilisateur) -> Optional[str]:
-        """Retourne le campus_id à filtrer (None pour super admin sans campus)."""
+        """Retourne le campus_id à filtrer (None pour admin sans campus).
+
+        Pour les utilisateurs en lecture seule sans campus_principal_id,
+        on retourne None et la visibilité naturelle filtrera à zéro résultat.
+        """
         membre = user.membre
-        campus_id = membre.campus_principal_id if membre else None
-        if not campus_id and not _is_admin_or_super(user):
-            raise AppException(ErrorRegistry.TMPL_005)
-        return campus_id
+        return membre.campus_principal_id if membre else None
 
     def _is_visible(
         self,
@@ -271,6 +273,39 @@ class PlanningTemplateSvc:
         self.db.flush()
         for slot in planning.slots:
             self._add_template_slot(template.id, slot, activite)
+        self.db.flush()
+        return self.get_template(template.id)
+
+    # ── Création vierge depuis la bibliothèque ────────────────────────
+
+    def create_template(
+        self,
+        data: PlanningTemplateCreate,
+        user: Utilisateur,
+    ) -> PlanningTemplateRead:
+        """Crée un template vierge en résolvant campus/ministère depuis l'user."""
+        membre = user.membre
+        if not membre:
+            raise AppException(ErrorRegistry.TMPL_005)
+        ministere_id = str(membre.ministeres[0].id) if membre.ministeres else None
+        campus_id = membre.campus_principal_id
+        if not ministere_id or not campus_id:
+            raise AppException(ErrorRegistry.TMPL_005)
+        created_by_id = str(user.membre_id or "")
+        template = PlanningTemplate(
+            nom=data.nom,
+            description=data.description,
+            activite_type=data.activite_type,
+            duree_minutes=data.duree_minutes,
+            campus_id=campus_id,
+            ministere_id=ministere_id,
+            created_by_id=created_by_id,
+            visibilite=data.visibilite,
+        )
+        self.db.add(template)
+        self.db.flush()
+        for slot_write in data.slots:
+            self._create_slot_from_write(template.id, slot_write)
         self.db.flush()
         return self.get_template(template.id)
 

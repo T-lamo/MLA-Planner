@@ -14,6 +14,7 @@ from sqlmodel import Session, delete, select
 from conf.db.database import Database
 from core.audit import audit
 from core.auth.auth_dependencies import CasbinGuard, get_current_active_user
+from core.auth.casbin_enforcer import build_enforcer
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models import Utilisateur
@@ -34,7 +35,7 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 _DB = Depends(Database.get_db_for_route)
 _READ_GUARD = Depends(
-    CasbinGuard("admin", "read", fallback_roles=["ADMIN", "SUPER_ADMIN"])
+    CasbinGuard("admin", "read", fallback_roles=["ADMIN", "SUPER_ADMIN", "DEMO"])
 )
 _WRITE_GUARD = Depends(
     CasbinGuard("admin", "write", fallback_roles=["ADMIN", "SUPER_ADMIN"])
@@ -191,4 +192,5 @@ def update_role_permissions(
         role_id=role_id,
         permissions=",".join(payload.permission_codes),
     )
+    build_enforcer(db)
     return _role_to_read(updated)

@@ -411,6 +411,15 @@ export interface PlanningTemplateFullUpdate {
   slots: PlanningTemplateSlotWrite[]
 }
 
+export interface PlanningTemplateCreate {
+  nom: string
+  description?: string | null
+  activite_type?: string | null
+  duree_minutes?: number
+  visibilite?: VisibiliteTemplate
+  slots: PlanningTemplateSlotWrite[]
+}
+
 /** Item affectation dans le formulaire */
 export interface AffectationFormItem {
   _tempId: string
