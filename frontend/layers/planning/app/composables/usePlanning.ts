@@ -119,7 +119,7 @@ export const usePlanning = () => {
 
   async function ensureProfile(): Promise<void> {
     if (myProfile.value) return
-    if (authStore.isSuperAdmin) return
+    if (!authStore.currentUser?.membreId) return
     myProfile.value = await profileRepo.getMyProfile()
   }
 
@@ -142,7 +142,7 @@ export const usePlanning = () => {
 
   async function refresh(): Promise<void> {
     if (!authStore.isAuthenticated) return
-    if (authStore.isSuperAdmin) return
+    if (!authStore.currentUser?.membreId) return
     if (isLoading.value) return
     isLoading.value = true
     error.value = null

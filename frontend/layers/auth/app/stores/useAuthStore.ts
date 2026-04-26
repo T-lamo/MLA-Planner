@@ -37,7 +37,7 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value?.capabilities?.includes(capability) ?? false
   }
 
-  const isSuperAdmin = computed(() => can('SYSTEM_MANAGE'))
+  const isSuperAdmin = computed(() => can('SYSTEM_MANAGE') && !user.value?.membreId)
   const isAdmin = computed(() => can('CAMPUS_ADMIN') && !can('SYSTEM_MANAGE'))
   const isResponsableMLA = computed(() => can('PLANNING_WRITE') && !can('CAMPUS_ADMIN'))
   const hasAdminAccess = computed(() => can('CAMPUS_ADMIN'))
