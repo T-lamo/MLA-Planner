@@ -8,7 +8,6 @@ from sqlmodel import Session
 from conf.db.database import Database
 from core.auth.auth_dependencies import (
     CapabilityChecker,
-    RoleChecker,
     get_current_active_user,
 )
 from core.exceptions.app_exception import AppException
@@ -38,7 +37,7 @@ router = APIRouter(
     tags=["PlanningTemplates"],
 )
 
-_WRITE_ROLES = RoleChecker(["RESPONSABLE_MLA", "ADMIN", "Super Admin"])
+_WRITE_ROLES = CapabilityChecker(["TEMPLATE_WRITE"])
 # Lecture : tout utilisateur avec TEMPLATE_READ ou TEMPLATE_WRITE
 _READ_CHECK = CapabilityChecker(["TEMPLATE_READ", "TEMPLATE_WRITE"])
 

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, status
 from sqlmodel import Session
 
 from conf.db.database import Database
-from core.auth.auth_dependencies import RoleChecker
+from core.auth.auth_dependencies import CapabilityChecker
 from models.campus_config_model import (
     BatchActivateResult,
     CampusConfigSummary,
@@ -43,7 +43,7 @@ from services.campus_config_service import CampusConfigService
 router = APIRouter(
     prefix="/config",
     tags=["Configuration"],
-    dependencies=[Depends(RoleChecker(["Super Admin"]))],
+    dependencies=[Depends(CapabilityChecker(["SYSTEM_MANAGE"]))],
 )
 
 _DB = Depends(Database.get_db_for_route)

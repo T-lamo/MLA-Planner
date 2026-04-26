@@ -1,10 +1,10 @@
 from fastapi import Depends
 
-from core.auth.auth_dependencies import RoleChecker
+from core.auth.auth_dependencies import CapabilityChecker
 
 # Instance réutilisable pour le checker
-admin_only = Depends(RoleChecker(["ADMIN"]))
-super_admin_only = Depends(RoleChecker(["SUPER_ADMIN"]))
+admin_only = Depends(CapabilityChecker(["CAMPUS_ADMIN"]))
+super_admin_only = Depends(CapabilityChecker(["SYSTEM_MANAGE"]))
 
 # Configuration standard des accès CRUD
 STANDARD_ADMIN_ONLY_DEPS = {
