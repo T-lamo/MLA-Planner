@@ -39,7 +39,7 @@ export interface AuthUser {
   id: string
   username: string
   isActive: boolean
-  membreId: string
+  membreId: string | null
   campusPrincipalId?: string | null
   roles: string[]
   capabilities: string[]
