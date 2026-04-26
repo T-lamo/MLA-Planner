@@ -25,8 +25,11 @@ _PERMISSION_TO_CASBIN: dict[str, list[tuple[str, str]]] = {
     "PLANNING_READ": [("planning", "read")],
     "PLANNING_WRITE": [("planning", "write"), ("planning", "read")],
     "PLANNING_PUBLISH": [("planning", "write")],
+    "TEMPLATE_READ": [("planning-templates", "read")],
+    "TEMPLATE_WRITE": [("planning-templates", "write"), ("planning-templates", "read")],
     "CAMPUS_ADMIN": [("admin", "read"), ("admin", "write")],
-    "ROLE_MANAGE": [("admin", "read"), ("admin", "write")],
+    "ROLE_READ": [("admin", "read")],
+    "ROLE_WRITE": [("admin", "read"), ("admin", "write")],
     "SYSTEM_MANAGE": [("*", "*")],
 }
 
@@ -67,6 +70,10 @@ def _add_default_policies(enf: casbin.Enforcer) -> None:
         (RoleName.RESPONSABLE_MLA.name, WILDCARD_DOMAIN, "planning", "write"),
         (RoleName.MEMBRE_MLA.name, WILDCARD_DOMAIN, "chants", "read"),
         (RoleName.MEMBRE_MLA.name, WILDCARD_DOMAIN, "planning", "read"),
+        # Rôle Demo — lecture seule sur toutes les briques
+        (RoleName.DEMO.name, WILDCARD_DOMAIN, "chants", "read"),
+        (RoleName.DEMO.name, WILDCARD_DOMAIN, "planning", "read"),
+        (RoleName.DEMO.name, WILDCARD_DOMAIN, "admin", "read"),
     ]
     for role, dom, obj, act in policies:
         enf.add_policy(role, dom, obj, act)

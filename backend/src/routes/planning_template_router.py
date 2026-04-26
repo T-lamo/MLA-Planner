@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session
 
 from conf.db.database import Database
-from core.auth.auth_dependencies import RoleChecker, get_current_active_user
+from core.auth.auth_dependencies import (
+    CapabilityChecker,
+    RoleChecker,
+    get_current_active_user,
+)
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from models import DataResponse, Utilisateur
@@ -35,6 +39,8 @@ router = APIRouter(
 )
 
 _WRITE_ROLES = RoleChecker(["RESPONSABLE_MLA", "ADMIN", "Super Admin"])
+# Lecture : tout utilisateur avec TEMPLATE_READ ou TEMPLATE_WRITE
+_READ_CHECK = CapabilityChecker(["TEMPLATE_READ", "TEMPLATE_WRITE"])
 
 
 def _get_svc(db: Session = Depends(Database.get_db_for_route)) -> PlanningTemplateSvc:
@@ -132,7 +138,7 @@ def save_planning_as_template(
 @router.get(
     "/by-campus/{campus_id}",
     response_model=PaginatedResponse[PlanningTemplateRead],
-    dependencies=[Depends(_WRITE_ROLES)],
+    dependencies=[Depends(_READ_CHECK)],
 )
 def list_templates_by_campus(
     campus_id: str,
@@ -155,7 +161,7 @@ def list_templates_by_campus(
 @router.get(
     "/by-ministere/{ministere_id}",
     response_model=PaginatedResponse[PlanningTemplateRead],
-    dependencies=[Depends(_WRITE_ROLES)],
+    dependencies=[Depends(_READ_CHECK)],
 )
 def list_templates_by_ministere(
     ministere_id: str,
@@ -193,7 +199,7 @@ def create_template(
 @router.get(
     "",
     response_model=PaginatedResponse[PlanningTemplateListItem],
-    dependencies=[Depends(_WRITE_ROLES)],
+    dependencies=[Depends(_READ_CHECK)],
 )
 def list_templates(
     ministere_id: Optional[str] = None,
@@ -216,7 +222,7 @@ def list_templates(
 @router.get(
     "/{template_id}",
     response_model=DataResponse[PlanningTemplateRead],
-    dependencies=[Depends(_WRITE_ROLES)],
+    dependencies=[Depends(_READ_CHECK)],
 )
 def get_template(
     template_id: str,

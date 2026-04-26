@@ -112,8 +112,30 @@ def test_superadmin(session: Session) -> Utilisateur:
 
 @pytest.fixture
 def admin_headers(test_admin):
-    # Remplace par ta vraie fonction de création de token
-    token, _ = create_access_token(data={"sub": test_admin.username})
+    admin_caps = [
+        "CAMPUS_ADMIN",
+        "MEMBRE_READ",
+        "MEMBRE_CREATE",
+        "MEMBRE_UPDATE",
+        "MEMBRE_DELETE",
+        "CHANT_READ",
+        "CHANT_WRITE",
+        "PLANNING_READ",
+        "PLANNING_WRITE",
+        "TEMPLATE_READ",
+        "TEMPLATE_WRITE",
+        "ROLE_READ",
+        "ROLE_WRITE",
+        "MINISTERE_READ",
+        "MINISTERE_WRITE",
+        "POLE_READ",
+        "POLE_WRITE",
+        "ACTIVITE_READ",
+        "ACTIVITE_WRITE",
+    ]
+    token, _ = create_access_token(
+        data={"sub": test_admin.username, "capabilities": admin_caps}
+    )
     return {"Authorization": f"Bearer {token}"}
 
 

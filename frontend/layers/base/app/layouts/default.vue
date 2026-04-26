@@ -93,7 +93,7 @@
                   class="pl-9"
                 />
                 <SidebarLink
-                  v-if="authStore.canManageChants"
+                  v-if="authStore.canReadTemplates"
                   to="/planning/templates"
                   :icon="LayoutTemplate"
                   label="Templates"
