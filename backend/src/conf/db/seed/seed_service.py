@@ -756,6 +756,8 @@ class SeedService:
         users = []
         membre_idx = 0
         for rn, role in rm.items():
+            if rn == "Demo":
+                continue  # compte démo créé séparément par _seed_demo_user
             if rn == "Super Admin":
                 u, _ = self._get_or_create(
                     Utilisateur,
