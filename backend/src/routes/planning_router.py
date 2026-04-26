@@ -5,7 +5,7 @@ from sqlmodel import Session
 
 from conf.db.database import Database
 from core.auth.auth_dependencies import (
-    RoleChecker,
+    CapabilityChecker,
     get_active_campus,
     get_current_active_user,
 )
@@ -36,7 +36,7 @@ from services.slot_service import SlotService
 from .base_route_factory import CRUDRouterFactory
 
 # Dépendance partagée pour la gestion du planning (RESPONSABLE+ requis)
-planning_manager = Depends(RoleChecker(["RESPONSABLE_MLA", "ADMIN", "Super Admin"]))
+planning_manager = Depends(CapabilityChecker(["PLANNING_WRITE"]))
 
 # Configuration du Router Factory pour Planning
 factory = CRUDRouterFactory(

@@ -5,7 +5,7 @@ from fastapi import Depends, status
 from sqlmodel import Session, select
 
 from conf.db.database import Database
-from core.auth.auth_dependencies import RoleChecker, get_current_active_user
+from core.auth.auth_dependencies import get_current_active_user
 from models import MembreCreate, MembreRead, MembreUpdate, Utilisateur, UtilisateurRead
 
 # MembreSimple et MembreSimpleWithRoles définis dans membre_model (hors __init__)
@@ -17,8 +17,6 @@ from routes.deps import STANDARD_ADMIN_ONLY_DEPS
 from services.membre_service import MembreService
 
 from .base_route_factory import CRUDRouterFactory
-
-admin_only = Depends(RoleChecker(["ADMIN"]))
 
 factory = CRUDRouterFactory(
     service_class=MembreService,
