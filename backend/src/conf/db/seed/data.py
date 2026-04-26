@@ -274,12 +274,23 @@ USER_PASSWORD = "plan123!"
 DEMO_USERNAME = "demo"
 DEMO_PASSWORD = "Demo@2025!mla"
 DEMO_MEMBRE_INFO: MembreInfo = {
-    "nom": "Visiteur",
-    "prenom": "Demo",
+    "nom": "Leblanc",
+    "prenom": "Thomas",
     "email": "demo@plannerchurch.com",
     "roles": ["HOTE_ACCUEIL", "ANIMATEUR_JEUNESSE", "TENOR"],
-    "campus_names": ["Campus Toulouse"],
-    "ministere_names": ["Accueil", "Louange et Adoration", "Jeunesse"],
+    "campus_names": ["Campus Toulouse", "Campus Cugnaux"],
+    "ministere_names": [
+        "Accueil",
+        "Louange et Adoration",
+        "Jeunesse",
+        "Technique",
+        "Enseignement",
+        "Intercession",
+        "Communication",
+        "Intendance",
+        "MCAD",
+        "Sonorisation",
+    ],
     "pole_names": ["Ushers", "Chorale", "Ados"],
 }
 
