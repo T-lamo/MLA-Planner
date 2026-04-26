@@ -17,6 +17,7 @@ from core.auth.auth_dependencies import CasbinGuard, get_current_active_user
 from core.auth.casbin_enforcer import build_enforcer
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
+from mla_enum import RoleName
 from models import Utilisateur
 from models.permission_model import (
     PermissionCodeRead,
@@ -40,6 +41,15 @@ _READ_GUARD = Depends(
 _WRITE_GUARD = Depends(
     CasbinGuard("admin", "write", fallback_roles=["ADMIN", "SUPER_ADMIN"])
 )
+
+
+_PROTECTED_ROLES = {RoleName.SUPER_ADMIN.value}
+
+
+def _assert_not_protected(role: Role) -> None:
+    """Lève CORE_SYSTEM_ROLE_PROTECTED si le rôle est un rôle système."""
+    if role.libelle in _PROTECTED_ROLES:
+        raise AppException(ErrorRegistry.CORE_SYSTEM_ROLE_PROTECTED)
 
 
 def _role_to_read(role: Role) -> RoleWithPermissionsRead:
@@ -102,6 +112,8 @@ def create_role(
     db: Session = _DB,
     current_user: Utilisateur = Depends(get_current_active_user),
 ) -> RoleWithPermissionsRead:
+    if payload.libelle in _PROTECTED_ROLES:
+        raise AppException(ErrorRegistry.CORE_SYSTEM_ROLE_PROTECTED)
     existing = db.exec(
         select(Role).where(cast(Any, Role.libelle) == payload.libelle)
     ).first()
@@ -129,6 +141,7 @@ def delete_role(
     role = db.get(Role, role_id)
     if not role:
         raise AppException(ErrorRegistry.CORE_RESOURCE_NOT_FOUND)
+    _assert_not_protected(role)
     has_affectations = db.exec(
         select(AffectationRole).where(cast(Any, AffectationRole.role_id) == role_id)
     ).first()
@@ -163,6 +176,7 @@ def update_role_permissions(
     role = db.get(Role, role_id)
     if not role:
         raise AppException(ErrorRegistry.CORE_RESOURCE_NOT_FOUND)
+    _assert_not_protected(role)
 
     db.exec(  # type: ignore[call-overload]
         delete(RolePermission).where(cast(Any, RolePermission.role_id) == role_id)
