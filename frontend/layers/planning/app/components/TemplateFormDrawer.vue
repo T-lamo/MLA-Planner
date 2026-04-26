@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { Plus, Trash2, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-vue-next'
 import { usePlanningTemplateStore } from '../stores/usePlanningTemplateStore'
@@ -12,9 +12,7 @@ import type {
   VisibiliteTemplate,
 } from '../types/planning.types'
 
-const props = defineProps<{
-  templateId: string | null
-}>()
+const props = defineProps<{ templateId: string | null }>()
 
 const emit = defineEmits<{
   (e: 'close' | 'saved'): void
@@ -24,6 +22,9 @@ const templateStore = usePlanningTemplateStore()
 const { selectedTemplate, isLoading } = storeToRefs(templateStore)
 const repo = new PlanningRepository()
 
+const isOpen = computed(() => props.templateId !== null)
+const isCreateMode = computed(() => props.templateId === 'new')
+
 interface SlotForm extends PlanningTemplateSlotWrite {
   _tempId: string
 }
@@ -31,9 +32,18 @@ interface SlotForm extends PlanningTemplateSlotWrite {
 const form = reactive<{
   nom: string
   description: string
+  activite_type: string
+  duree_minutes: number
   visibilite: VisibiliteTemplate
   slots: SlotForm[]
-}>({ nom: '', description: '', visibilite: 'MINISTERE', slots: [] })
+}>({
+  nom: '',
+  description: '',
+  activite_type: '',
+  duree_minutes: 120,
+  visibilite: 'MINISTERE',
+  slots: [],
+})
 
 const isSaving = ref(false)
 const loadError = ref<string | null>(null)
@@ -41,23 +51,18 @@ const membresDisponibles = ref<MembreSimple[]>([])
 const rolesCompetences = ref<RoleCompetenceRead[]>([])
 const roleErrors = ref<Record<string, string | null>>({})
 
-async function loadMembres(ministereId: string) {
-  try {
-    membresDisponibles.value = await repo.getMembersByMinistere(ministereId)
-  } catch {
-    membresDisponibles.value = []
-  }
+function resetForm() {
+  form.nom = ''
+  form.description = ''
+  form.activite_type = ''
+  form.duree_minutes = 120
+  form.visibilite = 'MINISTERE'
+  form.slots = []
+  roleErrors.value = {}
+  membresDisponibles.value = []
 }
 
-async function loadRoles() {
-  try {
-    rolesCompetences.value = await repo.getRoleCompetences()
-  } catch {
-    rolesCompetences.value = []
-  }
-}
-
-function populateForm() {
+function populateFromTemplate() {
   const tpl = selectedTemplate.value
   if (!tpl) return
   form.nom = tpl.nom
@@ -78,14 +83,36 @@ function populateForm() {
   }))
 }
 
+async function loadRoles() {
+  if (rolesCompetences.value.length > 0) return
+  try {
+    rolesCompetences.value = await repo.getRoleCompetences()
+  } catch {
+    rolesCompetences.value = []
+  }
+}
+
+async function loadMembres(ministereId: string) {
+  try {
+    membresDisponibles.value = await repo.getMembersByMinistere(ministereId)
+  } catch {
+    membresDisponibles.value = []
+  }
+}
+
 watch(
   () => props.templateId,
   async (id) => {
     if (!id) return
     loadError.value = null
+    resetForm()
+    if (id === 'new') {
+      await loadRoles()
+      return
+    }
     try {
       await templateStore.fetchTemplate(id)
-      populateForm()
+      populateFromTemplate()
       await Promise.all([
         loadRoles(),
         selectedTemplate.value?.ministere_id
@@ -98,6 +125,8 @@ watch(
   },
   { immediate: true },
 )
+
+// ── Slots ──────────────────────────────────────────────────────────────────
 
 function addSlot() {
   form.slots.push({
@@ -122,6 +151,8 @@ function moveSlot(index: number, direction: 'up' | 'down') {
   form.slots[target] = tmp
 }
 
+// ── Rôles ──────────────────────────────────────────────────────────────────
+
 function addRole(slot: SlotForm) {
   slot.roles.push({ role_code: '', membres_suggeres_ids: [] })
 }
@@ -135,22 +166,18 @@ function clearRoleError(sIdx: number, rIdx: number) {
 }
 
 function addSuggestedMember(role: TemplateRoleWrite, membreId: string, sIdx: number, rIdx: number) {
-  if (!membreId) return
-  if (role.membres_suggeres_ids.includes(membreId)) return
-
+  if (!membreId || role.membres_suggeres_ids.includes(membreId)) return
   if (role.role_code.trim() !== '') {
     const membre = membresDisponibles.value.find((m) => m.id === membreId)
     if (membre && membre.roles.length > 0) {
       const roleCode = role.role_code.trim().toUpperCase()
       if (!membre.roles.map((r) => r.toUpperCase()).includes(roleCode)) {
         roleErrors.value[`${sIdx}-${rIdx}`] =
-          `${membre.prenom} ${membre.nom} n'a pas la compétence ` +
-          `« ${roleCode} » requise pour ce rôle.`
+          `${membre.prenom} ${membre.nom} n'a pas la compétence « ${roleCode} » requise pour ce rôle.`
         return
       }
     }
   }
-
   roleErrors.value[`${sIdx}-${rIdx}`] = null
   role.membres_suggeres_ids.push(membreId)
 }
@@ -165,22 +192,37 @@ function membreLabel(id: string): string {
   return m ? `${m.prenom} ${m.nom}` : id
 }
 
+// ── Sauvegarde ─────────────────────────────────────────────────────────────
+
+const slotsPayload = () =>
+  form.slots.map((s) => ({
+    nom_creneau: s.nom_creneau,
+    offset_debut_minutes: s.offset_debut_minutes,
+    offset_fin_minutes: s.offset_fin_minutes,
+    nb_personnes_requis: s.nb_personnes_requis,
+    roles: s.roles.filter((r) => r.role_code.trim() !== ''),
+  }))
+
 async function handleSave() {
-  if (!props.templateId) return
   isSaving.value = true
   try {
-    await templateStore.updateTemplate(props.templateId, {
-      nom: form.nom,
-      description: form.description || null,
-      visibilite: form.visibilite,
-      slots: form.slots.map((s) => ({
-        nom_creneau: s.nom_creneau,
-        offset_debut_minutes: s.offset_debut_minutes,
-        offset_fin_minutes: s.offset_fin_minutes,
-        nb_personnes_requis: s.nb_personnes_requis,
-        roles: s.roles.filter((r) => r.role_code.trim() !== ''),
-      })),
-    })
+    if (isCreateMode.value) {
+      await templateStore.createTemplate({
+        nom: form.nom,
+        description: form.description || null,
+        activite_type: form.activite_type || null,
+        duree_minutes: form.duree_minutes,
+        visibilite: form.visibilite,
+        slots: slotsPayload(),
+      })
+    } else {
+      await templateStore.updateTemplate(props.templateId!, {
+        nom: form.nom,
+        description: form.description || null,
+        visibilite: form.visibilite,
+        slots: slotsPayload(),
+      })
+    }
     emit('saved')
     emit('close')
   } finally {
@@ -191,14 +233,13 @@ async function handleSave() {
 
 <template>
   <AppDrawer
-    :isOpen="templateId !== null"
-    :title="form.nom || 'Modifier le template'"
+    :isOpen="isOpen"
+    :title="isCreateMode ? 'Nouveau template' : form.nom || 'Modifier le template'"
     initialSize="standard"
     @close="emit('close')"
   >
-    <!-- Corps -->
     <div class="space-y-6">
-      <!-- Erreur chargement -->
+      <!-- Erreur chargement (mode édition) -->
       <div
         v-if="loadError"
         class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
@@ -206,27 +247,27 @@ async function handleSave() {
         {{ loadError }}
       </div>
 
-      <!-- Skeleton -->
-      <div v-else-if="isLoading" class="space-y-4">
+      <!-- Skeleton (mode édition) -->
+      <div v-else-if="!isCreateMode && isLoading" class="space-y-4">
         <div class="h-10 animate-pulse rounded-lg bg-slate-100" />
         <div class="h-20 animate-pulse rounded-lg bg-slate-100" />
         <div class="h-32 animate-pulse rounded-lg bg-slate-100" />
       </div>
 
       <!-- Formulaire -->
-      <form v-else id="template-edit-form" class="space-y-6" @submit.prevent="handleSave">
-        <!-- Infos générales -->
+      <form v-else id="template-form" class="space-y-6" @submit.prevent="handleSave">
+        <!-- Informations générales -->
         <div class="rounded-xl border border-slate-200 bg-white p-5">
           <h3 class="mb-4 text-sm font-semibold tracking-wide text-slate-700 uppercase">
             Informations générales
           </h3>
           <div class="space-y-4">
             <div>
-              <label class="mb-1 block text-sm font-medium text-slate-700" for="drawer-tpl-nom">
+              <label class="mb-1 block text-sm font-medium text-slate-700" for="tpl-nom">
                 Nom <span class="text-red-500">*</span>
               </label>
               <input
-                id="drawer-tpl-nom"
+                id="tpl-nom"
                 v-model="form.nom"
                 type="text"
                 maxlength="100"
@@ -236,27 +277,56 @@ async function handleSave() {
               />
             </div>
             <div>
-              <label class="mb-1 block text-sm font-medium text-slate-700" for="drawer-tpl-desc">
+              <label class="mb-1 block text-sm font-medium text-slate-700" for="tpl-desc">
                 Description
               </label>
               <textarea
-                id="drawer-tpl-desc"
+                id="tpl-desc"
                 v-model="form.description"
                 rows="3"
                 class="form-input resize-none"
                 placeholder="Description facultative…"
               />
             </div>
+
+            <!-- Champs création uniquement -->
+            <template v-if="isCreateMode">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-slate-700" for="tpl-type">
+                    Type d'activité
+                  </label>
+                  <input
+                    id="tpl-type"
+                    v-model="form.activite_type"
+                    type="text"
+                    maxlength="100"
+                    class="form-input"
+                    placeholder="Ex : Culte Dominical"
+                  />
+                </div>
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-slate-700" for="tpl-duree">
+                    Durée (minutes)
+                  </label>
+                  <input
+                    id="tpl-duree"
+                    v-model.number="form.duree_minutes"
+                    type="number"
+                    min="1"
+                    class="form-input"
+                  />
+                </div>
+              </div>
+            </template>
+
             <div>
-              <label
-                class="mb-1 block text-sm font-medium text-slate-700"
-                for="drawer-tpl-visibilite"
-              >
+              <label class="mb-1 block text-sm font-medium text-slate-700" for="tpl-visibilite">
                 Visibilité
               </label>
               <div class="form-select-wrapper">
                 <select
-                  id="drawer-tpl-visibilite"
+                  id="tpl-visibilite"
                   v-model="form.visibilite"
                   class="form-input form-select"
                 >
@@ -346,7 +416,7 @@ async function handleSave() {
                   />
                 </div>
                 <div>
-                  <label class="mb-1 block text-xs font-medium text-slate-600"> Début (min) </label>
+                  <label class="mb-1 block text-xs font-medium text-slate-600">Début (min)</label>
                   <input
                     v-model.number="slot.offset_debut_minutes"
                     type="number"
@@ -355,7 +425,7 @@ async function handleSave() {
                   />
                 </div>
                 <div>
-                  <label class="mb-1 block text-xs font-medium text-slate-600"> Fin (min) </label>
+                  <label class="mb-1 block text-xs font-medium text-slate-600">Fin (min)</label>
                   <input
                     v-model.number="slot.offset_fin_minutes"
                     type="number"
@@ -398,7 +468,7 @@ async function handleSave() {
                   :key="rIdx"
                   class="rounded-md border border-slate-200 bg-white p-3"
                 >
-                  <!-- Code rôle + supprimer -->
+                  <!-- Sélecteur de rôle -->
                   <div class="mb-2 flex items-center gap-2">
                     <div class="form-select-wrapper flex-1">
                       <select
@@ -430,84 +500,83 @@ async function handleSave() {
                     </button>
                   </div>
 
-                  <!-- Membres suggérés -->
-                  <div class="space-y-1.5">
-                    <p class="text-xs font-medium text-slate-500">Membres suggérés</p>
+                  <!-- Membres suggérés (mode édition uniquement) -->
+                  <template v-if="!isCreateMode">
+                    <div class="space-y-1.5">
+                      <p class="text-xs font-medium text-slate-500">Membres suggérés</p>
 
-                    <!-- Tags membres déjà ajoutés -->
-                    <div v-if="role.membres_suggeres_ids.length > 0" class="flex flex-wrap gap-1">
-                      <span
-                        v-for="membreId in role.membres_suggeres_ids"
-                        :key="membreId"
-                        class="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
-                      >
-                        {{ membreLabel(membreId) }}
-                        <button
-                          type="button"
-                          class="text-blue-500 hover:text-blue-800"
-                          @click="removeSuggestedMember(role, membreId)"
+                      <div v-if="role.membres_suggeres_ids.length > 0" class="flex flex-wrap gap-1">
+                        <span
+                          v-for="membreId in role.membres_suggeres_ids"
+                          :key="membreId"
+                          class="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
                         >
-                          ×
-                        </button>
-                      </span>
-                    </div>
+                          {{ membreLabel(membreId) }}
+                          <button
+                            type="button"
+                            class="text-blue-500 hover:text-blue-800"
+                            @click="removeSuggestedMember(role, membreId)"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      </div>
 
-                    <!-- Select pour ajouter un membre -->
-                    <div v-if="membresDisponibles.length > 0" class="form-select-wrapper">
-                      <select
-                        class="form-input form-input-sm form-select"
-                        @change="
-                          (e) => {
-                            const val = (e.target as HTMLSelectElement).value
-                            if (val) {
-                              addSuggestedMember(role, val, idx, rIdx)
-                              ;(e.target as HTMLSelectElement).value = ''
-                            } else {
-                              clearRoleError(idx, rIdx)
+                      <div v-if="membresDisponibles.length > 0" class="form-select-wrapper">
+                        <select
+                          class="form-input form-input-sm form-select"
+                          @change="
+                            (e) => {
+                              const val = (e.target as HTMLSelectElement).value
+                              if (val) {
+                                addSuggestedMember(role, val, idx, rIdx)
+                                ;(e.target as HTMLSelectElement).value = ''
+                              } else {
+                                clearRoleError(idx, rIdx)
+                              }
                             }
-                          }
-                        "
-                      >
-                        <option value="">— Ajouter un membre —</option>
-                        <option
-                          v-for="m in membresDisponibles.filter(
-                            (x) => !role.membres_suggeres_ids.includes(x.id),
-                          )"
-                          :key="m.id"
-                          :value="m.id"
+                          "
                         >
-                          {{ m.prenom }} {{ m.nom
-                          }}{{
-                            role.role_code &&
-                            m.roles.length > 0 &&
-                            !m.roles
-                              .map((r) => r.toUpperCase())
-                              .includes(role.role_code.toUpperCase())
-                              ? ' (hors compétence)'
-                              : ''
-                          }}
-                        </option>
-                      </select>
-                      <svg
-                        class="form-select-chevron"
-                        viewBox="0 0 14 14"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                      >
-                        <path d="M3 5l4 4 4-4" />
-                      </svg>
-                    </div>
+                          <option value="">— Ajouter un membre —</option>
+                          <option
+                            v-for="m in membresDisponibles.filter(
+                              (x) => !role.membres_suggeres_ids.includes(x.id),
+                            )"
+                            :key="m.id"
+                            :value="m.id"
+                          >
+                            {{ m.prenom }} {{ m.nom
+                            }}{{
+                              role.role_code &&
+                              m.roles.length > 0 &&
+                              !m.roles
+                                .map((r) => r.toUpperCase())
+                                .includes(role.role_code.toUpperCase())
+                                ? ' (hors compétence)'
+                                : ''
+                            }}
+                          </option>
+                        </select>
+                        <svg
+                          class="form-select-chevron"
+                          viewBox="0 0 14 14"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                        >
+                          <path d="M3 5l4 4 4-4" />
+                        </svg>
+                      </div>
 
-                    <!-- Erreur de compétence par rôle -->
-                    <p
-                      v-if="roleErrors[`${idx}-${rIdx}`]"
-                      class="mt-1 flex items-center gap-1.5 text-xs font-medium text-red-600"
-                    >
-                      <AlertTriangle class="size-3.5 shrink-0" />
-                      {{ roleErrors[`${idx}-${rIdx}`] }}
-                    </p>
-                  </div>
+                      <p
+                        v-if="roleErrors[`${idx}-${rIdx}`]"
+                        class="mt-1 flex items-center gap-1.5 text-xs font-medium text-red-600"
+                      >
+                        <AlertTriangle class="size-3.5 shrink-0" />
+                        {{ roleErrors[`${idx}-${rIdx}`] }}
+                      </p>
+                    </div>
+                  </template>
                 </div>
               </div>
             </div>
@@ -516,17 +585,24 @@ async function handleSave() {
       </form>
     </div>
 
-    <!-- Footer -->
     <template #footer>
       <div class="flex justify-end gap-3">
         <button type="button" class="btn btn-secondary" @click="emit('close')">Annuler</button>
         <button
           type="submit"
-          form="template-edit-form"
+          form="template-form"
           :disabled="isSaving || !form.nom.trim()"
           class="btn btn-primary"
         >
-          {{ isSaving ? 'Sauvegarde…' : 'Sauvegarder' }}
+          {{
+            isSaving
+              ? isCreateMode
+                ? 'Création…'
+                : 'Sauvegarde…'
+              : isCreateMode
+                ? 'Créer le template'
+                : 'Sauvegarder'
+          }}
         </button>
       </div>
     </template>

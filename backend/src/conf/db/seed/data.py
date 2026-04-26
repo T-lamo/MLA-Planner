@@ -133,6 +133,7 @@ ROLES: list[str] = [
     "Admin",
     "Responsable MLA",
     "Membre MLA",
+    "Demo",
 ]
 
 PERMISSIONS: dict[str, list[str]] = {
@@ -141,14 +142,19 @@ PERMISSIONS: dict[str, list[str]] = {
         "USER_READ",
         "USER_UPDATE",
         "USER_DELETE",
-        "ROLE_MANAGE",
-        "MINISTERE_MANAGE",
-        "POLE_MANAGE",
-        "ACTIVITE_MANAGE",
+        "ROLE_READ",
+        "ROLE_WRITE",
+        "MINISTERE_READ",
+        "MINISTERE_WRITE",
+        "POLE_READ",
+        "POLE_WRITE",
+        "ACTIVITE_READ",
+        "ACTIVITE_WRITE",
         "SYSTEM_MANAGE",
         "PLANNING_READ",
         "PLANNING_WRITE",
         "PLANNING_PUBLISH",
+        "TEMPLATE_READ",
         "TEMPLATE_WRITE",
         "CHANT_READ",
         "CHANT_WRITE",
@@ -164,11 +170,14 @@ PERMISSIONS: dict[str, list[str]] = {
         "USER_READ",
         "USER_UPDATE",
         "USER_DELETE",
-        "ROLE_MANAGE",
-        "MINISTERE_MANAGE",
+        "ROLE_READ",
+        "ROLE_WRITE",
+        "MINISTERE_READ",
+        "MINISTERE_WRITE",
         "PLANNING_READ",
         "PLANNING_WRITE",
         "PLANNING_PUBLISH",
+        "TEMPLATE_READ",
         "TEMPLATE_WRITE",
         "CHANT_READ",
         "CHANT_WRITE",
@@ -181,12 +190,16 @@ PERMISSIONS: dict[str, list[str]] = {
     ],
     "Responsable MLA": [
         "USER_READ",
-        "MINISTERE_MANAGE",
-        "POLE_MANAGE",
-        "ACTIVITE_MANAGE",
+        "MINISTERE_READ",
+        "MINISTERE_WRITE",
+        "POLE_READ",
+        "POLE_WRITE",
+        "ACTIVITE_READ",
+        "ACTIVITE_WRITE",
         "PLANNING_READ",
         "PLANNING_WRITE",
         "PLANNING_PUBLISH",
+        "TEMPLATE_READ",
         "TEMPLATE_WRITE",
         "CHANT_READ",
         "CHANT_WRITE",
@@ -201,15 +214,28 @@ PERMISSIONS: dict[str, list[str]] = {
         "CHANT_READ",
         "MEMBRE_READ",
     ],
+    # Accès lecture seule sur toutes les briques — compte démo et visiteurs.
+    "Demo": [
+        "USER_READ",
+        "ACTIVITE_READ",
+        "PLANNING_READ",
+        "TEMPLATE_READ",
+        "CHANT_READ",
+        "MEMBRE_READ",
+        "MINISTERE_READ",
+        "POLE_READ",
+        "ROLE_READ",
+    ],
 }
 
 # Ensemble canonique des capabilities de l'application.
-# Source de vérité : toute capability utilisée dans un RoleChecker doit figurer ici.
+# Source de vérité : toute capability utilisée dans un guard doit figurer ici.
 # Les capabilities sont créées automatiquement au bootstrap (make db-setup-back).
 # Ne jamais créer/supprimer via l'UI — modifier ce fichier + redéployer.
 CAPABILITY_CODES: list[str] = [
     "ACTIVITE_CREATE",
-    "ACTIVITE_MANAGE",
+    "ACTIVITE_READ",
+    "ACTIVITE_WRITE",
     "CAMPUS_ADMIN",
     "CHANT_READ",
     "CHANT_WRITE",
@@ -218,13 +244,17 @@ CAPABILITY_CODES: list[str] = [
     "MEMBRE_DELETE",
     "MEMBRE_READ",
     "MEMBRE_UPDATE",
-    "MINISTERE_MANAGE",
+    "MINISTERE_READ",
+    "MINISTERE_WRITE",
     "PLANNING_PUBLISH",
     "PLANNING_READ",
     "PLANNING_WRITE",
-    "POLE_MANAGE",
-    "ROLE_MANAGE",
+    "POLE_READ",
+    "POLE_WRITE",
+    "ROLE_READ",
+    "ROLE_WRITE",
     "SYSTEM_MANAGE",
+    "TEMPLATE_READ",
     "TEMPLATE_WRITE",
     "USER_CREATE",
     "USER_DELETE",
@@ -240,7 +270,7 @@ SUPERADMIN_PASSWORD = "plan123!"
 # Username = prenom.lower() du membre associé (ex: "amos", "jean", "awa")
 USER_PASSWORD = "plan123!"
 
-# Compte démo (lecture seule, rôle Membre MLA)
+# Compte démo (lecture seule, rôle Demo)
 DEMO_USERNAME = "demo"
 DEMO_PASSWORD = "Demo@2025!mla"
 DEMO_MEMBRE_INFO: MembreInfo = {

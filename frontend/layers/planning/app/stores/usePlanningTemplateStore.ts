@@ -5,6 +5,7 @@ import { PlanningRepository } from '../repositories/PlanningRepository'
 import type {
   GenerateSeriesForm,
   GenerateSeriesResponse,
+  PlanningTemplateCreate,
   PlanningTemplateFullUpdate,
   PlanningTemplateListItem,
   PlanningTemplateReadFull,
@@ -30,6 +31,14 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
     resetPagination,
   } = usePagination(20)
 
+  async function createTemplate(
+    payload: PlanningTemplateCreate,
+  ): Promise<PlanningTemplateReadFull> {
+    const tpl = await repo.createTemplate(payload)
+    notify.success(`"${tpl.nom}" créé`)
+    return tpl
+  }
+
   async function fetchTemplates(ministereId?: string): Promise<void> {
     isLoading.value = true
     try {
@@ -39,6 +48,9 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
       })
       templates.value = res.data
       setTotal(res.total)
+    } catch (err) {
+      notify.error('Impossible de charger les templates')
+      throw err
     } finally {
       isLoading.value = false
     }
@@ -109,6 +121,7 @@ export const usePlanningTemplateStore = defineStore('planningTemplates', () => {
     hasPrev,
     goToPage,
     resetPagination,
+    createTemplate,
     fetchTemplates,
     fetchTemplate,
     updateTemplate,

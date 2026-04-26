@@ -13,6 +13,7 @@ import type {
   PlanningFullRead,
   PlanningFullUpdate,
   PlanningRepertoireUpdate,
+  PlanningTemplateCreate,
   PlanningTemplateFullUpdate,
   PlanningTemplateListItem,
   PlanningTemplateRead,
@@ -127,6 +128,13 @@ export class PlanningRepository extends BaseRepository {
     payload: SaveAsTemplateRequest,
   ): Promise<PlanningTemplateRead> {
     return this.unwrap<PlanningTemplateRead>(`/planning-templates/from-planning/${planningId}`, {
+      method: 'POST',
+      body: payload,
+    })
+  }
+
+  async createTemplate(payload: PlanningTemplateCreate): Promise<PlanningTemplateReadFull> {
+    return this.unwrap<PlanningTemplateReadFull>('/planning-templates', {
       method: 'POST',
       body: payload,
     })

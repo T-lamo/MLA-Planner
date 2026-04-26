@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session
 
 from conf.db.database import Database
-from core.auth.auth_dependencies import RoleChecker, get_current_active_user
+from core.auth.auth_dependencies import CapabilityChecker, get_current_active_user
 from mla_enum.custom_enum import AffectationStatusCode
 from models import AffectationCreate, AffectationRead, AffectationUpdate, Utilisateur
 from models.affectation_model import AffectationMemberRead
@@ -59,7 +59,7 @@ factory = CRUDRouterFactory(
 
 router = factory.router
 
-admin_or_resp = Depends(RoleChecker(["ADMIN", "RESPONSABLE_MLA"]))
+admin_or_resp = Depends(CapabilityChecker(["PLANNING_WRITE"]))
 
 
 @router.patch("/{affectation_id}/my-status")

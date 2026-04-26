@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { LayoutTemplate } from 'lucide-vue-next'
+import { LayoutTemplate, Plus } from 'lucide-vue-next'
+import TemplateFormDrawer from '../../../components/TemplateFormDrawer.vue'
 import AppTable from '~~/layers/base/app/components/ui/AppTable.vue'
 import AppPagination from '~~/layers/base/app/components/ui/AppPagination.vue'
 import { usePlanningPermissions } from '../../../composables/usePlanningPermissions'
@@ -12,7 +13,7 @@ import type {
   VisibiliteTemplate,
 } from '../../../types/planning.types'
 
-const editingTemplateId = ref<string | null>(null)
+const formTemplateId = ref<string | null>(null)
 
 definePageMeta({ middleware: [] })
 
@@ -25,11 +26,11 @@ const deleteTarget = ref<string | null>(null)
 const isDeleting = ref(false)
 const generateSerieTarget = ref<{ id: string; nom: string } | null>(null)
 
-onMounted(() => templateStore.fetchTemplates())
+onMounted(() => templateStore.fetchTemplates().catch(() => {}))
 
 watch(ministereFilter, (v) => {
   templateStore.resetPagination()
-  templateStore.fetchTemplates(v || undefined)
+  templateStore.fetchTemplates(v || undefined).catch(() => {})
 })
 
 function relativeDate(iso: string | null): string {
@@ -117,6 +118,10 @@ function visibiliteBadge(v: VisibiliteTemplate) {
         <LayoutTemplate class="size-6 text-(--color-primary-700)" />
         <h1 class="text-xl font-bold text-slate-900">Bibliothèque de templates</h1>
       </div>
+      <button v-if="canWrite" class="btn btn-primary" @click="formTemplateId = 'new'">
+        <Plus class="size-4" />
+        Nouveau template
+      </button>
     </div>
 
     <!-- Loading skeleton -->
@@ -197,7 +202,7 @@ function visibiliteBadge(v: VisibiliteTemplate) {
         <template v-if="canWrite" #cell-actions="{ row }">
           <TemplateActionMenu
             :template="row as unknown as PlanningTemplateListItem"
-            @edit="editingTemplateId = (row as unknown as PlanningTemplateListItem).id"
+            @edit="formTemplateId = (row as unknown as PlanningTemplateListItem).id"
             @duplicate="handleDuplicate((row as unknown as PlanningTemplateListItem).id)"
             @generate-serie="openGenerateSerie(row as unknown as PlanningTemplateListItem)"
             @delete="openDeleteDialog((row as unknown as PlanningTemplateListItem).id)"
@@ -221,10 +226,10 @@ function visibiliteBadge(v: VisibiliteTemplate) {
       </AppTable>
     </div>
 
-    <!-- Drawer édition -->
-    <TemplateEditDrawer
-      :templateId="editingTemplateId"
-      @close="editingTemplateId = null"
+    <!-- Drawer création / édition -->
+    <TemplateFormDrawer
+      :templateId="formTemplateId"
+      @close="formTemplateId = null"
       @saved="templateStore.fetchTemplates(ministereFilter || undefined)"
     />
 

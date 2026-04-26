@@ -124,6 +124,17 @@ class SaveAsTemplateRequest(BaseModel):
         return v.strip()
 
 
+class PlanningTemplateCreate(BaseModel):
+    """Payload de création d'un template vierge depuis la bibliothèque."""
+
+    nom: str = Field(min_length=1, max_length=150)
+    description: Optional[str] = Field(default=None, max_length=500)
+    activite_type: Optional[str] = Field(default=None, max_length=100)
+    duree_minutes: int = Field(default=120, ge=1)
+    visibilite: str = VisibiliteTemplate.MINISTERE
+    slots: List[PlanningTemplateSlotWrite] = []
+
+
 class PlanningTemplateUpdate(BaseModel):
     """Payload de mise à jour partielle d'un template (nom/desc seulement)."""
 
