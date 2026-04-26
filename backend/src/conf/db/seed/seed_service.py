@@ -921,24 +921,24 @@ class SeedService:
         """Crée/met à jour les 3 activités démo dédiées, retourne leurs planning_ids."""
         act_acc = self._upsert_demo_activite(
             campus_id=campus_id,
-            activite_type="Demo Accueil Hebdo",
+            activite_type="Accueil Hebdomadaire",
             ministere=min_map.get("Accueil"),
-            date_debut=today,
-            date_fin=d_end,
+            date_debut=today.replace(hour=8, minute=30),
+            date_fin=d_end.replace(hour=11),
         )
         act_lou = self._upsert_demo_activite(
             campus_id=campus_id,
-            activite_type="Demo Louange Hebdo",
+            activite_type="Louange Hebdomadaire",
             ministere=min_map.get("Louange et Adoration"),
-            date_debut=today,
-            date_fin=d_end,
+            date_debut=today.replace(hour=18),
+            date_fin=d_end.replace(hour=22),
         )
         act_jeu = self._upsert_demo_activite(
             campus_id=campus_id,
-            activite_type="Demo Jeunesse Hebdo",
+            activite_type="Jeunesse Hebdomadaire",
             ministere=min_map.get("Jeunesse"),
-            date_debut=today,
-            date_fin=d_end,
+            date_debut=today.replace(hour=14),
+            date_fin=d_end.replace(hour=18),
         )
         return (
             str(self._upsert_demo_plan(str(act_acc.id)).id),
@@ -997,7 +997,7 @@ class SeedService:
         """3 slots aujourd'hui — Accueil 9h, Louange 14h, Jeunesse 18h."""
         s_acc = self._upsert_slot(
             planning_id=plan_acc_id,
-            nom_creneau="Accueil Démo — Matin J0",
+            nom_creneau="Accueil — Culte Matin",
             date_debut=today.replace(hour=9),
             date_fin=today.replace(hour=11),
             nb_personnes_requis=2,
@@ -1005,7 +1005,7 @@ class SeedService:
         self._seed_affectation(str(s_acc.id), demo_id, "HOTE_ACCUEIL")
         s_lou = self._upsert_slot(
             planning_id=plan_lou_id,
-            nom_creneau="Louange Démo — Après-midi J0",
+            nom_creneau="Louange — Répétition Après-midi",
             date_debut=today.replace(hour=14),
             date_fin=today.replace(hour=16, minute=30),
             nb_personnes_requis=3,
@@ -1013,7 +1013,7 @@ class SeedService:
         self._seed_affectation(str(s_lou.id), demo_id, "TENOR", statut="CONFIRME")
         s_jeu = self._upsert_slot(
             planning_id=plan_jeu_id,
-            nom_creneau="Jeunesse Démo — Soir J0",
+            nom_creneau="Jeunesse — Soirée",
             date_debut=today.replace(hour=18),
             date_fin=today.replace(hour=20),
             nb_personnes_requis=2,
@@ -1025,7 +1025,7 @@ class SeedService:
     def _seed_demo_j2(self, demo_id: str, d_j2: datetime, *, plan_acc_id: str) -> None:
         slot = self._upsert_slot(
             planning_id=plan_acc_id,
-            nom_creneau="Accueil Démo — Préparation J+2",
+            nom_creneau="Accueil — Préparation",
             date_debut=d_j2.replace(hour=8),
             date_fin=d_j2.replace(hour=10),
             nb_personnes_requis=2,
@@ -1035,7 +1035,7 @@ class SeedService:
     def _seed_demo_j3(self, demo_id: str, d_j3: datetime, *, plan_lou_id: str) -> None:
         slot = self._upsert_slot(
             planning_id=plan_lou_id,
-            nom_creneau="Louange Démo — Répétition J+3",
+            nom_creneau="Louange — Répétition",
             date_debut=d_j3.replace(hour=19),
             date_fin=d_j3.replace(hour=21),
             nb_personnes_requis=3,
@@ -1047,7 +1047,7 @@ class SeedService:
     ) -> None:
         slot = self._upsert_slot(
             planning_id=plan_acc_id,
-            nom_creneau="Accueil Démo — Culte Matin J+7",
+            nom_creneau="Accueil — Culte Matin",
             date_debut=d_j7.replace(hour=8, minute=30),
             date_fin=d_j7.replace(hour=11),
             nb_personnes_requis=2,
@@ -1059,7 +1059,7 @@ class SeedService:
     ) -> None:
         slot = self._upsert_slot(
             planning_id=plan_lou_id,
-            nom_creneau="Louange Démo — Culte Soir J+7",
+            nom_creneau="Louange — Culte Soir",
             date_debut=d_j7.replace(hour=18),
             date_fin=d_j7.replace(hour=21),
             nb_personnes_requis=2,
@@ -1071,7 +1071,7 @@ class SeedService:
     ) -> None:
         slot = self._upsert_slot(
             planning_id=plan_lou_id,
-            nom_creneau="Louange Démo — Répétition Chorale J+10",
+            nom_creneau="Louange — Répétition Chorale",
             date_debut=d_j10.replace(hour=19),
             date_fin=d_j10.replace(hour=21, minute=30),
             nb_personnes_requis=3,
@@ -1083,7 +1083,7 @@ class SeedService:
     ) -> None:
         slot = self._upsert_slot(
             planning_id=plan_lou_id,
-            nom_creneau="Louange Démo — Soirée Mensuelle J+14",
+            nom_creneau="Louange — Soirée Mensuelle",
             date_debut=d_j14.replace(hour=18),
             date_fin=d_j14.replace(hour=22),
             nb_personnes_requis=3,
@@ -1095,7 +1095,7 @@ class SeedService:
     ) -> None:
         slot = self._upsert_slot(
             planning_id=plan_jeu_id,
-            nom_creneau="Jeunesse Démo — Session Ados J+19",
+            nom_creneau="Jeunesse — Session Ados",
             date_debut=d_j19.replace(hour=14),
             date_fin=d_j19.replace(hour=18),
             nb_personnes_requis=2,
