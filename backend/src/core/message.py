@@ -459,6 +459,11 @@ class ErrorRegistry:
         message="Cette ressource est utilisée et ne peut pas être supprimée.",
         http_status=status.HTTP_409_CONFLICT,
     )
+    CORE_SYSTEM_ROLE_PROTECTED = ErrorDetail(
+        code="CORE_008",
+        message="Ce rôle système est protégé et ne peut pas être modifié.",
+        http_status=status.HTTP_403_FORBIDDEN,
+    )
 
     # --- DOMAINE CAMPUS (CAMP) ---
     CAMP_NOT_FOUND = ErrorDetail(
