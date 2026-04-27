@@ -24,7 +24,7 @@ export const useUIStore = defineStore('ui', () => {
    * Bootstrapping: always loads user's campuses first so the navbar
    * selector stays populated after SPA navigation, then selects a default.
    */
-  async function initializeUI() {
+  async function initializeUI(preferCampusId?: string) {
     try {
       const { ProfileRepository } =
         await import('~~/layers/base/app/repositories/ProfileRepository')
@@ -39,8 +39,9 @@ export const useUIStore = defineStore('ui', () => {
     const currentIsValid = myCampuses.value.some((c) => c.id === selectedCampusId.value)
     if (selectedCampusId.value && currentIsValid) return
 
-    // Fallback: first campus in the list
-    selectedCampusId.value = myCampuses.value[0]?.id ?? ''
+    // Prefer campus_principal_id when provided and valid, else first in list
+    const preferIsValid = preferCampusId && myCampuses.value.some((c) => c.id === preferCampusId)
+    selectedCampusId.value = preferIsValid ? preferCampusId : (myCampuses.value[0]?.id ?? '')
   }
 
   return {
