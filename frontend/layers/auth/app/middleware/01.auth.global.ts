@@ -32,7 +32,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   //    campus n'est sélectionné (premier chargement ou refresh F5).
   //    Obligatoire avant toute requête nécessitant X-Campus-Id.
   if (authStore.isAuthenticated && !uiStore.selectedCampusId) {
-    await uiStore.initializeUI()
+    await uiStore.initializeUI(authStore.currentUser?.campusPrincipalId ?? undefined)
   }
 
   // 4. Guards de navigation

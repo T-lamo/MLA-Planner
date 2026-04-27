@@ -411,30 +411,6 @@ class SeedService:
             defaults={"statut_affectation_code": statut, "presence_confirmee": present},
         )
 
-    def _seed_demo_slot_affectation(
-        self,
-        demo_id: str,
-        plan_id: str | None,
-        nom_creneau: str,
-        jour: datetime,
-        *,
-        role_code: str,
-        h_debut: int,
-        h_fin: int,
-        statut: str = "CONFIRME",
-    ) -> None:
-        """Crée un slot + affectation Thomas dans un planning démo."""
-        if not plan_id:
-            return
-        slot = self._upsert_slot(
-            planning_id=plan_id,
-            nom_creneau=nom_creneau,
-            date_debut=jour.replace(hour=h_debut),
-            date_fin=jour.replace(hour=h_fin),
-            nb_personnes_requis=2,
-        )
-        self._seed_affectation(str(slot.id), demo_id, role_code, statut=statut)
-
     def _seed_p1_culte_dominical(self, act_map, u0, u1, d_dim1: datetime) -> None:
         """P1 — Culte Dominical — PUBLIE — J+7. Couvre A3, B1, B2, C1, C2."""
         act = act_map.get("Culte Dominical")
@@ -939,40 +915,38 @@ class SeedService:
             self.db.flush()
         return plan
 
-    def _seed_demo_activites(
+    def _seed_demo_activite_jour(
         self,
         campus_id: str,
         min_map: dict,
-        today: datetime,
-        d_end: datetime,
-    ) -> tuple[str, str, str]:
-        """Crée/met à jour les 3 activités démo dédiées, retourne leurs planning_ids."""
-        act_acc = self._upsert_demo_activite(
+        demo_id: str,
+        jour: datetime,
+        *,
+        ministere_nom: str,
+        activite_type: str,
+        h_debut: int,
+        h_fin: int,
+        slot_nom: str,
+        role_code: str,
+        statut: str = "CONFIRME",
+    ) -> None:
+        """Crée activité+planning+slot+affectation Thomas pour un jour donné."""
+        act = self._upsert_demo_activite(
             campus_id=campus_id,
-            activite_type="Accueil Hebdomadaire",
-            ministere=min_map.get("Accueil"),
-            date_debut=today.replace(hour=8, minute=30),
-            date_fin=d_end.replace(hour=11),
+            activite_type=activite_type,
+            ministere=min_map.get(ministere_nom),
+            date_debut=jour.replace(hour=h_debut, minute=0),
+            date_fin=jour.replace(hour=h_fin, minute=0),
         )
-        act_lou = self._upsert_demo_activite(
-            campus_id=campus_id,
-            activite_type="Louange Hebdomadaire",
-            ministere=min_map.get("Louange et Adoration"),
-            date_debut=today.replace(hour=18),
-            date_fin=d_end.replace(hour=22),
+        plan = self._upsert_demo_plan(str(act.id))
+        slot = self._upsert_slot(
+            planning_id=str(plan.id),
+            nom_creneau=slot_nom,
+            date_debut=jour.replace(hour=h_debut, minute=0),
+            date_fin=jour.replace(hour=h_fin, minute=0),
+            nb_personnes_requis=2,
         )
-        act_jeu = self._upsert_demo_activite(
-            campus_id=campus_id,
-            activite_type="Jeunesse Hebdomadaire",
-            ministere=min_map.get("Jeunesse"),
-            date_debut=today.replace(hour=14),
-            date_fin=d_end.replace(hour=18),
-        )
-        return (
-            str(self._upsert_demo_plan(str(act_acc.id)).id),
-            str(self._upsert_demo_plan(str(act_lou.id)).id),
-            str(self._upsert_demo_plan(str(act_jeu.id)).id),
-        )
+        self._seed_affectation(str(slot.id), demo_id, role_code, statut=statut)
 
     def _seed_demo_planning(
         self,
@@ -981,298 +955,184 @@ class SeedService:
         demo_user: Utilisateur,
         today: datetime,
     ) -> None:
-        """Plannings dédiés au compte démo — dates toujours relatives à today."""
+        """Plannings démo — 1 activité/jour, dates relatives à today."""
         if not demo_user.membre_id:
             return
         demo_id = str(demo_user.membre_id)
-        d_end = today + timedelta(days=25)
-        plan_acc_id, plan_lou_id, plan_jeu_id = self._seed_demo_activites(
-            campus_id, min_map, today, d_end
-        )
-        d_j2 = today + timedelta(days=2)
-        d_j3 = today + timedelta(days=3)
-        d_j7 = today + timedelta(days=7)
-        d_j10 = today + timedelta(days=10)
-        self._seed_demo_j0(
+        _adej = self._seed_demo_activite_jour
+        days = {i: today + timedelta(days=i) for i in range(21)}
+        _adej(
+            campus_id,
+            min_map,
             demo_id,
-            today,
-            plan_acc_id=plan_acc_id,
-            plan_lou_id=plan_lou_id,
-            plan_jeu_id=plan_jeu_id,
-        )
-        self._seed_demo_j2(demo_id, d_j2, plan_acc_id=plan_acc_id)
-        self._seed_demo_j3(demo_id, d_j3, plan_lou_id=plan_lou_id)
-        self._seed_demo_accueil(demo_id, d_j7, plan_acc_id=plan_acc_id)
-        self._seed_demo_louange_culte(demo_id, d_j7, plan_lou_id=plan_lou_id)
-        self._seed_demo_louange(demo_id, d_j10, plan_lou_id=plan_lou_id)
-        self._seed_demo_louange_soir(
-            demo_id, today + timedelta(days=14), plan_lou_id=plan_lou_id
-        )
-        self._seed_demo_jeunesse(
-            demo_id, today + timedelta(days=19), plan_jeu_id=plan_jeu_id
-        )
-        sec_ids = self._seed_demo_activites_secondaires(
-            campus_id, min_map, today, d_end
-        )
-        self._seed_demo_ministeres_secondaires(demo_id, today, plan_ids=sec_ids)
-        self._seed_demo_indisponibilites(demo_id, today)
-
-    def _seed_demo_j0(
-        self,
-        demo_id: str,
-        today: datetime,
-        *,
-        plan_acc_id: str,
-        plan_lou_id: str,
-        plan_jeu_id: str,
-    ) -> None:
-        """3 slots aujourd'hui — Accueil 9h, Louange 14h, Jeunesse 18h."""
-        s_acc = self._upsert_slot(
-            planning_id=plan_acc_id,
-            nom_creneau="Accueil — Culte Matin",
-            date_debut=today.replace(hour=9),
-            date_fin=today.replace(hour=11),
-            nb_personnes_requis=2,
-        )
-        self._seed_affectation(str(s_acc.id), demo_id, "HOTE_ACCUEIL")
-        s_lou = self._upsert_slot(
-            planning_id=plan_lou_id,
-            nom_creneau="Louange — Répétition Après-midi",
-            date_debut=today.replace(hour=14),
-            date_fin=today.replace(hour=16, minute=30),
-            nb_personnes_requis=3,
-        )
-        self._seed_affectation(str(s_lou.id), demo_id, "TENOR", statut="CONFIRME")
-        s_jeu = self._upsert_slot(
-            planning_id=plan_jeu_id,
-            nom_creneau="Jeunesse — Soirée",
-            date_debut=today.replace(hour=18),
-            date_fin=today.replace(hour=20),
-            nb_personnes_requis=2,
-        )
-        self._seed_affectation(
-            str(s_jeu.id), demo_id, "ANIMATEUR_JEUNESSE", statut="PROPOSE"
-        )
-
-    def _seed_demo_j2(self, demo_id: str, d_j2: datetime, *, plan_acc_id: str) -> None:
-        slot = self._upsert_slot(
-            planning_id=plan_acc_id,
-            nom_creneau="Accueil — Préparation",
-            date_debut=d_j2.replace(hour=8),
-            date_fin=d_j2.replace(hour=10),
-            nb_personnes_requis=2,
-        )
-        self._seed_affectation(str(slot.id), demo_id, "HOTE_ACCUEIL", statut="CONFIRME")
-
-    def _seed_demo_j3(self, demo_id: str, d_j3: datetime, *, plan_lou_id: str) -> None:
-        slot = self._upsert_slot(
-            planning_id=plan_lou_id,
-            nom_creneau="Louange — Répétition",
-            date_debut=d_j3.replace(hour=19),
-            date_fin=d_j3.replace(hour=21),
-            nb_personnes_requis=3,
-        )
-        self._seed_affectation(str(slot.id), demo_id, "TENOR", statut="PROPOSE")
-
-    def _seed_demo_accueil(
-        self, demo_id: str, d_j7: datetime, *, plan_acc_id: str
-    ) -> None:
-        slot = self._upsert_slot(
-            planning_id=plan_acc_id,
-            nom_creneau="Accueil — Culte Matin",
-            date_debut=d_j7.replace(hour=8, minute=30),
-            date_fin=d_j7.replace(hour=11),
-            nb_personnes_requis=2,
-        )
-        self._seed_affectation(str(slot.id), demo_id, "HOTE_ACCUEIL")
-
-    def _seed_demo_louange_culte(
-        self, demo_id: str, d_j7: datetime, *, plan_lou_id: str
-    ) -> None:
-        slot = self._upsert_slot(
-            planning_id=plan_lou_id,
-            nom_creneau="Louange — Culte Soir",
-            date_debut=d_j7.replace(hour=18),
-            date_fin=d_j7.replace(hour=21),
-            nb_personnes_requis=2,
-        )
-        self._seed_affectation(str(slot.id), demo_id, "TENOR", statut="CONFIRME")
-
-    def _seed_demo_louange(
-        self, demo_id: str, d_j10: datetime, *, plan_lou_id: str
-    ) -> None:
-        slot = self._upsert_slot(
-            planning_id=plan_lou_id,
-            nom_creneau="Louange — Répétition Chorale",
-            date_debut=d_j10.replace(hour=19),
-            date_fin=d_j10.replace(hour=21, minute=30),
-            nb_personnes_requis=3,
-        )
-        self._seed_affectation(str(slot.id), demo_id, "TENOR", statut="PROPOSE")
-
-    def _seed_demo_louange_soir(
-        self, demo_id: str, d_j14: datetime, *, plan_lou_id: str
-    ) -> None:
-        slot = self._upsert_slot(
-            planning_id=plan_lou_id,
-            nom_creneau="Louange — Soirée Mensuelle",
-            date_debut=d_j14.replace(hour=18),
-            date_fin=d_j14.replace(hour=22),
-            nb_personnes_requis=3,
-        )
-        self._seed_affectation(str(slot.id), demo_id, "ALTO", statut="CONFIRME")
-
-    def _seed_demo_jeunesse(
-        self, demo_id: str, d_j19: datetime, *, plan_jeu_id: str
-    ) -> None:
-        slot = self._upsert_slot(
-            planning_id=plan_jeu_id,
-            nom_creneau="Jeunesse — Session Ados",
-            date_debut=d_j19.replace(hour=14),
-            date_fin=d_j19.replace(hour=18),
-            nb_personnes_requis=2,
-        )
-        self._seed_affectation(
-            str(slot.id), demo_id, "ANIMATEUR_JEUNESSE", statut="CONFIRME"
-        )
-
-    def _seed_demo_activites_secondaires(
-        self,
-        campus_id: str,
-        min_map: dict,
-        today: datetime,
-        d_end: datetime,
-    ) -> dict[str, str]:
-        """Activités Hebdomadaires pour les 7 ministères secondaires de Thomas."""
-        entries = [
-            ("Technique", "Technique Hebdomadaire", 7, 22),
-            ("Intercession", "Intercession Hebdomadaire", 6, 20),
-            ("Enseignement", "Enseignement Hebdomadaire", 9, 17),
-            ("Communication", "Communication Hebdomadaire", 9, 18),
-            ("Intendance", "Intendance Hebdomadaire", 8, 17),
-            ("MCAD", "MCAD Hebdomadaire", 14, 19),
-            ("Sonorisation", "Sonorisation Hebdomadaire", 7, 21),
-        ]
-        plan_ids: dict[str, str] = {}
-        for min_nom, act_type, h_deb, h_fin in entries:
-            act = self._upsert_demo_activite(
-                campus_id=campus_id,
-                activite_type=act_type,
-                ministere=min_map.get(min_nom),
-                date_debut=today.replace(hour=h_deb),
-                date_fin=d_end.replace(hour=h_fin),
-            )
-            plan_ids[min_nom] = str(self._upsert_demo_plan(str(act.id)).id)
-        return plan_ids
-
-    def _seed_demo_ministeres_secondaires(
-        self,
-        demo_id: str,
-        today: datetime,
-        *,
-        plan_ids: dict[str, str],
-    ) -> None:
-        """Affecte Thomas dans les 7 ministères secondaires sur plusieurs jours."""
-        _sa = self._seed_demo_slot_affectation
-        d4 = today + timedelta(days=4)
-        d5 = today + timedelta(days=5)
-        d8 = today + timedelta(days=8)
-        d12 = today + timedelta(days=12)
-        d13 = today + timedelta(days=13)
-        d17 = today + timedelta(days=17)
-        d20 = today + timedelta(days=20)
-        _sa(
-            demo_id,
-            plan_ids.get("Intercession"),
-            "Réunion d'Intercession",
-            d4,
-            role_code="PRIEUR",
-            h_debut=6,
-            h_fin=8,
-        )
-        _sa(
-            demo_id,
-            plan_ids.get("Sonorisation"),
-            "Préparation Sono",
-            d4,
-            role_code="SONORISATEUR",
-            h_debut=14,
-            h_fin=17,
-        )
-        _sa(
-            demo_id,
-            plan_ids.get("Enseignement"),
-            "Cours Biblique Hebdo",
-            d5,
-            role_code="ENSEIGNANT",
-            h_debut=10,
-            h_fin=12,
-        )
-        _sa(
-            demo_id,
-            plan_ids.get("Intendance"),
-            "Réunion Intendance",
-            d8,
-            role_code="INTENDANT",
+            days[0],
+            ministere_nom="Accueil",
+            activite_type="Accueil — Culte Matin",
             h_debut=9,
             h_fin=11,
+            slot_nom="Accueil — Culte Matin",
+            role_code="HOTE_ACCUEIL",
         )
-        _sa(
+        _adej(
+            campus_id,
+            min_map,
             demo_id,
-            plan_ids.get("Technique"),
-            "Formation Technique",
-            d8,
-            role_code="SON",
+            days[2],
+            ministere_nom="Accueil",
+            activite_type="Accueil — Préparation",
+            h_debut=8,
+            h_fin=10,
+            slot_nom="Accueil — Préparation",
+            role_code="HOTE_ACCUEIL",
+        )
+        _adej(
+            campus_id,
+            min_map,
+            demo_id,
+            days[3],
+            ministere_nom="Louange et Adoration",
+            activite_type="Louange — Répétition Chorale",
             h_debut=19,
-            h_fin=22,
-        )
-        _sa(
-            demo_id,
-            plan_ids.get("Communication"),
-            "Session Créa",
-            d12,
-            role_code="GRAPHISTE",
-            h_debut=14,
-            h_fin=17,
-        )
-        _sa(
-            demo_id,
-            plan_ids.get("MCAD"),
-            "Répétition MCAD Hebdo",
-            d13,
-            role_code="DANSEUR",
-            h_debut=15,
-            h_fin=18,
-        )
-        _sa(
-            demo_id,
-            plan_ids.get("Technique"),
-            "Régie Son Hebdo",
-            d17,
-            role_code="SON",
-            h_debut=18,
             h_fin=21,
+            slot_nom="Louange — Répétition Chorale",
+            role_code="TENOR",
             statut="PROPOSE",
         )
-        _sa(
+        _adej(
+            campus_id,
+            min_map,
             demo_id,
-            plan_ids.get("Intercession"),
-            "Intercession Mensuelle",
-            d20,
-            role_code="PRIEUR",
+            days[4],
+            ministere_nom="Intercession",
+            activite_type="Intercession — Réunion Prière",
             h_debut=6,
             h_fin=8,
+            slot_nom="Intercession — Réunion Prière",
+            role_code="PRIEUR",
+        )
+        _adej(
+            campus_id,
+            min_map,
+            demo_id,
+            days[5],
+            ministere_nom="Enseignement",
+            activite_type="Enseignement — Cours Biblique",
+            h_debut=10,
+            h_fin=12,
+            slot_nom="Enseignement — Cours Biblique",
+            role_code="ENSEIGNANT",
+        )
+        _adej(
+            campus_id,
+            min_map,
+            demo_id,
+            days[7],
+            ministere_nom="Louange et Adoration",
+            activite_type="Louange — Culte Soir",
+            h_debut=18,
+            h_fin=21,
+            slot_nom="Louange — Culte Soir",
+            role_code="TENOR",
+        )
+        _adej(
+            campus_id,
+            min_map,
+            demo_id,
+            days[8],
+            ministere_nom="Technique",
+            activite_type="Technique — Formation Son",
+            h_debut=19,
+            h_fin=22,
+            slot_nom="Technique — Formation Son",
+            role_code="SON",
+        )
+        _adej(
+            campus_id,
+            min_map,
+            demo_id,
+            days[10],
+            ministere_nom="Louange et Adoration",
+            activite_type="Louange — Répétition Hebdo",
+            h_debut=19,
+            h_fin=21,
+            slot_nom="Louange — Répétition Hebdo",
+            role_code="TENOR",
             statut="PROPOSE",
         )
-        _sa(
+        _adej(
+            campus_id,
+            min_map,
             demo_id,
-            plan_ids.get("Communication"),
-            "Réunion Comm",
-            d20,
+            days[12],
+            ministere_nom="Communication",
+            activite_type="Communication — Session Créa",
+            h_debut=14,
+            h_fin=17,
+            slot_nom="Communication — Session Créa",
             role_code="GRAPHISTE",
+        )
+        _adej(
+            campus_id,
+            min_map,
+            demo_id,
+            days[13],
+            ministere_nom="MCAD",
+            activite_type="MCAD — Répétition",
+            h_debut=15,
+            h_fin=18,
+            slot_nom="MCAD — Répétition",
+            role_code="DANSEUR",
+        )
+        _adej(
+            campus_id,
+            min_map,
+            demo_id,
+            days[14],
+            ministere_nom="Louange et Adoration",
+            activite_type="Louange — Soirée Mensuelle",
+            h_debut=18,
+            h_fin=22,
+            slot_nom="Louange — Soirée Mensuelle",
+            role_code="ALTO",
+        )
+        _adej(
+            campus_id,
+            min_map,
+            demo_id,
+            days[17],
+            ministere_nom="Technique",
+            activite_type="Technique — Régie Son",
+            h_debut=18,
+            h_fin=21,
+            slot_nom="Technique — Régie Son",
+            role_code="SON",
+            statut="PROPOSE",
+        )
+        _adej(
+            campus_id,
+            min_map,
+            demo_id,
+            days[19],
+            ministere_nom="Jeunesse",
+            activite_type="Jeunesse — Session Ados",
+            h_debut=14,
+            h_fin=18,
+            slot_nom="Jeunesse — Session Ados",
+            role_code="ANIMATEUR_JEUNESSE",
+        )
+        _adej(
+            campus_id,
+            min_map,
+            demo_id,
+            days[20],
+            ministere_nom="Communication",
+            activite_type="Communication — Réunion Créa",
             h_debut=14,
             h_fin=16,
+            slot_nom="Communication — Réunion Créa",
+            role_code="GRAPHISTE",
         )
+        self._seed_demo_indisponibilites(demo_id, today)
 
     def _seed_demo_indisponibilites(self, demo_id: str, today: datetime) -> None:
         """Crée des indisponibilités démo avec dates relatives à today (upsert)."""
