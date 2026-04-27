@@ -19,7 +19,10 @@ from routes import router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    Database.init_db()
+    # En dev : create_all() pour ne pas dépendre d'alembic
+    # En prod : alembic upgrade head est lancé avant uvicorn (Dockerfile/docker-compose)
+    if settings.ENV != "production":
+        Database.init_db()
     with Session(Database.get_engine()) as db:
         bootstrap_superadmin(db)
         build_enforcer(db)
