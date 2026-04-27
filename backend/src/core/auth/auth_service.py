@@ -17,6 +17,7 @@ from core.auth.security import (
 from core.exceptions.app_exception import AppException
 from core.message import ErrorRegistry
 from core.settings import settings as stng
+from mla_enum import RoleName
 from models import Utilisateur
 from models.role_model import RoleRead
 from models.utilisateur_model import UtilisateurRead
@@ -57,13 +58,23 @@ class AuthService:
         return contexts
 
     def _build_capabilities(self, user: Utilisateur) -> List[str]:
-        """Extrait la liste plate des codes de permission pour l'utilisateur."""
+        """Extrait la liste plate des codes de permission pour l'utilisateur.
+
+        SYSTEM_MANAGE n'est émis que pour le Super Admin (sans membre_id).
+        """
+        _system_only = {"SYSTEM_MANAGE"}
+        is_super = any(
+            aff.role and aff.role.libelle == RoleName.SUPER_ADMIN.value
+            for aff in user.affectations
+        )
         caps: set[str] = set()
         for aff in user.affectations:
             if not _affectation_valide(aff):
                 continue
             if aff.role:
                 for perm in aff.role.permissions:
+                    if perm.code in _system_only and not is_super:
+                        continue
                     caps.add(perm.code)
         return sorted(caps)
 
