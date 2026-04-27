@@ -411,6 +411,30 @@ class SeedService:
             defaults={"statut_affectation_code": statut, "presence_confirmee": present},
         )
 
+    def _seed_demo_slot_affectation(
+        self,
+        demo_id: str,
+        plan_id: str | None,
+        nom_creneau: str,
+        jour: datetime,
+        *,
+        role_code: str,
+        h_debut: int,
+        h_fin: int,
+        statut: str = "CONFIRME",
+    ) -> None:
+        """Crée un slot + affectation Thomas dans un planning démo."""
+        if not plan_id:
+            return
+        slot = self._upsert_slot(
+            planning_id=plan_id,
+            nom_creneau=nom_creneau,
+            date_debut=jour.replace(hour=h_debut),
+            date_fin=jour.replace(hour=h_fin),
+            nb_personnes_requis=2,
+        )
+        self._seed_affectation(str(slot.id), demo_id, role_code, statut=statut)
+
     def _seed_p1_culte_dominical(self, act_map, u0, u1, d_dim1: datetime) -> None:
         """P1 — Culte Dominical — PUBLIE — J+7. Couvre A3, B1, B2, C1, C2."""
         act = act_map.get("Culte Dominical")
@@ -987,6 +1011,10 @@ class SeedService:
         self._seed_demo_jeunesse(
             demo_id, today + timedelta(days=19), plan_jeu_id=plan_jeu_id
         )
+        sec_ids = self._seed_demo_activites_secondaires(
+            campus_id, min_map, today, d_end
+        )
+        self._seed_demo_ministeres_secondaires(demo_id, today, plan_ids=sec_ids)
         self._seed_demo_indisponibilites(demo_id, today)
 
     def _seed_demo_j0(
@@ -1106,6 +1134,144 @@ class SeedService:
         )
         self._seed_affectation(
             str(slot.id), demo_id, "ANIMATEUR_JEUNESSE", statut="CONFIRME"
+        )
+
+    def _seed_demo_activites_secondaires(
+        self,
+        campus_id: str,
+        min_map: dict,
+        today: datetime,
+        d_end: datetime,
+    ) -> dict[str, str]:
+        """Activités Hebdomadaires pour les 7 ministères secondaires de Thomas."""
+        entries = [
+            ("Technique", "Technique Hebdomadaire", 7, 22),
+            ("Intercession", "Intercession Hebdomadaire", 6, 20),
+            ("Enseignement", "Enseignement Hebdomadaire", 9, 17),
+            ("Communication", "Communication Hebdomadaire", 9, 18),
+            ("Intendance", "Intendance Hebdomadaire", 8, 17),
+            ("MCAD", "MCAD Hebdomadaire", 14, 19),
+            ("Sonorisation", "Sonorisation Hebdomadaire", 7, 21),
+        ]
+        plan_ids: dict[str, str] = {}
+        for min_nom, act_type, h_deb, h_fin in entries:
+            act = self._upsert_demo_activite(
+                campus_id=campus_id,
+                activite_type=act_type,
+                ministere=min_map.get(min_nom),
+                date_debut=today.replace(hour=h_deb),
+                date_fin=d_end.replace(hour=h_fin),
+            )
+            plan_ids[min_nom] = str(self._upsert_demo_plan(str(act.id)).id)
+        return plan_ids
+
+    def _seed_demo_ministeres_secondaires(
+        self,
+        demo_id: str,
+        today: datetime,
+        *,
+        plan_ids: dict[str, str],
+    ) -> None:
+        """Affecte Thomas dans les 7 ministères secondaires sur plusieurs jours."""
+        _sa = self._seed_demo_slot_affectation
+        d4 = today + timedelta(days=4)
+        d5 = today + timedelta(days=5)
+        d8 = today + timedelta(days=8)
+        d12 = today + timedelta(days=12)
+        d13 = today + timedelta(days=13)
+        d17 = today + timedelta(days=17)
+        d20 = today + timedelta(days=20)
+        _sa(
+            demo_id,
+            plan_ids.get("Intercession"),
+            "Réunion d'Intercession",
+            d4,
+            role_code="PRIEUR",
+            h_debut=6,
+            h_fin=8,
+        )
+        _sa(
+            demo_id,
+            plan_ids.get("Sonorisation"),
+            "Préparation Sono",
+            d4,
+            role_code="SONORISATEUR",
+            h_debut=14,
+            h_fin=17,
+        )
+        _sa(
+            demo_id,
+            plan_ids.get("Enseignement"),
+            "Cours Biblique Hebdo",
+            d5,
+            role_code="ENSEIGNANT",
+            h_debut=10,
+            h_fin=12,
+        )
+        _sa(
+            demo_id,
+            plan_ids.get("Intendance"),
+            "Réunion Intendance",
+            d8,
+            role_code="INTENDANT",
+            h_debut=9,
+            h_fin=11,
+        )
+        _sa(
+            demo_id,
+            plan_ids.get("Technique"),
+            "Formation Technique",
+            d8,
+            role_code="SON",
+            h_debut=19,
+            h_fin=22,
+        )
+        _sa(
+            demo_id,
+            plan_ids.get("Communication"),
+            "Session Créa",
+            d12,
+            role_code="GRAPHISTE",
+            h_debut=14,
+            h_fin=17,
+        )
+        _sa(
+            demo_id,
+            plan_ids.get("MCAD"),
+            "Répétition MCAD Hebdo",
+            d13,
+            role_code="DANSEUR",
+            h_debut=15,
+            h_fin=18,
+        )
+        _sa(
+            demo_id,
+            plan_ids.get("Technique"),
+            "Régie Son Hebdo",
+            d17,
+            role_code="SON",
+            h_debut=18,
+            h_fin=21,
+            statut="PROPOSE",
+        )
+        _sa(
+            demo_id,
+            plan_ids.get("Intercession"),
+            "Intercession Mensuelle",
+            d20,
+            role_code="PRIEUR",
+            h_debut=6,
+            h_fin=8,
+            statut="PROPOSE",
+        )
+        _sa(
+            demo_id,
+            plan_ids.get("Communication"),
+            "Réunion Comm",
+            d20,
+            role_code="GRAPHISTE",
+            h_debut=14,
+            h_fin=16,
         )
 
     def _seed_demo_indisponibilites(self, demo_id: str, today: datetime) -> None:
