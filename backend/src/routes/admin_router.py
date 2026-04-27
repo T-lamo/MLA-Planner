@@ -45,10 +45,19 @@ _WRITE_GUARD = Depends(
 
 _PROTECTED_ROLES = {RoleName.SUPER_ADMIN.value}
 
+# Capabilities réservées au Super Admin — ne peuvent être attribuées via l'UI.
+_PROTECTED_CAPABILITIES: set[str] = {"SYSTEM_MANAGE"}
+
 
 def _assert_not_protected(role: Role) -> None:
     """Lève CORE_SYSTEM_ROLE_PROTECTED si le rôle est un rôle système."""
     if role.libelle in _PROTECTED_ROLES:
+        raise AppException(ErrorRegistry.CORE_SYSTEM_ROLE_PROTECTED)
+
+
+def _assert_no_protected_capabilities(codes: list[str]) -> None:
+    """Lève CORE_SYSTEM_ROLE_PROTECTED si une capability système est demandée."""
+    if _PROTECTED_CAPABILITIES & set(codes):
         raise AppException(ErrorRegistry.CORE_SYSTEM_ROLE_PROTECTED)
 
 
@@ -177,6 +186,7 @@ def update_role_permissions(
     if not role:
         raise AppException(ErrorRegistry.CORE_RESOURCE_NOT_FOUND)
     _assert_not_protected(role)
+    _assert_no_protected_capabilities(payload.permission_codes)
 
     db.exec(  # type: ignore[call-overload]
         delete(RolePermission).where(cast(Any, RolePermission.role_id) == role_id)
