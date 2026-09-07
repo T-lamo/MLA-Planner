@@ -6,8 +6,8 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Installer pnpm
-RUN npm install -g pnpm
+# Installer pnpm — version pinnée sur la majeure utilisée en CI et par le lockfile (v9)
+RUN npm install -g pnpm@9
 
 # ── Copier les manifestes du workspace (couche cachée) ─────────
 # Séparés des sources pour ne pas invalider le cache pnpm
