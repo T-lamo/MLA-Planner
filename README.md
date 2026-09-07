@@ -200,6 +200,7 @@ Backend disponible sur `http://localhost:8000` · Frontend sur `http://localhost
 | [API.md](API.md) | Intégrateurs | Endpoints, auth, format des erreurs |
 | [SECURITY.md](SECURITY.md) | Auditeurs | Auth JWT, RBAC, isolation des données |
 | [conception/](conception/README.md) | Recruteurs / Auditeurs | Cas d'utilisation, architecture, UML, ERD, MLD, RBAC (conception) |
+| [documents-planification/](documents-planification/README.md) | Recruteurs / Auditeurs | Épiques, backlogs, présentations produit (planification) |
 | [CLAUDE.md](CLAUDE.md) | IA / Contributeurs | Règles absolues pour les contributions assistées |
 
 ---
