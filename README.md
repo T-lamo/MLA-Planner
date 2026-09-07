@@ -156,6 +156,14 @@ mla-app/
 
 ---
 
+## Application mobile (Flutter) — early stage
+
+Un client mobile Android est en cours de démarrage dans [`mobile/`](mobile/), en parallèle du frontend web. Stack : Flutter · Riverpod (state management) · go_router · Dio · `flutter_secure_storage` pour le JWT (jamais de `SharedPreferences` pour les tokens).
+
+État actuel : écran de connexion + stockage sécurisé du token, appel à l'API partagée, premier écran de planning. Architecture en couches (`core/` : API client, auth, config · `features/` : auth, planning · `shared/` : thème) qui réutilise le même backend FastAPI que le frontend web. Pas encore de couverture fonctionnelle complète — c'est un MVP en construction, pas une release.
+
+---
+
 ## Démarrage rapide
 
 ```bash
@@ -191,6 +199,7 @@ Backend disponible sur `http://localhost:8000` · Frontend sur `http://localhost
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Développeurs | Couches, patterns, décisions techniques |
 | [API.md](API.md) | Intégrateurs | Endpoints, auth, format des erreurs |
 | [SECURITY.md](SECURITY.md) | Auditeurs | Auth JWT, RBAC, isolation des données |
+| [conception/](conception/README.md) | Recruteurs / Auditeurs | Cas d'utilisation, architecture, UML, ERD, MLD, RBAC (conception) |
 | [CLAUDE.md](CLAUDE.md) | IA / Contributeurs | Règles absolues pour les contributions assistées |
 
 ---

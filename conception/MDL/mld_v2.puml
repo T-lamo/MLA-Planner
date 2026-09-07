@@ -1,0 +1,439 @@
+@startuml MLA_MLD_v2
+' =========================================================
+' MLD – MLA v2  (Modèle Logique de Données)
+' Généré depuis schema_db_model.py
+' Chaque table = colonnes avec types SQL, PK/FK/UNIQUE/NOT NULL
+' =========================================================
+skinparam linetype ortho
+skinparam nodesep 50
+skinparam ranksep 70
+skinparam class {
+  BackgroundColor #FAFAFA
+  BorderColor #37474F
+  HeaderBackgroundColor #ECEFF1
+  FontName Arial
+  FontSize 11
+}
+skinparam arrow {
+  Color #607D8B
+}
+hide circle
+
+' =========================================================
+' A. RÉFÉRENTIELS
+' =========================================================
+
+class "t_statutplanning" as SP << (T,#B0BEC5) >> {
+  PK  code          VARCHAR(20)      NOT NULL
+}
+
+class "t_statutaffectation" as SA << (T,#B0BEC5) >> {
+  PK  code          VARCHAR(20)      NOT NULL
+      libelle       VARCHAR
+}
+
+class "t_typeresponsabilite" as TR << (T,#B0BEC5) >> {
+  PK  code          VARCHAR(50)      NOT NULL
+}
+
+class "t_chant_categorie" as CC << (T,#B0BEC5) >> {
+  PK  code          VARCHAR(30)      NOT NULL
+      libelle       VARCHAR(100)     NOT NULL
+      ordre         INT              DEFAULT 0
+      description   TEXT
+}
+
+' =========================================================
+' B. STRUCTURE ORGANISATIONNELLE
+' =========================================================
+
+class "t_organisation" as ORG << (T,#42A5F5) >> {
+  PK  id            UUID             NOT NULL
+      nom           VARCHAR(150)     NOT NULL  UNIQUE
+      date_creation DATE             NOT NULL
+      deleted_at    TIMESTAMP
+}
+
+class "t_pays" as PAYS << (T,#42A5F5) >> {
+  PK  id            UUID             NOT NULL
+  FK  organisation_id UUID           SET NULL
+      nom           VARCHAR(100)     NOT NULL  UNIQUE
+      code          VARCHAR(5)       NOT NULL  UNIQUE
+      deleted_at    TIMESTAMP
+}
+
+class "t_campus" as CAM << (T,#42A5F5) >> {
+  PK  id            UUID             NOT NULL
+  FK  pays_id       UUID             NOT NULL  CASCADE
+      nom           VARCHAR(100)     NOT NULL
+      ville         VARCHAR(100)     NOT NULL
+      timezone      VARCHAR(50)      DEFAULT 'Europe/Paris'
+      deleted_at    TIMESTAMP
+}
+
+class "t_ministere" as MIN << (T,#42A5F5) >> {
+  PK  id            UUID             NOT NULL
+      nom           VARCHAR(100)     NOT NULL  UNIQUE
+      date_creation VARCHAR          NOT NULL
+      actif         BOOLEAN          DEFAULT true
+      deleted_at    TIMESTAMP
+}
+
+class "t_campus_ministere_link" as CML << (T,#90CAF9) >> {
+  PK,FK  campus_id    UUID           NOT NULL  CASCADE
+  PK,FK  ministere_id UUID           NOT NULL  CASCADE
+}
+
+class "t_pole" as POL << (T,#42A5F5) >> {
+  PK  id            UUID             NOT NULL
+  FK  ministere_id  UUID             NOT NULL  CASCADE
+      nom           VARCHAR(100)     NOT NULL
+      description   VARCHAR(500)
+      active        BOOLEAN          DEFAULT true
+      deleted_at    TIMESTAMP
+}
+
+' =========================================================
+' C. MEMBRES & UTILISATEURS
+' =========================================================
+
+class "t_membre" as MBR << (T,#E91E63) >> {
+  PK  id                  UUID         NOT NULL
+  FK  campus_principal_id UUID         SET NULL
+      nom                 VARCHAR(50)  NOT NULL
+      prenom              VARCHAR(50)  NOT NULL
+      email               VARCHAR(100) UNIQUE
+      telephone           VARCHAR(20)
+      actif               BOOLEAN      DEFAULT true
+      date_inscription    TIMESTAMP    NOT NULL
+      deleted_at          TIMESTAMP
+}
+
+class "t_membre_campus_link" as MCL << (T,#F8BBD9) >> {
+  PK,FK  membre_id   UUID             NOT NULL  CASCADE
+  PK,FK  campus_id   UUID             NOT NULL  CASCADE
+}
+
+class "t_membre_ministere_link" as MML << (T,#F8BBD9) >> {
+  PK,FK  membre_id   UUID             NOT NULL  CASCADE
+  PK,FK  ministere_id UUID            NOT NULL  CASCADE
+}
+
+class "t_membre_pole_link" as MPL << (T,#F8BBD9) >> {
+  PK,FK  membre_id   UUID             NOT NULL  CASCADE
+  PK,FK  pole_id     UUID             NOT NULL  CASCADE
+}
+
+class "t_utilisateur" as USR << (T,#AD1457) >> {
+  PK  id            UUID             NOT NULL
+  FK  membre_id     UUID             UNIQUE  (nullable)
+      username      VARCHAR(50)      NOT NULL  UNIQUE
+      password      VARCHAR(255)     NOT NULL
+      actif         BOOLEAN          DEFAULT true
+}
+
+class "t_revoked_tokens" as TOK << (T,#AD1457) >> {
+  PK  id            SERIAL           NOT NULL
+      jti           VARCHAR          NOT NULL  UNIQUE
+      expires_at    TIMESTAMP        NOT NULL
+      revoked_at    TIMESTAMP        NOT NULL
+}
+
+' =========================================================
+' D. RÔLES & COMPÉTENCES MÉTIER
+' =========================================================
+
+class "t_categorierole" as CROL << (T,#8E24AA) >> {
+  PK  code          VARCHAR(20)      NOT NULL
+  FK  ministere_id  UUID             SET NULL
+      libelle       VARCHAR(100)     NOT NULL
+      description   TEXT
+}
+
+class "t_rolecompetence" as RCMP << (T,#8E24AA) >> {
+  PK  code          VARCHAR(50)      NOT NULL
+  FK  categorie_code VARCHAR(20)     NOT NULL
+      libelle       VARCHAR(100)     NOT NULL
+}
+
+class "t_membre_role" as MROL << (T,#CE93D8) >> {
+  PK,FK  membre_id  UUID             NOT NULL  CASCADE
+  PK,FK  role_code  VARCHAR(50)      NOT NULL
+         niveau     VARCHAR(20)      DEFAULT 'DEBUTANT'
+         is_principal BOOLEAN        DEFAULT false
+}
+
+' =========================================================
+' E. ACTIVITÉS & PLANNING
+' =========================================================
+
+class "t_activite" as ACT << (T,#1976D2) >> {
+  PK  id                          UUID         NOT NULL
+  FK  campus_id                   UUID         NOT NULL  CASCADE
+  FK  ministere_organisateur_id   UUID         NOT NULL  CASCADE
+      type                        VARCHAR(100) NOT NULL
+      date_debut                  TIMESTAMP    NOT NULL
+      date_fin                    TIMESTAMP    NOT NULL
+      lieu                        VARCHAR(255)
+      description                 VARCHAR(1000)
+      deleted_at                  TIMESTAMP
+}
+
+class "t_planningservice" as PLN << (T,#1976D2) >> {
+  PK  id            UUID             NOT NULL
+  FK  statut_code   VARCHAR(20)      NOT NULL  CASCADE
+  FK  activite_id   UUID             CASCADE  (nullable)
+  FK  template_id   UUID             SET NULL  (nullable)
+      serie_id      VARCHAR          (nullable)
+      deleted_at    TIMESTAMP
+}
+
+class "t_slot" as SLT << (T,#1976D2) >> {
+  PK  id                UUID         NOT NULL
+  FK  planning_id        UUID        NOT NULL  CASCADE
+      nom_creneau        VARCHAR(100) NOT NULL
+      date_debut         TIMESTAMP   NOT NULL
+      date_fin           TIMESTAMP   NOT NULL
+      nb_personnes_requis INT        DEFAULT 2
+}
+
+class "t_affectation" as AFF << (T,#1565C0) >> {
+  PK  id                      UUID         NOT NULL
+  FK  slot_id                 UUID         NOT NULL  CASCADE
+  FK  membre_id               UUID         NOT NULL  CASCADE
+  FK  statut_affectation_code VARCHAR(20)  NOT NULL
+  FK  ministere_id            UUID         SET NULL  (nullable)
+      role_code               VARCHAR(50)  NOT NULL
+      presence_confirmee      BOOLEAN      DEFAULT false
+}
+
+class "t_indisponibilite" as IND << (T,#0D47A1) >> {
+  PK  id            UUID             NOT NULL
+  FK  membre_id     UUID             NOT NULL  CASCADE
+  FK  ministere_id  UUID             SET NULL  (nullable)
+      date_debut    VARCHAR
+      date_fin      VARCHAR
+      motif         VARCHAR(255)
+      validee       BOOLEAN          DEFAULT false
+}
+
+class "t_responsabilite" as RESP << (T,#0D47A1) >> {
+  PK  id            UUID             NOT NULL
+  FK  type_code     VARCHAR(50)      NOT NULL  CASCADE
+  FK  membre_id     UUID             NOT NULL  CASCADE
+  FK  ministere_id  UUID             CASCADE  (nullable)
+  FK  pole_id       UUID             CASCADE  (nullable)
+  FK  activite_id   UUID             CASCADE  (nullable)
+      date_debut    VARCHAR
+      date_fin      VARCHAR
+      actif         BOOLEAN          DEFAULT true
+}
+
+class "t_planning_chant_link" as PCL << (T,#90CAF9) >> {
+  PK,FK  planning_id  UUID           NOT NULL  CASCADE
+  PK,FK  chant_id     UUID           NOT NULL  CASCADE
+         ordre        INT            DEFAULT 0
+}
+
+' =========================================================
+' F. RBAC
+' =========================================================
+
+class "t_role" as ROL << (T,#E64A19) >> {
+  PK  id            UUID             NOT NULL
+      libelle       VARCHAR(100)     NOT NULL  UNIQUE
+}
+
+class "t_permission" as PERM << (T,#E64A19) >> {
+  PK  id            UUID             NOT NULL
+      code          VARCHAR(100)     NOT NULL  UNIQUE
+      description   TEXT
+}
+
+class "t_role_permission" as RP << (T,#FFCCBC) >> {
+  PK,FK  role_id       UUID          NOT NULL  CASCADE
+  PK,FK  permission_id UUID          NOT NULL  CASCADE
+}
+
+class "t_affectation_role" as AR << (T,#BF360C) >> {
+  PK  id              UUID           NOT NULL
+  FK  utilisateur_id  UUID           NOT NULL  CASCADE
+  FK  role_id         UUID           NOT NULL  CASCADE
+      dateDebut       DATE
+      dateFin         DATE
+      active          BOOLEAN        DEFAULT true
+}
+
+class "t_affectation_contexte" as ARCTX << (T,#BF360C) >> {
+  PK  id                   UUID      NOT NULL
+  FK  affectation_role_id  UUID      NOT NULL  CASCADE
+  FK  ministere_id         UUID      CASCADE  (nullable)
+  FK  pole_id              UUID      CASCADE  (nullable)
+  FK  activite_id          UUID      CASCADE  (nullable)
+}
+
+' =========================================================
+' G. ÉQUIPES
+' =========================================================
+
+class "t_equipe" as EQP << (T,#00897B) >> {
+  PK  id            UUID             NOT NULL
+  FK  ministere_id  UUID             NOT NULL  CASCADE
+      nom           VARCHAR(100)     NOT NULL
+      active        BOOLEAN          DEFAULT true
+}
+
+class "t_equipe_membre" as EM << (T,#80CBC4) >> {
+  PK,FK  equipe_id  UUID             NOT NULL  CASCADE
+  PK,FK  membre_id  UUID             NOT NULL  CASCADE
+}
+
+' =========================================================
+' H. PLANNING TEMPLATES
+' =========================================================
+
+class "t_planningtemplate" as PT << (T,#558B2F) >> {
+  PK  id             UUID            NOT NULL
+  FK  campus_id      UUID            NOT NULL  CASCADE
+  FK  ministere_id   UUID            NOT NULL  CASCADE
+  FK  created_by_id  UUID            NOT NULL  CASCADE
+      nom            VARCHAR(150)    NOT NULL
+      description    VARCHAR(500)
+      activite_type  VARCHAR(100)    NOT NULL
+      duree_minutes  INT             NOT NULL
+      used_count     INT             DEFAULT 0
+      visibilite     VARCHAR(20)     DEFAULT 'MINISTERE'
+      created_at     TIMESTAMP       NOT NULL
+}
+
+class "t_planningtemplateslot" as PTS << (T,#558B2F) >> {
+  PK  id                      UUID     NOT NULL
+  FK  template_id              UUID    NOT NULL  CASCADE
+      nom_creneau              VARCHAR(100) NOT NULL
+      offset_debut_minutes     INT     NOT NULL
+      offset_fin_minutes       INT     NOT NULL
+      nb_personnes_requis      INT     DEFAULT 2
+}
+
+class "t_planningtemplaterole" as PTR << (T,#558B2F) >> {
+  PK  id          UUID             NOT NULL
+  FK  slot_id     UUID             NOT NULL  CASCADE
+      role_code   VARCHAR(50)      NOT NULL
+}
+
+class "t_planning_template_role_membre" as PTRM << (T,#AED581) >> {
+  PK  id               UUID        NOT NULL
+  FK  template_role_id UUID        NOT NULL  CASCADE
+  FK  membre_id        UUID        NOT NULL  CASCADE
+}
+
+' =========================================================
+' I. SONGBOOK
+' =========================================================
+
+class "t_chant" as CHT << (T,#F57F17) >> {
+  PK  id             UUID           NOT NULL
+  FK  campus_id      UUID           NOT NULL  CASCADE
+  FK  categorie_code VARCHAR(30)    SET NULL  (nullable)
+      titre          VARCHAR(200)   NOT NULL
+      artiste        VARCHAR(150)
+      actif          BOOLEAN        DEFAULT true
+      youtube_url    VARCHAR(500)
+      date_creation  TIMESTAMP      NOT NULL
+      deleted_at     TIMESTAMP
+}
+
+class "t_chant_contenu" as CHTC << (T,#F57F17) >> {
+  PK  id                UUID        NOT NULL
+  FK  chant_id          UUID        NOT NULL  UNIQUE  CASCADE
+      tonalite          VARCHAR(10) NOT NULL
+      paroles_chords    TEXT        NOT NULL
+      version           INT         DEFAULT 1
+      date_modification TIMESTAMP   NOT NULL
+}
+
+class "t_chant_artiste_link" as CAL << (T,#FFE082) >> {
+  PK,FK  chant_id    UUID           NOT NULL  CASCADE
+  PK     artiste_nom VARCHAR(150)   NOT NULL
+         role        VARCHAR(50)    DEFAULT 'INTERPRETE'
+}
+
+class "t_chant_tag" as CTAG << (T,#FFE082) >> {
+  PK  id         UUID               NOT NULL
+  FK  chant_id   UUID               NOT NULL  CASCADE
+      libelle    VARCHAR(50)        NOT NULL
+}
+
+' =========================================================
+' RELATIONS
+' =========================================================
+
+' --- Organisation ---
+ORG  "1" --o{ "N" PAYS
+PAYS "1" --o{ "N" CAM
+CAM  "1" --o{ "N" CML
+MIN  "1" --o{ "N" CML
+MIN  "1" --o{ "N" POL
+
+' --- Membres ---
+CAM  "1" --o{ "N" MCL
+MBR  "1" --o{ "N" MCL
+MIN  "1" --o{ "N" MML
+MBR  "1" --o{ "N" MML
+POL  "1" --o{ "N" MPL
+MBR  "1" --o{ "N" MPL
+MBR  "1" --o| "0..1" USR
+MBR  "1" --o{ "N" IND
+MBR  "1" --o{ "N" RESP
+MBR  "1" --o{ "N" AFF
+MBR  "1" --o{ "N" MROL
+
+' --- Rôles compétences ---
+CROL "1" --o{ "N" RCMP
+RCMP "1" --o{ "N" MROL
+MIN  "1" --o{ "N" CROL
+
+' --- Planning ---
+CAM  "1" --o{ "N" ACT
+MIN  "1" --o{ "N" ACT
+ACT  "1" --o{ "N" PLN
+SP   "1" --o{ "N" PLN
+PT   "1" --o{ "N" PLN
+PLN  "1" --o{ "N" SLT
+SLT  "1" --o{ "N" AFF
+SA   "1" --o{ "N" AFF
+MIN  "0..1" --o{ "N" AFF
+TR   "1" --o{ "N" RESP
+MIN  "0..1" --o{ "N" IND
+
+' --- RBAC ---
+ROL  "1" --o{ "N" RP
+PERM "1" --o{ "N" RP
+USR  "1" --o{ "N" AR
+ROL  "1" --o{ "N" AR
+AR   "1" --o{ "N" ARCTX
+
+' --- Équipes ---
+MIN  "1" --o{ "N" EQP
+EQP  "1" --o{ "N" EM
+MBR  "1" --o{ "N" EM
+
+' --- Templates ---
+CAM  "1" --o{ "N" PT
+MIN  "1" --o{ "N" PT
+MBR  "1" --o{ "N" PT
+PT   "1" --o{ "N" PTS
+PTS  "1" --o{ "N" PTR
+PTR  "1" --o{ "N" PTRM
+MBR  "1" --o{ "N" PTRM
+
+' --- Songbook ---
+CAM  "1" --o{ "N" CHT
+CC   "1" --o{ "N" CHT
+CHT  "1" --o| "0..1" CHTC
+CHT  "1" --o{ "N" CAL
+CHT  "1" --o{ "N" CTAG
+PLN  "1" --o{ "N" PCL
+CHT  "1" --o{ "N" PCL
+
+@enduml
