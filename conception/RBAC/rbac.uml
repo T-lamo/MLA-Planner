@@ -1,0 +1,89 @@
+@startuml
+skinparam style strictuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+' -------------------------
+' Utilisateur
+' -------------------------
+class Utilisateur {
+  -id : UUID
+  -nom : String
+  -prenom : String
+  -email : String
+  -actif : Boolean
+  +hasPermission(permission, contexte) : Boolean
+}
+
+' -------------------------
+' Rôle
+' -------------------------
+class Role {
+  -id : UUID
+  -nom : String
+  -description : String
+}
+
+' -------------------------
+' Permission
+' -------------------------
+class Permission {
+  -id : UUID
+  -code : String
+  -description : String
+}
+
+' -------------------------
+' Contexte (générique)
+' -------------------------
+abstract class Contexte {
+  -id : UUID
+  -nom : String
+}
+class Ministere
+class Pole
+class Activite
+class Voix
+Contexte <|-- Ministere
+Contexte <|-- Pole
+Contexte <|-- Activite
+Contexte <|-- Voix
+
+' -------------------------
+' Affectation rôle
+' -------------------------
+class AffectationRole {
+  -id : UUID
+  -dateDebut : Date
+  -dateFin : Date
+  -active : Boolean
+  +estValide() : Boolean
+}
+
+' -------------------------
+' Relations avec cardinalité
+' -------------------------
+Utilisateur "1" o-- "0..*" AffectationRole : possede
+AffectationRole "1" --> "1" Utilisateur
+
+AffectationRole "1" --> "1" Role
+Role "1" -- "0..*" AffectationRole
+
+AffectationRole "1" o-- "0..*" Contexte : concerne
+Role "1" -- "0..*" Permission : possede
+Permission "1" -- "0..*" Role : appartient_a
+
+' -------------------------
+' ENUM Role types
+' -------------------------
+enum TypeRole <<enumeration>> {
+  RESPONSABLE_MINISTERE
+  ADJOINT_MINISTERE
+  RESPONSABLE_POLE
+  RESPONSABLE_VOIX
+  RESPONSABLE_DRESS_CODE
+  RESPONSABLE_ACTIVITE
+  CHANTRE
+}
+
+@enduml
