@@ -113,3 +113,10 @@ mobile/.packages
 mobile/**/*.g.dart
 mobile/**/*.freezed.dart
 mobile/.env
+
+# --- SCRATCH / SCRIPTS PERSO (racine) ---
+test.md
+structure.txt
+check_import.py
+create_init.py
+merge_files.py
