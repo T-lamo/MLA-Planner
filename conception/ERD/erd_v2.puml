@@ -1,0 +1,484 @@
+@startuml MLA_ERD_v2
+' =========================================================
+' ERD – MLA v2  (généré depuis schema_db_model.py)
+' =========================================================
+skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 80
+
+skinparam entity {
+  BackgroundColor #E8F5E9
+  BorderColor #388E3C
+  FontName Arial
+}
+skinparam arrow {
+  Color #555
+}
+
+' =========================================================
+' 1. RÉFÉRENTIELS (codes)
+' =========================================================
+
+package "Référentiels" #FFF9C4 {
+  entity t_statutplanning {
+    * code : VARCHAR(20) [PK]
+  }
+
+  entity t_statutaffectation {
+    * code : VARCHAR(20) [PK]
+    --
+    libelle : VARCHAR
+  }
+
+  entity t_typeresponsabilite {
+    * code : VARCHAR(50) [PK]
+  }
+
+  entity t_chant_categorie {
+    * code : VARCHAR(30) [PK]
+    --
+    libelle : VARCHAR(100)
+    ordre : INT
+    description : TEXT
+  }
+}
+
+' =========================================================
+' 2. STRUCTURE ORGANISATIONNELLE
+' =========================================================
+
+package "Organisation" #E3F2FD {
+  entity t_organisation {
+    * id : UUID [PK]
+    --
+    nom : VARCHAR(150)
+    date_creation : DATE
+    deleted_at : TIMESTAMP
+  }
+
+  entity t_pays {
+    * id : UUID [PK]
+    + organisation_id : UUID [FK]
+    --
+    nom : VARCHAR(100)
+    code : VARCHAR(5)
+    deleted_at : TIMESTAMP
+  }
+
+  entity t_campus {
+    * id : UUID [PK]
+    + pays_id : UUID [FK]
+    --
+    nom : VARCHAR(100)
+    ville : VARCHAR(100)
+    timezone : VARCHAR(50)
+    deleted_at : TIMESTAMP
+  }
+
+  entity t_ministere {
+    * id : UUID [PK]
+    --
+    nom : VARCHAR(100)
+    date_creation : VARCHAR
+    actif : BOOLEAN
+    deleted_at : TIMESTAMP
+  }
+
+  entity t_pole {
+    * id : UUID [PK]
+    + ministere_id : UUID [FK]
+    --
+    nom : VARCHAR(100)
+    description : VARCHAR(500)
+    active : BOOLEAN
+    deleted_at : TIMESTAMP
+  }
+
+  entity t_campus_ministere_link {
+    * campus_id : UUID [PK, FK]
+    * ministere_id : UUID [PK, FK]
+  }
+}
+
+' =========================================================
+' 3. MEMBRES & UTILISATEURS
+' =========================================================
+
+package "Membres & Auth" #FCE4EC {
+  entity t_membre {
+    * id : UUID [PK]
+    + campus_principal_id : UUID [FK, nullable]
+    --
+    nom : VARCHAR(50)
+    prenom : VARCHAR(50)
+    email : VARCHAR(100)
+    telephone : VARCHAR(20)
+    actif : BOOLEAN
+    date_inscription : TIMESTAMP
+    deleted_at : TIMESTAMP
+  }
+
+  entity t_utilisateur {
+    * id : UUID [PK]
+    + membre_id : UUID [FK, unique, nullable]
+    --
+    username : VARCHAR(50)
+    password : VARCHAR(255)
+    actif : BOOLEAN
+  }
+
+  entity t_revoked_tokens {
+    * id : SERIAL [PK]
+    --
+    jti : VARCHAR [unique]
+    expires_at : TIMESTAMP
+    revoked_at : TIMESTAMP
+  }
+
+  entity t_membre_campus_link {
+    * membre_id : UUID [PK, FK]
+    * campus_id : UUID [PK, FK]
+  }
+
+  entity t_membre_ministere_link {
+    * membre_id : UUID [PK, FK]
+    * ministere_id : UUID [PK, FK]
+  }
+
+  entity t_membre_pole_link {
+    * membre_id : UUID [PK, FK]
+    * pole_id : UUID [PK, FK]
+  }
+}
+
+' =========================================================
+' 4. RÔLES & COMPÉTENCES (métier)
+' =========================================================
+
+package "Rôles & Compétences" #F3E5F5 {
+  entity t_categorierole {
+    * code : VARCHAR(20) [PK]
+    + ministere_id : UUID [FK, nullable]
+    --
+    libelle : VARCHAR(100)
+    description : TEXT
+  }
+
+  entity t_rolecompetence {
+    * code : VARCHAR(50) [PK]
+    + categorie_code : VARCHAR(20) [FK]
+    --
+    libelle : VARCHAR(100)
+  }
+
+  entity t_membre_role {
+    * membre_id : UUID [PK, FK]
+    * role_code : VARCHAR(50) [PK, FK]
+    --
+    niveau : VARCHAR(20)
+    is_principal : BOOLEAN
+  }
+}
+
+' =========================================================
+' 5. PLANNING & ACTIVITÉS
+' =========================================================
+
+package "Planning & Activités" #E8EAF6 {
+  entity t_activite {
+    * id : UUID [PK]
+    + campus_id : UUID [FK]
+    + ministere_organisateur_id : UUID [FK]
+    --
+    type : VARCHAR(100)
+    date_debut : TIMESTAMP
+    date_fin : TIMESTAMP
+    lieu : VARCHAR(255)
+    description : VARCHAR(1000)
+    deleted_at : TIMESTAMP
+  }
+
+  entity t_planningservice {
+    * id : UUID [PK]
+    + statut_code : VARCHAR(20) [FK]
+    + activite_id : UUID [FK, nullable]
+    + template_id : UUID [FK, nullable]
+    --
+    serie_id : VARCHAR [nullable]
+    deleted_at : TIMESTAMP
+  }
+
+  entity t_slot {
+    * id : UUID [PK]
+    + planning_id : UUID [FK]
+    --
+    nom_creneau : VARCHAR(100)
+    date_debut : TIMESTAMP
+    date_fin : TIMESTAMP
+    nb_personnes_requis : INT
+  }
+
+  entity t_affectation {
+    * id : UUID [PK]
+    + slot_id : UUID [FK]
+    + membre_id : UUID [FK]
+    + statut_affectation_code : VARCHAR(20) [FK]
+    + ministere_id : UUID [FK, nullable]
+    --
+    role_code : VARCHAR(50)
+    presence_confirmee : BOOLEAN
+  }
+
+  entity t_indisponibilite {
+    * id : UUID [PK]
+    + membre_id : UUID [FK]
+    + ministere_id : UUID [FK, nullable]
+    --
+    date_debut : VARCHAR
+    date_fin : VARCHAR
+    motif : VARCHAR(255)
+    validee : BOOLEAN
+  }
+
+  entity t_responsabilite {
+    * id : UUID [PK]
+    + type_code : VARCHAR(50) [FK]
+    + membre_id : UUID [FK]
+    + ministere_id : UUID [FK, nullable]
+    + pole_id : UUID [FK, nullable]
+    + activite_id : UUID [FK, nullable]
+    --
+    date_debut : VARCHAR
+    date_fin : VARCHAR
+    actif : BOOLEAN
+  }
+
+  entity t_planning_chant_link {
+    * planning_id : UUID [PK, FK]
+    * chant_id : UUID [PK, FK]
+    --
+    ordre : INT
+  }
+}
+
+' =========================================================
+' 6. RBAC
+' =========================================================
+
+package "RBAC" #FBE9E7 {
+  entity t_role {
+    * id : UUID [PK]
+    --
+    libelle : VARCHAR(100) [unique]
+  }
+
+  entity t_permission {
+    * id : UUID [PK]
+    --
+    code : VARCHAR(100) [unique]
+    description : TEXT
+  }
+
+  entity t_role_permission {
+    * role_id : UUID [PK, FK]
+    * permission_id : UUID [PK, FK]
+  }
+
+  entity t_affectation_role {
+    * id : UUID [PK]
+    + utilisateur_id : UUID [FK]
+    + role_id : UUID [FK]
+    --
+    dateDebut : DATE
+    dateFin : DATE
+    active : BOOLEAN
+  }
+
+  entity t_affectation_contexte {
+    * id : UUID [PK]
+    + affectation_role_id : UUID [FK]
+    + ministere_id : UUID [FK, nullable]
+    + pole_id : UUID [FK, nullable]
+    + activite_id : UUID [FK, nullable]
+  }
+}
+
+' =========================================================
+' 7. ÉQUIPES
+' =========================================================
+
+package "Équipes" #E0F7FA {
+  entity t_equipe {
+    * id : UUID [PK]
+    + ministere_id : UUID [FK]
+    --
+    nom : VARCHAR(100)
+    active : BOOLEAN
+  }
+
+  entity t_equipe_membre {
+    * equipe_id : UUID [PK, FK]
+    * membre_id : UUID [PK, FK]
+  }
+}
+
+' =========================================================
+' 8. PLANNING TEMPLATES
+' =========================================================
+
+package "Templates" #F9FBE7 {
+  entity t_planningtemplate {
+    * id : UUID [PK]
+    + campus_id : UUID [FK]
+    + ministere_id : UUID [FK]
+    + created_by_id : UUID [FK]
+    --
+    nom : VARCHAR(150)
+    description : VARCHAR(500)
+    activite_type : VARCHAR(100)
+    duree_minutes : INT
+    used_count : INT
+    visibilite : VARCHAR(20)
+    created_at : TIMESTAMP
+  }
+
+  entity t_planningtemplateslot {
+    * id : UUID [PK]
+    + template_id : UUID [FK]
+    --
+    nom_creneau : VARCHAR(100)
+    offset_debut_minutes : INT
+    offset_fin_minutes : INT
+    nb_personnes_requis : INT
+  }
+
+  entity t_planningtemplaterole {
+    * id : UUID [PK]
+    + slot_id : UUID [FK]
+    --
+    role_code : VARCHAR(50)
+  }
+
+  entity t_planning_template_role_membre {
+    * id : UUID [PK]
+    + template_role_id : UUID [FK]
+    + membre_id : UUID [FK]
+  }
+}
+
+' =========================================================
+' 9. SONGBOOK
+' =========================================================
+
+package "Songbook" #FFF3E0 {
+  entity t_chant {
+    * id : UUID [PK]
+    + campus_id : UUID [FK]
+    + categorie_code : VARCHAR(30) [FK, nullable]
+    --
+    titre : VARCHAR(200)
+    artiste : VARCHAR(150)
+    actif : BOOLEAN
+    youtube_url : VARCHAR(500)
+    date_creation : TIMESTAMP
+    deleted_at : TIMESTAMP
+  }
+
+  entity t_chant_contenu {
+    * id : UUID [PK]
+    + chant_id : UUID [FK, unique]
+    --
+    tonalite : VARCHAR(10)
+    paroles_chords : TEXT
+    version : INT
+    date_modification : TIMESTAMP
+  }
+
+  entity t_chant_artiste_link {
+    * chant_id : UUID [PK, FK]
+    * artiste_nom : VARCHAR(150) [PK]
+    --
+    role : VARCHAR(50)
+  }
+
+  entity t_chant_tag {
+    * id : UUID [PK]
+    + chant_id : UUID [FK]
+    --
+    libelle : VARCHAR(50)
+  }
+}
+
+' =========================================================
+' RELATIONS
+' =========================================================
+
+' Organisation
+t_organisation ||--o{ t_pays
+t_pays ||--o{ t_campus
+t_campus ||--o{ t_campus_ministere_link
+t_ministere ||--o{ t_campus_ministere_link
+t_ministere ||--o{ t_pole
+
+' Membres
+t_campus ||--o{ t_membre_campus_link
+t_membre ||--o{ t_membre_campus_link
+t_ministere ||--o{ t_membre_ministere_link
+t_membre ||--o{ t_membre_ministere_link
+t_pole ||--o{ t_membre_pole_link
+t_membre ||--o{ t_membre_pole_link
+t_membre ||--o| t_utilisateur
+t_membre ||--o{ t_indisponibilite
+t_membre ||--o{ t_responsabilite
+t_membre ||--o{ t_affectation
+t_membre ||--o{ t_membre_role
+
+' Rôles compétences
+t_categorierole ||--o{ t_rolecompetence
+t_rolecompetence ||--o{ t_membre_role
+t_ministere ||--o{ t_categorierole
+
+' Activités & Planning
+t_campus ||--o{ t_activite
+t_ministere ||--o{ t_activite : organisateur
+t_activite ||--o{ t_planningservice
+t_statutplanning ||--o{ t_planningservice
+t_planningtemplate ||--o{ t_planningservice
+t_planningservice ||--o{ t_slot
+t_slot ||--o{ t_affectation
+t_statutaffectation ||--o{ t_affectation
+t_ministere ||--o{ t_affectation
+t_typeresponsabilite ||--o{ t_responsabilite
+t_ministere ||--o{ t_indisponibilite
+
+' RBAC
+t_role ||--o{ t_role_permission
+t_permission ||--o{ t_role_permission
+t_utilisateur ||--o{ t_affectation_role
+t_role ||--o{ t_affectation_role
+t_affectation_role ||--o{ t_affectation_contexte
+
+' Équipes
+t_ministere ||--o{ t_equipe
+t_equipe ||--o{ t_equipe_membre
+t_membre ||--o{ t_equipe_membre
+
+' Templates
+t_campus ||--o{ t_planningtemplate
+t_ministere ||--o{ t_planningtemplate
+t_membre ||--o{ t_planningtemplate : created_by
+t_planningtemplate ||--o{ t_planningtemplateslot
+t_planningtemplateslot ||--o{ t_planningtemplaterole
+t_planningtemplaterole ||--o{ t_planning_template_role_membre
+t_membre ||--o{ t_planning_template_role_membre
+
+' Songbook
+t_campus ||--o{ t_chant
+t_chant_categorie ||--o{ t_chant
+t_chant ||--o| t_chant_contenu
+t_chant ||--o{ t_chant_artiste_link
+t_chant ||--o{ t_chant_tag
+t_planningservice ||--o{ t_planning_chant_link
+t_chant ||--o{ t_planning_chant_link
+
+@enduml
