@@ -1,0 +1,169 @@
+@startuml
+' ---------------------------------------------------------
+' Modèle Logique de Données Final - Architecture Robuste
+' ---------------------------------------------------------
+
+skinparam linetype ortho
+skinparam entity {
+    BackgroundColor #F8F9FA
+    BorderColor #343A40
+}
+
+' --- Référentiels Géo ---
+entity OrganisationICC {
+    * id : UUID [PK]
+    nom : VARCHAR(255)
+}
+
+entity Pays {
+    * id : UUID [PK]
+    nom : VARCHAR(255)
+    code_iso : VARCHAR(10)
+    + organisation_id : UUID [FK]
+}
+
+entity Campus {
+    * id : UUID [PK]
+    nom : VARCHAR(255)
+    ville : VARCHAR(255)
+    timezone : VARCHAR(50)
+    + pays_id : UUID [FK]
+}
+
+' --- Référentiels Métier ---
+entity CategorieRole {
+    * code : VARCHAR(20) [PK]
+    libelle : VARCHAR(100)
+}
+
+entity RoleCompetence {
+    * code : VARCHAR(50) [PK]
+    libelle : VARCHAR(100)
+    + categorie_code : VARCHAR(20) [FK]
+}
+
+entity TypeResponsabilite {
+    * code : VARCHAR(50) [PK]
+    libelle : VARCHAR(100)
+}
+
+entity StatutPlanning {
+    * code : VARCHAR(20) [PK]
+}
+
+entity StatutAffectation {
+    * code : VARCHAR(20) [PK] -- 'PROPOSE', 'CONFIRME', 'REFUSE', 'PRESENT'
+}
+
+' --- Organisation Interne ---
+entity Ministere {
+    * id : UUID [PK]
+    nom : VARCHAR(255)
+    + campus_id : UUID [FK]
+}
+
+entity Pole {
+    * id : UUID [PK]
+    nom : VARCHAR(255)
+    + ministere_id : UUID [FK]
+}
+
+' --- Ressources Humaines ---
+entity Membre {
+    * id : UUID [PK]
+    nom : VARCHAR(255)
+    prenom : VARCHAR(255)
+    email : VARCHAR(255) [UNIQUE]
+    actif : BOOLEAN
+    + campus_id : UUID [FK]
+}
+
+entity MembreRole {
+    * membre_id : UUID [FK, PK]
+    * role_code : VARCHAR(50) [FK, PK]
+    niveau : VARCHAR(50)
+    is_principal : BOOLEAN
+}
+
+entity Responsabilite {
+    * id : UUID [PK]
+    dateDebut : DATE
+    dateFin : DATE
+    actif : BOOLEAN
+    + membre_id : UUID [FK]
+    + type_code : VARCHAR(50) [FK]
+    + ministere_id : UUID [FK]
+    + pole_id : UUID [FK]
+}
+
+entity Indisponibilite {
+    * id : UUID [PK]
+    dateDebut : DATETIME
+    dateFin : DATETIME
+    + membre_id : UUID [FK]
+}
+
+' --- Planning & Activités ---
+entity Activite {
+    * id : UUID [PK]
+    nom : VARCHAR(255)
+    dateDebut : DATETIME
+    dateFin : DATETIME
+    + campus_id : UUID [FK]
+    + ministere_organisateur_id : UUID [FK]
+}
+
+entity PlanningService {
+    * id : UUID [PK]
+    + activite_id : UUID [FK]
+    + statut_code : VARCHAR(20) [FK]
+}
+
+entity Slot {
+    * id : UUID [PK]
+    + planning_id : UUID [FK]
+    nom_creneau : VARCHAR(100)
+    dateDebut : DATETIME
+    dateFin : DATETIME
+}
+
+entity Affectation {
+    * id : UUID [PK]
+    + slot_id : UUID [FK]
+    ' Le couple (membre_id, role_code) référence MembreRole
+    + membre_id : UUID [FK]
+    + role_code : VARCHAR(50) [FK]
+    + statut_affectation_code : VARCHAR(20) [FK]
+    presence_confirmee : BOOLEAN
+}
+
+' --- Relations ---
+OrganisationICC ||--o{ Pays
+Pays ||--o{ Campus
+Campus ||--o{ Ministere
+Campus ||--o{ Membre
+Campus ||--o{ Activite
+
+Ministere ||--o{ Pole
+Ministere ||--o{ Activite
+
+Membre ||--o{ Responsabilite
+TypeResponsabilite ||--o{ Responsabilite
+Responsabilite }o--|| Ministere
+Responsabilite }o--|| Pole
+
+CategorieRole ||--o{ RoleCompetence
+RoleCompetence ||--o{ MembreRole
+Membre ||--o{ MembreRole
+Membre ||--o{ Indisponibilite
+
+Activite ||--o{ PlanningService
+PlanningService ||--o{ Slot
+StatutPlanning ||--o{ PlanningService
+
+' Liaison forte entre Affectation et le couple Membre/Role
+Slot ||--o{ Affectation
+MembreRole ||--o{ Affectation
+StatutAffectation ||--o{ Affectation
+
+@enduml

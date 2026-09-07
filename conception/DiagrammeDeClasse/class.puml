@@ -1,0 +1,271 @@
+@startuml
+skinparam style strictuml
+skinparam classAttributeIconSize 0
+
+' =========================
+' PARAMÈTRES POUR LIGNES ORTHOGONALES ET ESPACEMENT
+' =========================
+skinparam linetype ortho
+skinparam shadowing false
+skinparam classPadding 15
+skinparam classMargin 20
+skinparam interfacePadding 10
+skinparam enumPadding 10
+skinparam ArrowColor black
+
+' =========================
+' INTERFACES
+' =========================
+
+interface Authentifiable <<interface>> {
+  +login(email, password) : Boolean
+  +logout() : void
+  +changerMotDePasse(ancien, nouveau)
+}
+
+interface Planifiable <<interface>> {
+  +creerPlanning()
+  +modifierPlanning()
+  +validerPlanning()
+  +publierPlanning()
+}
+
+interface Notifiable <<interface>> {
+  +notifier()
+  +notifierAnnulation()
+}
+
+' =========================
+' ORGANISATION
+' =========================
+
+class OrganisationICC {
+  -id : UUID
+  -nom : String
+  -dateCreation : Date
+  +getPays() : List<Pays>
+}
+
+class Pays {
+  -id : UUID
+  -nom : String
+  -code : String
+  +getCampus() : List<Campus>
+}
+
+class Campus {
+  -id : UUID
+  -nom : String
+  -ville : String
+  -timezone : String
+  +getMinisteres()
+  +organiserActivite()
+}
+
+OrganisationICC "1" *-- "many" Pays
+Pays "1" *-- "many" Campus
+
+' =========================
+' MINISTERE & POLES
+' =========================
+
+abstract class Ministere {
+  -id : UUID
+  -nom : String
+  -dateCreation : Date
+  -actif : Boolean
+  +getMembres()
+  +getResponsables()
+}
+
+class MLA {
+  -nombreEquipes : int
+  +creerEquipe(nom)
+  +programmerActivite()
+  +equilibrerEquipes()
+}
+
+class Pole {
+  -id : UUID
+  -nom : String
+  -description : String
+  +ajouterMembre(membre)
+  +retirerMembre(membre)
+  +getResponsable()
+}
+
+Campus "1" *-- "many" Ministere
+Ministere <|-- MLA
+Ministere "1" *-- "many" Pole
+
+' =========================
+' MEMBRES
+' =========================
+
+class Membre implements Authentifiable {
+  -id : UUID
+  -nom : String
+  -prenom : String
+  -email : String
+  -telephone : String
+  -date_inscription : Date
+  -actif : Boolean
+  +consulterPlanning()
+  +mettreAJourProfil()
+}
+
+abstract class Chantre {
+  -date_integration : Date
+  -niveau : String
+  +soumettreIndisponibilite()
+  +consulterHistoriqueService()
+}
+
+class Choriste {
+  -voix : Voix
+  -secondaireVoix : List<Voix>
+  +changerVoix()
+  +estResponsableVoix() : Boolean
+}
+
+class Musicien {
+  -instruments : List<Instrument>
+  -instrumentPrincipal : Instrument
+  +ajouterInstrument()
+  +definirInstrumentPrincipal()
+}
+
+Ministere "1" o-- "many" Membre
+Pole "1" o-- "many" Membre
+
+Membre <|-- Chantre
+Chantre <|-- Choriste
+Chantre <|-- Musicien
+
+' =========================
+' RESPONSABILITE
+' =========================
+
+class Responsabilite {
+  -id : UUID
+  -type : TypeResponsabilite
+  -dateDebut : Date
+  -dateFin : Date
+  -actif : Boolean
+  +estActive() : Boolean
+  +terminer()
+}
+
+Membre "1" o-- "many" Responsabilite
+Responsabilite "1" --> Ministere
+Responsabilite "0..1" --> Pole
+Responsabilite "0..1" --> Activite
+Responsabilite "0..1" --> Voix
+
+' =========================
+' EQUIPE
+' =========================
+
+class Equipe {
+  -id : UUID
+  -nom : String
+  -active : Boolean
+  +ajouterChantre()
+  +retirerChantre()
+  +getChantresDisponibles()
+}
+
+MLA "1" *-- "many" Equipe
+Equipe "1" o-- "many" Chantre
+
+' =========================
+' ACTIVITE & PLANNING
+' =========================
+
+class Activite {
+  -id : UUID
+  -type : String
+  -dateDebut : DateTime
+  -dateFin : DateTime
+  -lieu : String
+  -description : String
+  +estActive() : Boolean
+  +annuler()
+}
+
+class PlanningService implements Planifiable {
+  -id : UUID
+  -statut : StatutPlanning
+  -dateCreation : Date
+  +ajouterAffectation()
+  +retirerAffectation()
+  +verifierContraintes()
+  +genererPlanningEquipe()
+}
+
+class Affectation implements Notifiable {
+  -role : String
+  -voix : Voix
+  -instrument : Instrument
+  -principal : Boolean
+  -presenceConfirmee : Boolean
+  +confirmer()
+  +refuser()
+}
+
+Campus "1" o-- "many" Activite
+Activite "1" *-- "1" PlanningService
+PlanningService "1" *-- "many" Affectation
+Chantre "1" o-- "many" Affectation
+
+' =========================
+' INDISPONIBILITE
+' =========================
+
+class Indisponibilite {
+  -id : UUID
+  -dateDebut : Date
+  -dateFin : Date
+  -motif : String
+  -validee : Boolean
+  +estValidePour(date) : Boolean
+  +annuler()
+}
+
+Chantre "1" *-- "many" Indisponibilite
+
+' =========================
+' ENUMERATIONS
+' =========================
+
+enum Voix <<enumeration>> {
+  SOPRANO
+  ALTO
+  TENOR
+  BARYTON
+}
+
+enum Instrument <<enumeration>> {
+  PIANO
+  GUITARE
+  BASSE
+  BATTERIE
+  CLAVIER
+}
+
+enum StatutPlanning <<enumeration>> {
+  BROUILLON
+  VALIDE
+  PUBLIE
+}
+
+enum TypeResponsabilite <<enumeration>> {
+  RESPONSABLE_MINISTERE
+  ADJOINT_MINISTERE
+  RESPONSABLE_POLE
+  RESPONSABLE_VOIX
+  RESPONSABLE_DRESS_CODE
+  RESPONSABLE_ACTIVITE
+}
+
+@enduml

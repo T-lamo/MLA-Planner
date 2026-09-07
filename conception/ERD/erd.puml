@@ -1,0 +1,201 @@
+@startuml
+' -------------------------
+' ERD – MLA / ICC avec Enums et relations
+' -------------------------
+
+' Forcer les lignes orthogonales (angles droits)
+skinparam linetype ortho
+
+skinparam entity {
+  BackgroundColor #E8F5E9
+  BorderColor #43A047
+}
+
+' -------------------------
+' Tables de référence (Enums)
+' -------------------------
+entity Voix {
+  * code : VARCHAR(20) [PK]
+}
+
+entity Instrument {
+  * code : VARCHAR(20) [PK]
+}
+
+entity StatutPlanning {
+  * code : VARCHAR(20) [PK]
+}
+
+entity TypeResponsabilite {
+  * code : VARCHAR(50) [PK]
+}
+
+' -------------------------
+' Tables principales
+' -------------------------
+entity OrganisationICC {
+  * id : UUID [PK]
+  nom : VARCHAR(255)
+  dateCreation : DATE
+}
+
+entity Pays {
+  * id : UUID [PK]
+  nom : VARCHAR(255)
+  code : VARCHAR(10)
+  + organisation_id : UUID [FK -> OrganisationICC.id]
+}
+
+entity Campus {
+  * id : UUID [PK]
+  nom : VARCHAR(255)
+  ville : VARCHAR(255)
+  timezone : VARCHAR(50)
+  + pays_id : UUID [FK -> Pays.id]
+}
+
+entity Ministere {
+  * id : UUID [PK]
+  nom : VARCHAR(255)
+  dateCreation : DATE
+  actif : BOOLEAN
+  + campus_id : UUID [FK -> Campus.id]
+}
+
+entity Pole {
+  * id : UUID [PK]
+  nom : VARCHAR(255)
+  description : TEXT
+  + ministere_id : UUID [FK -> Ministere.id]
+}
+
+entity Membre {
+  * id : UUID [PK]
+  nom : VARCHAR(255)
+  prenom : VARCHAR(255)
+  email : VARCHAR(255)
+  telephone : VARCHAR(50)
+  date_inscription : DATE
+  actif : BOOLEAN
+  + ministere_id : UUID [FK -> Ministere.id]
+  + pole_id : UUID [FK -> Pole.id]
+}
+
+entity Chantre {
+  * id : UUID [PK]
+  date_integration : DATE
+  niveau : VARCHAR(50)
+  + membre_id : UUID [FK -> Membre.id]
+}
+
+entity Choriste {
+  * id : UUID [PK]
+  voix_code : VARCHAR(20) [FK -> Voix.code]
+  secondaireVoix : VARCHAR(50)
+  + chantre_id : UUID [FK -> Chantre.id]
+}
+
+entity Musicien {
+  * id : UUID [PK]
+  instrument_code : VARCHAR(20) [FK -> Instrument.code]
+  instrumentPrincipal : VARCHAR(50)
+  + chantre_id : UUID [FK -> Chantre.id]
+}
+
+entity Equipe {
+  * id : UUID [PK]
+  nom : VARCHAR(255)
+  active : BOOLEAN
+  + ministere_id : UUID [FK -> Ministere.id]
+}
+
+entity Equipe_Membre {
+  * equipe_id : UUID [FK -> Equipe.id] [PK]
+  * membre_id : UUID [FK -> Membre.id] [PK]
+}
+
+entity Activite {
+  * id : UUID [PK]
+  type : VARCHAR(100)
+  dateDebut : DATETIME
+  dateFin : DATETIME
+  lieu : VARCHAR(255)
+  description : TEXT
+  + campus_id : UUID [FK -> Campus.id]
+}
+
+entity PlanningService {
+  * id : UUID [PK]
+  statut_code : VARCHAR(20) [FK -> StatutPlanning.code]
+  dateCreation : DATE
+  + activite_id : UUID [FK -> Activite.id]
+}
+
+entity Affectation {
+  * id : UUID [PK]
+  role : VARCHAR(50)
+  voix_code : VARCHAR(20) [FK -> Voix.code]
+  instrument_code : VARCHAR(20) [FK -> Instrument.code]
+  principal : BOOLEAN
+  presenceConfirmee : BOOLEAN
+  + planning_id : UUID [FK -> PlanningService.id]
+  + chantre_id : UUID [FK -> Chantre.id]
+}
+
+entity Indisponibilite {
+  * id : UUID [PK]
+  dateDebut : DATE
+  dateFin : DATE
+  motif : TEXT
+  validee : BOOLEAN
+  + chantre_id : UUID [FK -> Chantre.id]
+}
+
+entity Responsabilite {
+  * id : UUID [PK]
+  type_code : VARCHAR(50) [FK -> TypeResponsabilite.code]
+  dateDebut : DATE
+  dateFin : DATE
+  actif : BOOLEAN
+  + membre_id : UUID [FK -> Membre.id]
+  + ministere_id : UUID [FK -> Ministere.id] [NULLABLE]
+  + pole_id : UUID [FK -> Pole.id] [NULLABLE]
+  + activite_id : UUID [FK -> Activite.id] [NULLABLE]
+}
+
+' -------------------------
+' Relations visuelles
+' -------------------------
+OrganisationICC ||--o{ Pays
+Pays ||--o{ Campus
+Campus ||--o{ Ministere
+Ministere ||--o{ Pole
+Ministere ||--o{ Membre
+Pole ||--o{ Membre
+Ministere ||--o{ Equipe
+Equipe ||--o{ Equipe_Membre
+Membre ||--o{ Equipe_Membre
+Membre ||--o{ Chantre
+Chantre ||--o{ Choriste
+Chantre ||--o{ Musicien
+Campus ||--o{ Activite
+Activite ||--|| PlanningService
+PlanningService ||--o{ Affectation
+Chantre ||--o{ Affectation
+Chantre ||--o{ Indisponibilite
+Membre ||--o{ Responsabilite
+Responsabilite ||--|| Ministere
+Responsabilite ||--|| Pole
+Responsabilite ||--|| Activite
+
+' -------------------------
+' Relations Classe -> Enum
+' -------------------------
+Choriste ..> Voix : voix_code
+Musicien ..> Instrument : instrument_code
+Affectation ..> Voix : voix_code
+Affectation ..> Instrument : instrument_code
+PlanningService ..> StatutPlanning : statut_code
+Responsabilite ..> TypeResponsabilite : type_code
+
+@enduml

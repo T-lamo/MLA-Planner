@@ -1,0 +1,151 @@
+@startuml
+' ---------------------------------------------------------
+' Modèle Logique de Données – Multi-Ministères & Multi-Campus
+' ---------------------------------------------------------
+skinparam linetype ortho
+skinparam entity {
+  BackgroundColor #F8F9FA
+  BorderColor #343A40
+}
+
+' --- Référentiels Géo & Structure ---
+entity OrganisationICC {
+  * id : CHAR(36) [PK]
+  nom : VARCHAR(255)
+}
+
+entity Pays {
+  * id : CHAR(36) [PK]
+  nom : VARCHAR(255)
+  code_iso : VARCHAR(10)
+  + organisation_id : CHAR(36) [FK]
+}
+
+entity Campus {
+  * id : CHAR(36) [PK]
+  nom : VARCHAR(255)
+  ville : VARCHAR(255)
+  timezone : VARCHAR(50)
+  + pays_id : CHAR(36) [FK]
+}
+
+' --- Référentiels Métier ---
+entity CategorieRole {
+  * code : VARCHAR(20) [PK] -- 'VOIX', 'INST', 'TECH'
+  libelle : VARCHAR(100)
+}
+
+entity RoleCompetence {
+  * code : VARCHAR(50) [PK] -- 'SOPRANO', 'SON'
+  libelle : VARCHAR(100)
+  + categorie_code : VARCHAR(20) [FK]
+}
+
+entity TypeResponsabilite {
+  * code : VARCHAR(50) [PK] -- 'RESPONSABLE', 'ADJOINT'
+  libelle : VARCHAR(100)
+}
+
+entity StatutPlanning {
+  * code : VARCHAR(20) [PK] -- 'BROUILLON', 'PUBLIE'
+}
+
+' --- Organisation Interne ---
+entity Ministere {
+  * id : CHAR(36) [PK]
+  nom : VARCHAR(255)
+  + campus_id : CHAR(36) [FK]
+}
+
+entity Pole {
+  * id : CHAR(36) [PK]
+  nom : VARCHAR(255)
+  + ministere_id : CHAR(36) [FK]
+}
+
+' --- Ressources Humaines ---
+entity Membre {
+  * id : CHAR(36) [PK]
+  nom : VARCHAR(255)
+  prenom : VARCHAR(255)
+  email : VARCHAR(255)
+  actif : BOOLEAN
+  + campus_id : CHAR(36) [FK] -- 'Rattachement géographique'
+}
+
+entity Responsabilite {
+  * id : CHAR(36) [PK]
+  dateDebut : DATE
+  dateFin : DATE
+  actif : BOOLEAN
+  + membre_id : CHAR(36) [FK]
+  + type_code : VARCHAR(50) [FK]
+  + ministere_id : CHAR(36) [FK] [NULL]
+  + pole_id : CHAR(36) [FK] [NULL]
+}
+
+entity MembreRole {
+  * membre_id : FK [PK]
+  * role_code : FK [PK]
+  niveau : VARCHAR(50)
+  is_principal : BOOLEAN
+}
+
+entity Indisponibilite {
+  * id : CHAR(36) [PK]
+  dateDebut : DATETIME
+  dateFin : DATETIME
+  + membre_id : CHAR(36) [FK]
+}
+
+' --- Planning & Activités ---
+entity Activite {
+  * id : CHAR(36) [PK]
+  nom : VARCHAR(255)
+  dateDebut : DATETIME
+  dateFin : DATETIME
+  + campus_id : CHAR(36) [FK] -- 'Lieu de l'activité'
+  + ministere_organisateur_id : CHAR(36) [FK]
+}
+
+entity PlanningService {
+  * id : CHAR(36) [PK]
+  + activite_id : CHAR(36) [FK]
+  statut_code : VARCHAR(20) [FK]
+}
+
+entity Affectation {
+  * id : CHAR(36) [PK]
+  + planning_id : CHAR(36) [FK]
+  + membre_id : CHAR(36) [FK]
+  + role_code : VARCHAR(50) [FK]
+  presenceConfirmee : BOOLEAN
+}
+
+' --- Relations ---
+OrganisationICC ||--o{ Pays
+Pays ||--o{ Campus
+Campus ||--o{ Ministere
+Campus ||--o{ Membre
+Campus ||--o{ Activite
+
+Ministere ||--o{ Pole
+Ministere ||--o{ Activite
+
+Membre ||--o{ Responsabilite
+TypeResponsabilite ||--o{ Responsabilite
+Responsabilite }o--|| Ministere
+Responsabilite }o--|| Pole
+
+CategorieRole ||--o{ RoleCompetence
+RoleCompetence ||--o{ MembreRole
+Membre ||--o{ MembreRole
+Membre ||--o{ Indisponibilite
+
+Activite ||--|| PlanningService
+PlanningService ||--o{ Affectation
+Membre ||--o{ Affectation
+RoleCompetence ||--o{ Affectation
+StatutPlanning ||--o{ PlanningService
+
+@enduml

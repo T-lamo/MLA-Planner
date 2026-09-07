@@ -1,0 +1,89 @@
+@startuml
+title Diagramme de cas d’utilisation – Système de Planning MLA (ICC)
+
+left to right direction
+skinparam linetype ortho
+skinparam shadowing false
+
+skinparam ActorBorderColor #1B5E20
+skinparam ActorBackgroundColor #E8F5E9
+skinparam UsecaseBorderColor #1B5E20
+skinparam UsecaseBackgroundColor #F1F8E9
+skinparam ArrowColor #1B5E20
+
+' =====================
+' Acteurs
+' =====================
+actor "Responsable MLA" as Responsable
+actor "Chantre\n(Choriste / Musicien)" as Chantre
+actor "Administrateur ICC" as Admin
+
+' =====================
+' Frontière du système
+' =====================
+rectangle "Système de Planning MLA / ICC" {
+
+  ' -------- Authentification --------
+  usecase "S’authentifier" as UC_Login
+  usecase "Gérer comptes utilisateurs" as UC_Users
+
+  ' -------- Gestion Planning --------
+  usecase "Créer / Modifier activité" as UC_Activite
+  usecase "Consulter calendrier\n(TUI Calendar)" as UC_Calendar
+  usecase "Constituer planning\nde service" as UC_Planning
+  usecase "Affecter chantres" as UC_Affecter
+  usecase "Vérifier contraintes\n(métier)" as UC_Contraintes
+  usecase "Valider planning" as UC_Valider
+  usecase "Notifier chantres" as UC_Notifier
+
+  ' -------- Gestion Membres --------
+  usecase "Gérer membres" as UC_Membres
+  usecase "Gérer équipes" as UC_Equipes
+  usecase "Consulter profils\nmembres" as UC_Profils
+
+  ' -------- Indisponibilités --------
+  usecase "Déclarer indisponibilité" as UC_DeclareIndispo
+  usecase "Consulter indisponibilités" as UC_ConsulterIndispo
+
+  ' -------- Reporting --------
+  usecase "Consulter statistiques" as UC_Stats
+
+  ' -------- Évolution future --------
+  usecase "Gérer répertoire\nde chants" as UC_Chants
+}
+
+' =====================
+' Associations Acteurs
+' =====================
+Responsable --> UC_Login
+Responsable --> UC_Activite
+Responsable --> UC_Calendar
+Responsable --> UC_Planning
+Responsable --> UC_Membres
+Responsable --> UC_Equipes
+Responsable --> UC_Profils
+Responsable --> UC_ConsulterIndispo
+Responsable --> UC_Stats
+
+Chantre --> UC_Login
+Chantre --> UC_Calendar
+Chantre --> UC_DeclareIndispo
+Chantre --> UC_Profils
+
+Admin --> UC_Login
+Admin --> UC_Users
+Admin --> UC_Stats
+
+' =====================
+' Relations UML
+' =====================
+UC_Planning ..> UC_Affecter : <<include>>
+UC_Planning ..> UC_Contraintes : <<include>>
+UC_Planning ..> UC_Valider : <<include>>
+UC_Valider ..> UC_Notifier : <<include>>
+
+UC_DeclareIndispo ..> UC_ConsulterIndispo : <<extend>>
+UC_Activite ..> UC_Calendar : <<include>>
+UC_Equipes ..> UC_Membres : <<include>>
+
+@enduml

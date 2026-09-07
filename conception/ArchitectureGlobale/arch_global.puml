@@ -1,0 +1,95 @@
+@startuml
+title Architecture globale – Application Planning MLA / ICC
+
+skinparam linetype ortho
+skinparam shadowing false
+skinparam componentStyle rectangle
+
+' ======================
+' Acteurs
+' ======================
+actor "Responsable MLA" as Responsable
+actor "Chantre\n(Choriste / Musicien)" as Chantre
+actor "Administrateur ICC" as Admin
+
+' ======================
+' Couche Présentation
+' ======================
+package "Couche Présentation\n(Frontend Web)" {
+  component "Interface Web\n(Vue)" as UI
+  component "Calendrier\n(TUI Calendar)" as Calendar
+}
+
+' ======================
+' Couche Applicative
+' ======================
+package "Couche Applicative\n(Backend API)" {
+  component "Service\nAuthentification\n(JWT)" as Auth
+  component "Service\nMembres & Équipes" as Membres
+  component "Service\nActivités" as Activites
+  component "Service\nPlanning" as Planning
+  component "Service\nIndisponibilités" as Indispo
+  component "Service\nNotifications" as Notify
+  component "Service\nStatistiques" as Stats
+  component "Service\nRépertoire de Chants\n(Futur)" as Chants
+}
+
+' ======================
+' Intégrations / Services Externes
+' ======================
+package "Services Externes / Intégrations" {
+  component "Email / SMS / App Notifications" as ExtNotify
+  component "Calendrier Interactif\n(TUI Calendar)" as ExtCalendar
+}
+
+' ======================
+' Couche Données
+' ======================
+package "Couche Données" {
+  database "Base de Données\n(PostgreSQL / MySQL)" as DB
+}
+
+' ======================
+' Interactions Acteurs
+' ======================
+Responsable --> UI
+Chantre --> UI
+Admin --> UI
+
+' ======================
+' Frontend -> Backend
+' ======================
+UI --> Auth
+UI --> Membres
+UI --> Activites
+UI --> Planning
+UI --> Indispo
+UI --> Stats
+
+Calendar --> Planning
+
+' ======================
+' Backend -> Données
+' ======================
+Auth --> DB
+Membres --> DB
+Activites --> DB
+Planning --> DB
+Indispo --> DB
+Stats --> DB
+Chants --> DB
+
+' ======================
+' Backend -> Services Externes
+' ======================
+Notify ..> ExtNotify : envoie notifications
+Calendar ..> ExtCalendar : synchronise
+
+' ======================
+' Services internes
+' ======================
+Planning --> Indispo : vérifie contraintes
+Planning --> Notify : envoie notifications
+Activites --> Chants : associe chants
+
+@enduml

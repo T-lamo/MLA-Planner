@@ -1,0 +1,242 @@
+@startuml
+' ---------------------------------------------------------
+' Modèle Logique de Données (MLD) - FULL SPEC
+' ---------------------------------------------------------
+
+skinparam linetype ortho
+skinparam shadowing false
+skinparam class {
+    BackgroundColor #FFFFFF
+    ArrowColor #268BD2
+    BorderColor #268BD2
+}
+
+' --- 0. TABLES DE LIAISON (N:N) ---
+entity "t_membre_campus_link" as MembreCampusLink <<Link>> {
+    * membre_id : UUID [FK, PK]
+    * campus_id : UUID [FK, PK]
+}
+
+entity "t_membre_ministere_link" as MembreMinistereLink <<Link>> {
+    * membre_id : UUID [FK, PK]
+    * ministere_id : UUID [FK, PK]
+}
+
+entity "t_membre_pole_link" as MembrePoleLink <<Link>> {
+    * membre_id : UUID [FK, PK]
+    * pole_id : UUID [FK, PK]
+}
+
+entity "t_role_permission" as RolePermission <<Link>> {
+    * role_id : UUID [FK, PK]
+    * permission_id : UUID [FK, PK]
+}
+
+entity "t_equipe_membre" as EquipeMembre <<Link>> {
+    * equipe_id : UUID [FK, PK]
+    * membre_id : UUID [FK, PK]
+}
+
+' --- 1. RÉFÉRENTIELS ---
+entity "t_categorierole" as CategorieRole {
+    * code : VARCHAR(20) [PK] <<ALPHA_UPPER>>
+    libelle : VARCHAR(100)
+}
+
+entity "t_rolecompetence" as RoleCompetence {
+    * code : VARCHAR(50) [PK] <<UPPERCASE>>
+    libelle : VARCHAR(100)
+    + categorie_code : VARCHAR(20) [FK]
+}
+
+entity "t_statutplanning" as StatutPlanning {
+    * code : VARCHAR(20) [PK] -- 'BROUILLON', 'PUBLIE'
+}
+
+entity "t_statutaffectation" as StatutAffectation {
+    * code : VARCHAR(20) [PK]
+    libelle : VARCHAR(100)
+}
+
+' --- 2. STRUCTURE ORGANISATIONNELLE ---
+entity "t_organisationicc" as OrganisationICC {
+    * id : UUID [PK]
+    nom : VARCHAR(150) [UNIQUE]
+    date_creation : DATE
+}
+
+entity "t_pays" as Pays {
+    * id : UUID [PK]
+    nom : VARCHAR(100) [UNIQUE]
+    code : VARCHAR(5) [UPPERCASE]
+    + organisation_id : UUID [FK]
+}
+
+entity "t_campus" as Campus {
+    * id : UUID [PK]
+    nom : VARCHAR(100) [NOT_BLANK]
+    ville : VARCHAR(100) [NOT_BLANK]
+    timezone : VARCHAR(50) [DEFAULT: 'Europe/Paris']
+    + pays_id : UUID [FK]
+}
+
+entity "t_ministere" as Ministere {
+    * id : UUID [PK]
+    nom : VARCHAR(100) [UNIQUE, NOT_BLANK]
+    date_creation : DATE [ISO]
+    actif : BOOLEAN [DEFAULT: TRUE]
+    + campus_id : UUID [FK]
+    -- computed --
+    poles_count : INT
+    membres_count : INT
+}
+
+entity "t_pole" as Pole {
+    * id : UUID [PK]
+    nom : VARCHAR(100) [NOT_BLANK]
+    description : VARCHAR(500)
+    active : BOOLEAN [DEFAULT: TRUE]
+    + ministere_id : UUID [FK]
+}
+
+' --- 3. RH & MEMBRES ---
+entity "t_membre" as Membre {
+    * id : UUID [PK]
+    nom : VARCHAR(50) [TITLE_CASE]
+    prenom : VARCHAR(50) [TITLE_CASE]
+    email : VARCHAR(100) [UNIQUE, LOWERCASE]
+    telephone : VARCHAR(20)
+    actif : BOOLEAN [DEFAULT: TRUE]
+    date_inscription : DATETIME [NOW]
+}
+
+entity "t_membre_role" as MembreRole {
+    * membre_id : UUID [FK, PK]
+    * role_code : VARCHAR(50) [FK, PK]
+    niveau : ENUM [DEBUTANT, INTERMEDIAIRE, AVANCE, EXPERT]
+    is_principal : BOOLEAN [DEFAULT: FALSE]
+}
+
+entity "t_indisponibilite" as Indisponibilite {
+    * id : UUID [PK]
+    date_debut : DATE [ISO]
+    date_fin : DATE [ISO]
+    motif : VARCHAR(255)
+    validee : BOOLEAN [DEFAULT: FALSE]
+    + membre_id : UUID [FK]
+}
+
+' --- 4. PLANNING & OPÉRATIONS ---
+entity "t_activite" as Activite {
+    * id : UUID [PK]
+    type : VARCHAR(100) [TITLE_CASE]
+    date_debut : DATETIME
+    date_fin : DATETIME
+    lieu : VARCHAR(255)
+    description : VARCHAR(1000)
+    + campus_id : UUID [FK]
+    + ministere_organisateur_id : UUID [FK]
+}
+
+entity "t_planningservice" as PlanningService {
+    * id : UUID [PK]
+    + activite_id : UUID [FK]
+    statut_code : VARCHAR(20) [FK, DEFAULT: 'BROUILLON']
+}
+
+entity "t_slot" as Slot {
+    * id : UUID [PK]
+    + planning_id : UUID [FK]
+    nom_creneau : VARCHAR(100)
+    date_debut : DATETIME
+    date_fin : DATETIME
+    nb_personnes_requis : INT
+    -- computed --
+    filling_rate : FLOAT
+}
+
+entity "t_affectation" as Affectation {
+    * id : UUID [PK]
+    + slot_id : UUID [FK]
+    + membre_id : UUID [FK]
+    role_code : VARCHAR(50) [FK]
+    + statut_affectation_code : VARCHAR(20) [FK]
+    presence_confirmee : BOOLEAN [DEFAULT: FALSE]
+}
+
+' --- 5. SÉCURITÉ & RBAC ---
+entity "t_utilisateur" as Utilisateur {
+    * id : UUID [PK]
+    + membre_id : UUID [FK, UNIQUE]
+    password : VARCHAR(255)
+}
+
+entity "t_role" as Role {
+    * id : UUID [PK]
+    nom : VARCHAR(100)
+}
+
+entity "t_permission" as Permission {
+    * id : UUID [PK]
+    code : VARCHAR(100) [RESOURCE_ACTION]
+}
+
+entity "t_affectation_role" as AffectationRole {
+    * id : UUID [PK]
+    + utilisateur_id : UUID [FK]
+    + role_id : UUID [FK]
+    dateDebut : DATE
+    dateFin : DATE
+    active : BOOLEAN [DEFAULT: TRUE]
+}
+
+entity "t_affectation_contexte" as AffectationContexte {
+    * id : UUID [PK]
+    + affectation_role_id : UUID [FK]
+    + ministere_id : UUID [FK] [OPTIONAL]
+    + pole_id : UUID [FK] [OPTIONAL]
+    + activite_id : UUID [FK] [OPTIONAL]
+    + voix_id : UUID [FK] [OPTIONAL]
+}
+
+' --- RELATIONS ---
+OrganisationICC ||--o{ Pays
+Pays ||--o{ Campus
+Campus ||--o{ Ministere
+Ministere ||--o{ Pole
+
+' N:N Membre rattaché
+Membre ||--o{ MembreCampusLink
+Campus ||--o{ MembreCampusLink
+Membre ||--o{ MembreMinistereLink
+Ministere ||--o{ MembreMinistereLink
+Membre ||--o{ MembrePoleLink
+Pole ||--o{ MembrePoleLink
+
+' Compétences
+CategorieRole ||--o{ RoleCompetence
+RoleCompetence ||--o{ MembreRole
+Membre ||--o{ MembreRole
+Membre ||--o{ Indisponibilite
+
+' Opérations
+Activite ||--o{ PlanningService
+PlanningService ||--o{ Slot
+Slot ||--o{ Affectation
+Membre ||--o{ Affectation
+StatutAffectation ||--o{ Affectation
+
+' Sécurité
+Membre |o--|| Utilisateur
+Utilisateur ||--o{ AffectationRole
+Role ||--o{ AffectationRole
+Role ||--o{ RolePermission
+Permission ||--o{ RolePermission
+AffectationRole ||--o{ AffectationContexte
+
+' Équipes
+Ministere ||--o{ Equipe
+Equipe ||--o{ EquipeMembre
+Membre ||--o{ EquipeMembre
+
+@enduml
