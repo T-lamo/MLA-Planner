@@ -207,4 +207,4 @@ Backend disponible sur `http://localhost:8000` · Frontend sur `http://localhost
 
 ## Licence
 
-Projet privé — MLA / ICC. Tous droits réservés.
+Le code source de ce dépôt est partagé publiquement à des fins de démonstration technique (portfolio, revue de code), avec l'accord d'ICC. Les droits sur le nom, la marque et le contenu métier propres à MLA / ICC restent réservés à l'organisation ; ce dépôt n'accorde aucun droit de réutilisation commerciale.
